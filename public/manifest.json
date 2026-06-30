@@ -2,7 +2,7 @@
   "name": "我的计划日历",
   "short_name": "计划日历",
   "description": "个人计划管理系统 — 月/周/日视图，上午/下午/晚上三时段规划",
-  "start_url": "/plan-calender/",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#3b82f6",
@@ -30,6 +30,6 @@
   "categories": ["productivity", "utilities"],
   "lang": "zh-CN",
   "dir": "ltr",
-  "scope": "/plan-calender/",
+  "scope": "/",
   "prefer_related_applications": false
 }
