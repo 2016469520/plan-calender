@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { useTheme } from 'next-themes'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { LogOut, Moon, Sun, Monitor, Bell, BellOff, BellRing } from 'lucide-react'
+import { LogOut, Moon, Sun, Monitor, Bell, BellOff, BellRing, MonitorDown } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { TagManager } from '@/components/common/tag-manager'
 import { ReminderList } from '@/components/reminders/reminder-list'
@@ -17,6 +17,7 @@ import { TemplateManager } from '@/components/plans/template-manager'
 import { OverdueProcessor } from '@/components/plans/overdue-processor'
 import { ImportExportDialog } from '@/components/plans/import-export-dialog'
 import { useNotifications } from '@/hooks/use-notifications'
+import { usePwa } from '@/components/pwa/pwa-provider'
 import { toast } from 'sonner'
 import { Download } from 'lucide-react'
 import { useState } from 'react'
@@ -34,6 +35,7 @@ export default function SettingsPage() {
     requestPermission,
     isSupported: notifSupported,
   } = useNotifications()
+  const { isInstallable, promptInstall } = usePwa()
 
   const { data: prefs } = useQuery({
     queryKey: ['userPreferences'],
@@ -109,6 +111,25 @@ export default function SettingsPage() {
           {isDemoMode ? '本地演示模式' : user.email}
         </p>
       </div>
+
+      {/* PWA Install */}
+      {isInstallable && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <MonitorDown className="h-5 w-5" />安装应用
+            </CardTitle>
+            <CardDescription>
+              将应用安装到桌面或主屏幕，像原生 App 一样使用
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => { promptInstall(); toast.success('请在弹出的安装窗口中确认') }}>
+              <MonitorDown className="h-4 w-4 mr-2" />添加到主屏幕
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Reminders */}
       <Card>
