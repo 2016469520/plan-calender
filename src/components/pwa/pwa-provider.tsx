@@ -60,8 +60,9 @@ export function PwaProvider({ children }: PwaProviderProps) {
     window.addEventListener('offline', handleOffline)
 
     // Register SW
+    const basePath = '/plan-calender'
     navigator.serviceWorker
-      .register('/sw.js')
+      .register(`${basePath}/sw.js`)
       .then((reg) => {
         setRegistration(reg)
         // Check for updates

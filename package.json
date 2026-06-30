@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "deploy": "npm run build && npx gh-pages -d out -b gh-pages"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -49,6 +50,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "fake-indexeddb": "^6.2.5",
+    "gh-pages": "^6.3.0",
     "jsdom": "^29.1.1",
     "serwist": "^9.5.11",
     "tailwindcss": "^4",
