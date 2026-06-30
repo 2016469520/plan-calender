@@ -57,7 +57,7 @@ npm install
 npm run dev
 ```
 
-打开 http://localhost:3000，输入任意邮箱密码即可进入（演示模式）。
+打开 http://localhost:3000 ，输入任意邮箱密码即可进入（演示模式）。
 
 ### 配置 Supabase（可选）
 
