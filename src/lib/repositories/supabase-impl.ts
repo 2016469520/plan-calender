@@ -976,6 +976,21 @@ class SupabaseDailyReviewRepository implements IDailyReviewRepository {
       handleError('upsert daily review', e)
     }
   }
+
+  async delete(userId: string, date: string): Promise<void> {
+    try {
+      const supabase = getSupabase()
+      const { error } = await supabase
+        .from('daily_reviews')
+        .delete()
+        .eq('user_id', userId)
+        .eq('review_date', date)
+
+      if (error) throw error
+    } catch (e) {
+      handleError('delete daily review', e)
+    }
+  }
 }
 
 // ---------- Task Template Repository ----------

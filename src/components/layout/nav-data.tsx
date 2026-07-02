@@ -5,6 +5,7 @@ import {
   BarChart3,
   Settings,
   Inbox,
+  ClipboardList,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -23,5 +24,6 @@ export const mainNavItems: NavItem[] = [
 ]
 
 export const secondaryNavItems: NavItem[] = [
+  { href: '/reviews', label: '复盘记录', icon: ClipboardList },
   { href: '/inbox', label: '收集箱', icon: Inbox },
 ]

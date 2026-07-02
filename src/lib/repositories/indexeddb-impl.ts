@@ -449,6 +449,14 @@ class IndexedDBDailyReviewRepository implements IDailyReviewRepository {
     await db.add('daily_reviews', review)
     return review
   }
+
+  async delete(userId: string, date: string): Promise<void> {
+    const db = await getDB()
+    const existing = await this.getByDate(userId, date)
+    if (existing) {
+      await db.delete('daily_reviews', existing.id)
+    }
+  }
 }
 
 // ---------- Task Template Repository ----------

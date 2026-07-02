@@ -87,9 +87,12 @@ describe('stats utilities', () => {
   })
 
   describe('calculateTaskStats', () => {
-    const today = new Date().toISOString().slice(0, 10)
-    const futureDate = new Date(Date.now() + 86400000 * 30).toISOString().slice(0, 10)
-    const pastDate = new Date(Date.now() - 86400000 * 7).toISOString().slice(0, 10)
+    // Use fixed dates to avoid timezone-dependent test failures.
+    // The function under test uses todayStr() which returns local date;
+    // mixing with .toISOString() (UTC) causes off-by-one in non-UTC tz.
+    const today = '2026-07-03'
+    const futureDate = '2026-08-02'  // 30 days later
+    const pastDate = '2026-06-26'    // 7 days earlier
 
     const tasks: Task[] = [
       { id: '1', user_id: 'u1', title: 'Done task', task_date: today, period: 'morning', priority: 'normal', status: 'done', order_index: 0, created_at: '', updated_at: '' },
@@ -100,7 +103,7 @@ describe('stats utilities', () => {
     ]
 
     it('counts tasks correctly', () => {
-      const stats = calculateTaskStats(tasks)
+      const stats = calculateTaskStats(tasks, today)
       expect(stats.total).toBe(5)
       expect(stats.done).toBe(1)
       expect(stats.todo).toBe(2) // includes overdue
@@ -109,25 +112,25 @@ describe('stats utilities', () => {
     })
 
     it('calculates completion rate (excluding cancelled)', () => {
-      const stats = calculateTaskStats(tasks)
+      const stats = calculateTaskStats(tasks, today)
       // 1 done / 4 active = 25%
       expect(stats.completionRate).toBe(0.25)
     })
 
     it('counts overdue tasks', () => {
-      const stats = calculateTaskStats(tasks)
+      const stats = calculateTaskStats(tasks, today)
       expect(stats.overdue).toBe(1)
     })
 
     it('breaks down by period', () => {
-      const stats = calculateTaskStats(tasks)
+      const stats = calculateTaskStats(tasks, today)
       expect(stats.byPeriod.morning.total).toBe(3)
       expect(stats.byPeriod.afternoon.total).toBe(1)
       expect(stats.byPeriod.evening.total).toBe(1)
     })
 
     it('breaks down by priority', () => {
-      const stats = calculateTaskStats(tasks)
+      const stats = calculateTaskStats(tasks, today)
       expect(stats.byPriority.normal.total).toBe(2)
       expect(stats.byPriority.high.total).toBe(1)
       expect(stats.byPriority.urgent.total).toBe(1)
