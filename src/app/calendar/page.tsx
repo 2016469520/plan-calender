@@ -8,6 +8,8 @@ import { WeekView } from '@/components/calendar/week-view'
 import { DayView } from '@/components/calendar/day-view'
 import { CategoryView } from '@/components/calendar/category-view'
 import { TaskEditDialog } from '@/components/plans/task-edit-dialog'
+import { TaskDetailPanel } from '@/components/schedule/task-detail-panel'
+import { useMediaQuery } from '@/hooks/use-media-query'
 import type { CalendarView, Task } from '@/types'
 import { todayStr } from '@/lib/utils/date'
 import { STORAGE_KEYS } from '@/lib/constants'
@@ -35,17 +37,19 @@ function getInitialDate(): string {
 
 export default function CalendarPage() {
   const { user } = useAuth()
+  const isDesktop = useMediaQuery('(min-width: 1024px)')
   const [currentView, setCurrentView] = useState<CalendarView>(getInitialView)
   const [presentationMode, setPresentationMode] = useState<PresentationMode>(getInitialMode)
   const [currentDate, setCurrentDate] = useState(getInitialDate)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [newTaskTagId, setNewTaskTagId] = useState<string | undefined>()
+  // New detail panel state
+  const [detailTask, setDetailTask] = useState<Task | null>(null)
 
   const handleViewChange = useCallback((view: CalendarView) => {
     setCurrentView(view)
     localStorage.setItem(STORAGE_KEYS.lastView, view)
-    // Switching a time view also sets mode to 'time'
     setPresentationMode('time')
     localStorage.setItem('plan-calendar-presentation-mode', 'time')
   }, [])
@@ -67,58 +71,75 @@ export default function CalendarPage() {
   }, [])
 
   const handleEditTask = useCallback((task: Task) => {
-    setEditingTask(task)
-    setNewTaskTagId(undefined)
-    setDialogOpen(true)
-  }, [])
+    // Open detail panel on desktop, dialog on mobile
+    if (isDesktop) {
+      setDetailTask(task)
+    } else {
+      setEditingTask(task)
+      setNewTaskTagId(undefined)
+      setDialogOpen(true)
+    }
+  }, [isDesktop])
 
   if (!user) return null
 
   return (
-    <div className="flex flex-col h-full">
-      <CalendarHeader
-        currentView={currentView}
-        currentDate={currentDate}
-        presentationMode={presentationMode}
-        onViewChange={handleViewChange}
-        onDateChange={handleDateChange}
-        onNewTask={() => handleNewTask()}
-        onPresentationModeChange={handlePresentationModeChange}
-      />
+    <div className="flex h-full">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <CalendarHeader
+          currentView={currentView}
+          currentDate={currentDate}
+          presentationMode={presentationMode}
+          onViewChange={handleViewChange}
+          onDateChange={handleDateChange}
+          onNewTask={() => handleNewTask()}
+          onPresentationModeChange={handlePresentationModeChange}
+        />
 
-      <div className="flex-1 overflow-hidden">
-        {presentationMode === 'time' && (
-          <>
-            {currentView === 'month' && (
-              <MonthView currentDate={currentDate} onDateClick={handleDateChange} onViewChange={handleViewChange} />
-            )}
-            {currentView === 'week' && (
-              <WeekView currentDate={currentDate} />
-            )}
-            {currentView === 'day' && (
-              <DayView currentDate={currentDate} onDateChange={handleDateChange} />
-            )}
-          </>
-        )}
+        <div className="flex-1 overflow-hidden">
+          {presentationMode === 'time' && (
+            <>
+              {currentView === 'month' && (
+                <MonthView currentDate={currentDate} onDateClick={handleDateChange} onViewChange={handleViewChange} />
+              )}
+              {currentView === 'week' && (
+                <WeekView currentDate={currentDate} />
+              )}
+              {currentView === 'day' && (
+                <DayView currentDate={currentDate} onDateChange={handleDateChange} />
+              )}
+            </>
+          )}
 
-        {presentationMode === 'category' && (
-          <CategoryView
-            onEditTask={handleEditTask}
-            onNewTask={handleNewTask}
-            newTaskDialogOpen={dialogOpen}
-            setNewTaskDialogOpen={setDialogOpen}
-            defaultDate={currentDate}
-          />
-        )}
+          {presentationMode === 'category' && (
+            <CategoryView
+              onEditTask={handleEditTask}
+              onNewTask={handleNewTask}
+              newTaskDialogOpen={dialogOpen}
+              setNewTaskDialogOpen={setDialogOpen}
+              defaultDate={currentDate}
+            />
+          )}
+        </div>
+
+        {/* Keep TaskEditDialog for mobile and explicit "新建" */}
+        <TaskEditDialog
+          task={editingTask}
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          defaultDate={currentDate}
+          defaultTagId={newTaskTagId}
+        />
       </div>
 
-      <TaskEditDialog
-        task={editingTask}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        defaultDate={currentDate}
-        defaultTagId={newTaskTagId}
-      />
+      {/* Desktop: Task detail side panel */}
+      {isDesktop && (
+        <TaskDetailPanel
+          task={detailTask}
+          open={!!detailTask}
+          onClose={() => setDetailTask(null)}
+        />
+      )}
     </div>
   )
 }
