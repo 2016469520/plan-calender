@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { mainNavItems } from './nav-data'
+import { mobileNavItems } from './nav-data'
 
 export function MobileNav() {
   const pathname = usePathname()
@@ -11,7 +11,7 @@ export function MobileNav() {
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t safe-area-bottom">
       <div className="flex items-center justify-around h-14">
-        {mainNavItems.map((item) => {
+        {mobileNavItems.map((item) => {
           const isActive = pathname.startsWith(item.href)
           return (
             <Link
