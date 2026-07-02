@@ -99,6 +99,7 @@ export interface IDailyReviewRepository {
   getByDate(userId: string, date: string): Promise<DailyReview | null>
   getByDateRange(userId: string, range: DateRange): Promise<DailyReview[]>
   upsert(userId: string, data: Omit<DailyReview, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<DailyReview>
+  delete(userId: string, date: string): Promise<void>
 }
 
 // ---------- Task Template Repository ----------

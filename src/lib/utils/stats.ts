@@ -224,8 +224,8 @@ export interface TaskStatsResult {
   estimatedVsActual: { totalEstimated: number; totalActual: number }
 }
 
-export function calculateTaskStats(tasks: Task[]): TaskStatsResult {
-  const today = todayStr()
+export function calculateTaskStats(tasks: Task[], referenceDate?: string): TaskStatsResult {
+  const today = referenceDate || todayStr()
   const total = tasks.length
   const done = tasks.filter((t) => t.status === 'done').length
   const inProgress = tasks.filter((t) => t.status === 'in_progress').length

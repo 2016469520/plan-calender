@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { BarChart3, CheckCircle2, Clock, TrendingUp } from 'lucide-react'
 import { getMonthRange, todayStr, format } from '@/lib/utils/date'
+import Link from 'next/link'
 
 export default function InsightsPage() {
   const { user } = useAuth()
@@ -99,7 +100,12 @@ export default function InsightsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{reviewDays}</div>
-              <p className="text-xs text-muted-foreground">评价天数</p>
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-xs text-muted-foreground">评价天数</p>
+                <Link href="/reviews" className="text-xs text-primary hover:underline">
+                  查看全部评价
+                </Link>
+              </div>
             </CardContent>
           </Card>
         </div>

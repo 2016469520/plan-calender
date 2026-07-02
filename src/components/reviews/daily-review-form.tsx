@@ -23,9 +23,10 @@ import { toast } from 'sonner'
 
 interface DailyReviewFormProps {
   date?: string
+  onSaved?: () => void
 }
 
-export function DailyReviewForm({ date = todayStr() }: DailyReviewFormProps) {
+export function DailyReviewForm({ date = todayStr(), onSaved }: DailyReviewFormProps) {
   const { user } = useAuth()
   const { dailyReviews } = useRepos()
   const queryClient = useQueryClient()
@@ -43,6 +44,7 @@ export function DailyReviewForm({ date = todayStr() }: DailyReviewFormProps) {
       queryClient.invalidateQueries({ queryKey: ['dailyReview', date] })
       queryClient.invalidateQueries({ queryKey: ['reviews'] })
       toast.success('评价已保存')
+      onSaved?.()
     },
     onError: () => {
       toast.error('保存失败，请重试')

@@ -59,6 +59,7 @@ interface TaskEditDialogProps {
   onOpenChange: (open: boolean) => void
   defaultDate?: string
   defaultPeriod?: Period
+  defaultTagId?: string
 }
 
 export function TaskEditDialog({
@@ -67,6 +68,7 @@ export function TaskEditDialog({
   onOpenChange,
   defaultDate,
   defaultPeriod,
+  defaultTagId,
 }: TaskEditDialogProps) {
   const { user } = useAuth()
   const { tasks, tags } = useRepos()
@@ -117,11 +119,11 @@ export function TaskEditDialog({
         period: defaultPeriod || 'morning',
         priority: 'normal',
         status: 'todo',
-        tag_id: 'none',
+        tag_id: defaultTagId || 'none',
         reminder_at: '',
       })
     }
-  }, [task, defaultDate, defaultPeriod, form])
+  }, [task, defaultDate, defaultPeriod, defaultTagId, form])
 
   const handleSubmit = async (data: TaskFormValues) => {
     if (!user) return

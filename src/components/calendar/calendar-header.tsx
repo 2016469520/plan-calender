@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, LayoutGrid, Clock } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { type CalendarView } from '@/types'
@@ -10,12 +10,16 @@ import { navigateDate, todayStr } from '@/lib/utils/date'
 import { KEYBOARD_SHORTCUTS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
+type PresentationMode = 'time' | 'category'
+
 interface CalendarHeaderProps {
   currentView: CalendarView
   currentDate: string
+  presentationMode: PresentationMode
   onViewChange: (view: CalendarView) => void
   onDateChange: (date: string) => void
   onNewTask: () => void
+  onPresentationModeChange: (mode: PresentationMode) => void
 }
 
 const VIEW_OPTIONS: { value: CalendarView; label: string; shortcut: string }[] = [
@@ -27,9 +31,11 @@ const VIEW_OPTIONS: { value: CalendarView; label: string; shortcut: string }[] =
 export function CalendarHeader({
   currentView,
   currentDate,
+  presentationMode,
   onViewChange,
   onDateChange,
   onNewTask,
+  onPresentationModeChange,
 }: CalendarHeaderProps) {
   const displayDate = (() => {
     const d = parseISO(currentDate)
@@ -78,47 +84,88 @@ export function CalendarHeader({
   return (
     <header className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b">
       <div className="flex items-center justify-between px-4 py-2 gap-2">
-        {/* Left: Navigation */}
+        {/* Left: Navigation (time mode only) */}
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goPrev} title="上一页">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-sm font-medium min-w-[120px]"
-            onClick={goToday}
-            title="回到今天"
-          >
-            {displayDate}
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goNext} title="下一页">
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="sm" className="ml-2 h-8" onClick={goToday}>
-            今天
-          </Button>
+          {presentationMode === 'time' && (
+            <>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goPrev} title="上一页">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-sm font-medium min-w-[120px]"
+                onClick={goToday}
+                title="回到今天"
+              >
+                {displayDate}
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goNext} title="下一页">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" className="ml-2 h-8" onClick={goToday}>
+                今天
+              </Button>
+            </>
+          )}
         </div>
 
-        {/* Center: View toggle (Desktop) */}
-        <div className="hidden sm:flex items-center gap-0.5 bg-muted rounded-lg p-0.5">
-          {VIEW_OPTIONS.map((opt) => (
+        {/* Center: Presentation mode + View toggle */}
+        <div className="flex items-center gap-2">
+          {/* Presentation mode toggle */}
+          <div className="flex items-center gap-0.5 bg-muted rounded-lg p-0.5">
             <Button
-              key={opt.value}
               variant="ghost"
               size="sm"
               className={cn(
                 'h-7 px-3 text-xs rounded-md transition-all',
-                currentView === opt.value
+                presentationMode === 'time'
                   ? 'bg-background shadow-sm text-foreground'
                   : 'text-muted-foreground hover:text-foreground'
               )}
-              onClick={() => onViewChange(opt.value)}
-              title={`${opt.label}视图 (${opt.shortcut})`}
+              onClick={() => onPresentationModeChange('time')}
             >
-              {opt.label}
+              <Clock className="h-3.5 w-3.5 mr-1" />
+              按时间
             </Button>
-          ))}
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                'h-7 px-3 text-xs rounded-md transition-all',
+                presentationMode === 'category'
+                  ? 'bg-background shadow-sm text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+              onClick={() => onPresentationModeChange('category')}
+            >
+              <LayoutGrid className="h-3.5 w-3.5 mr-1" />
+              按分类
+            </Button>
+          </div>
+
+          {/* View toggle (time mode only, desktop) */}
+          {presentationMode === 'time' && (
+            <div className="hidden sm:flex items-center gap-0.5 bg-muted rounded-lg p-0.5">
+              {VIEW_OPTIONS.map((opt) => (
+                <Button
+                  key={opt.value}
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'h-7 px-3 text-xs rounded-md transition-all',
+                    currentView === opt.value
+                      ? 'bg-background shadow-sm text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                  onClick={() => onViewChange(opt.value)}
+                  title={`${opt.label}视图 (${opt.shortcut})`}
+                >
+                  {opt.label}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right: Actions */}
@@ -130,27 +177,29 @@ export function CalendarHeader({
         </div>
       </div>
 
-      {/* Mobile view toggle */}
-      <div className="sm:hidden flex justify-center pb-2">
-        <div className="inline-flex items-center gap-0.5 bg-muted rounded-lg p-0.5">
-          {VIEW_OPTIONS.map((opt) => (
-            <Button
-              key={opt.value}
-              variant="ghost"
-              size="sm"
-              className={cn(
-                'h-7 px-4 text-xs rounded-md',
-                currentView === opt.value
-                  ? 'bg-background shadow-sm text-foreground'
-                  : 'text-muted-foreground'
-              )}
-              onClick={() => onViewChange(opt.value)}
-            >
-              {opt.label}
-            </Button>
-          ))}
+      {/* Mobile view toggle (time mode only) */}
+      {presentationMode === 'time' && (
+        <div className="sm:hidden flex justify-center pb-2">
+          <div className="inline-flex items-center gap-0.5 bg-muted rounded-lg p-0.5">
+            {VIEW_OPTIONS.map((opt) => (
+              <Button
+                key={opt.value}
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'h-7 px-4 text-xs rounded-md',
+                  currentView === opt.value
+                    ? 'bg-background shadow-sm text-foreground'
+                    : 'text-muted-foreground'
+                )}
+                onClick={() => onViewChange(opt.value)}
+              >
+                {opt.label}
+              </Button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </header>
   )
 }
