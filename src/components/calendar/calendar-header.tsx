@@ -15,6 +15,7 @@ interface CalendarHeaderProps {
   currentDate: string
   onViewChange: (view: CalendarView) => void
   onDateChange: (date: string) => void
+  onNewTask: () => void
 }
 
 const VIEW_OPTIONS: { value: CalendarView; label: string; shortcut: string }[] = [
@@ -28,6 +29,7 @@ export function CalendarHeader({
   currentDate,
   onViewChange,
   onDateChange,
+  onNewTask,
 }: CalendarHeaderProps) {
   const displayDate = (() => {
     const d = parseISO(currentDate)
@@ -64,10 +66,14 @@ export function CalendarHeader({
       if (key === KEYBOARD_SHORTCUTS.monthView) onViewChange('month')
       if (key === KEYBOARD_SHORTCUTS.weekView) onViewChange('week')
       if (key === KEYBOARD_SHORTCUTS.dayView) onViewChange('day')
+      if (key === KEYBOARD_SHORTCUTS.newTask) {
+        e.preventDefault()
+        onNewTask()
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [goToday, onViewChange])
+  }, [goToday, onViewChange, onNewTask])
 
   return (
     <header className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b">
@@ -117,7 +123,7 @@ export function CalendarHeader({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-1">
-          <Button variant="default" size="sm" className="h-8" title="新建事项 (N)">
+          <Button variant="default" size="sm" className="h-8" onClick={onNewTask} title="新建事项 (N)">
             <Plus className="h-4 w-4 mr-1" />
             <span className="hidden sm:inline">新建</span>
           </Button>

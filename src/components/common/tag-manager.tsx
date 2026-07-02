@@ -15,11 +15,20 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Pencil, Trash2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import type { Tag } from '@/types'
 
 const PRESET_COLORS = [
   '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
@@ -27,14 +36,22 @@ const PRESET_COLORS = [
   '#84cc16', '#e11d48', '#0ea5e9', '#a855f7', '#64748b',
 ]
 
+type DeleteAction = 'migrate' | 'clear' | null
+
 export function TagManager() {
   const { user } = useAuth()
-  const { tags } = useRepos()
+  const { tags, tasks } = useRepos()
   const queryClient = useQueryClient()
   const [editingTag, setEditingTag] = useState<{ id: string; name: string; color: string } | null>(null)
   const [newTagName, setNewTagName] = useState('')
   const [newTagColor, setNewTagColor] = useState('#3b82f6')
   const [showNewForm, setShowNewForm] = useState(false)
+  // Delete confirmation state
+  const [deletingTag, setDeletingTag] = useState<Tag | null>(null)
+  const [deleteAction, setDeleteAction] = useState<DeleteAction>(null)
+  const [migrateTargetId, setMigrateTargetId] = useState<string>('')
+  const [tagUsageCount, setTagUsageCount] = useState(0)
+  const [isLoadingUsage, setIsLoadingUsage] = useState(false)
 
   const { data: tagList = [], isLoading } = useQuery({
     queryKey: ['tags'],
@@ -51,6 +68,7 @@ export function TagManager() {
       setShowNewForm(false)
       toast.success('标签已创建')
     },
+    onError: () => toast.error('创建标签失败'),
   })
 
   const updateMutation = useMutation({
@@ -61,19 +79,75 @@ export function TagManager() {
       setEditingTag(null)
       toast.success('标签已更新')
     },
+    onError: () => toast.error('更新标签失败'),
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => tags.delete(user!.id, id),
+    mutationFn: ({ id, migrateToTagId }: { id: string; migrateToTagId?: string }) => {
+      if (deleteAction === 'clear') {
+        // Clear tag from all tasks first
+        return (async () => {
+          const userTasks = await tasks.filter(user!.id, { tagIds: [id] })
+          for (const task of userTasks) {
+            await tasks.update(user!.id, task.id, { tag_id: undefined } as Partial<import('@/types').Task>)
+          }
+          await tags.delete(user!.id, id)
+        })()
+      }
+      return tags.delete(user!.id, id, migrateToTagId)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tags'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      setDeletingTag(null)
+      setDeleteAction(null)
+      setMigrateTargetId('')
       toast.success('标签已删除')
     },
+    onError: () => toast.error('删除标签失败'),
   })
 
   const handleCreate = () => {
     if (!newTagName.trim()) return
     createMutation.mutate({ name: newTagName.trim(), color: newTagColor })
+  }
+
+  const openDeleteDialog = async (tag: Tag) => {
+    setDeletingTag(tag)
+    setDeleteAction(null)
+    setMigrateTargetId('')
+    setIsLoadingUsage(true)
+
+    try {
+      const userTasks = await tasks.filter(user!.id, { tagIds: [tag.id] })
+      setTagUsageCount(userTasks.length)
+      if (userTasks.length === 0) {
+        setDeleteAction('clear') // No tasks, so default action is fine
+      }
+    } catch {
+      setTagUsageCount(0)
+    } finally {
+      setIsLoadingUsage(false)
+    }
+  }
+
+  const handleConfirmDelete = () => {
+    if (!deletingTag) return
+
+    if (tagUsageCount === 0) {
+      // No tasks using this tag — simple delete
+      deleteMutation.mutate({ id: deletingTag.id })
+    } else if (deleteAction === 'migrate') {
+      if (!migrateTargetId) {
+        toast.error('请选择目标标签')
+        return
+      }
+      deleteMutation.mutate({ id: deletingTag.id, migrateToTagId: migrateTargetId })
+    } else if (deleteAction === 'clear') {
+      deleteMutation.mutate({ id: deletingTag.id })
+    } else {
+      toast.error('请选择处理方式')
+    }
   }
 
   if (isLoading) {
@@ -88,6 +162,8 @@ export function TagManager() {
       </Card>
     )
   }
+
+  const availableTargets = tagList.filter((t) => t.id !== deletingTag?.id)
 
   return (
     <Card>
@@ -148,26 +224,26 @@ export function TagManager() {
                 size="icon"
                 className="h-7 w-7"
                 onClick={() => setEditingTag({ id: tag.id, name: tag.name, color: tag.color })}
+                title="编辑标签"
               >
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
-              {!tag.is_default && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-destructive"
-                  onClick={() => {
-                    if (confirm(`确定删除标签「${tag.name}」？`)) {
-                      deleteMutation.mutate(tag.id)
-                    }
-                  }}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive"
+                onClick={() => openDeleteDialog(tag)}
+                title="删除标签"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
             </div>
           </div>
         ))}
+
+        {tagList.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-4">暂无标签</p>
+        )}
 
         {/* Edit dialog */}
         {editingTag && (
@@ -215,6 +291,91 @@ export function TagManager() {
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Delete confirmation dialog */}
+        <Dialog open={!!deletingTag} onOpenChange={(o) => !o && setDeletingTag(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>删除标签</DialogTitle>
+              <DialogDescription>
+                确定要删除标签「{deletingTag?.name}」吗？
+              </DialogDescription>
+            </DialogHeader>
+
+            {isLoadingUsage ? (
+              <div className="py-4 text-center text-sm text-muted-foreground">检查标签使用情况...</div>
+            ) : tagUsageCount === 0 ? (
+              <div className="py-2">
+                <p className="text-sm text-muted-foreground">该标签未被任何事项使用，可以安全删除。</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm">
+                  该标签正被 <strong>{tagUsageCount}</strong> 个事项使用。
+                  请选择如何处理这些事项：
+                </p>
+
+                <div className="space-y-2">
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="deleteAction"
+                      value="migrate"
+                      checked={deleteAction === 'migrate'}
+                      onChange={() => setDeleteAction('migrate')}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm font-medium">迁移到其他标签</span>
+                      {deleteAction === 'migrate' && (
+                        <div className="mt-1">
+                          <Select value={migrateTargetId} onValueChange={(v) => setMigrateTargetId(v ?? '')}>
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue placeholder="选择目标标签" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableTargets.map((t) => (
+                                <SelectItem key={t.id} value={t.id}>
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: t.color }} />
+                                    {t.name}
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  </label>
+
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="deleteAction"
+                      value="clear"
+                      checked={deleteAction === 'clear'}
+                      onChange={() => { setDeleteAction('clear'); setMigrateTargetId('') }}
+                      className="mt-1"
+                    />
+                    <span className="text-sm font-medium">清除关联，保留事项</span>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setDeletingTag(null)}>取消</Button>
+              <Button
+                variant="destructive"
+                onClick={handleConfirmDelete}
+                disabled={deleteMutation.isPending || (tagUsageCount > 0 && deleteAction === null)}
+              >
+                {deleteMutation.isPending ? '删除中...' : '确认删除'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   )

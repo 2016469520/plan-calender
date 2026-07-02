@@ -6,7 +6,8 @@ import { CalendarHeader } from '@/components/calendar/calendar-header'
 import { MonthView } from '@/components/calendar/month-view'
 import { WeekView } from '@/components/calendar/week-view'
 import { DayView } from '@/components/calendar/day-view'
-import type { CalendarView } from '@/types'
+import { TaskEditDialog } from '@/components/plans/task-edit-dialog'
+import type { CalendarView, Task } from '@/types'
 import { todayStr } from '@/lib/utils/date'
 import { STORAGE_KEYS } from '@/lib/constants'
 
@@ -26,6 +27,8 @@ export default function CalendarPage() {
   const { user } = useAuth()
   const [currentView, setCurrentView] = useState<CalendarView>(getInitialView)
   const [currentDate, setCurrentDate] = useState(getInitialDate)
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   const handleViewChange = useCallback((view: CalendarView) => {
     setCurrentView(view)
@@ -37,6 +40,16 @@ export default function CalendarPage() {
     localStorage.setItem(STORAGE_KEYS.lastDate, date)
   }, [])
 
+  const handleNewTask = useCallback(() => {
+    setEditingTask(null)
+    setDialogOpen(true)
+  }, [])
+
+  const handleEditTask = useCallback((task: Task) => {
+    setEditingTask(task)
+    setDialogOpen(true)
+  }, [])
+
   if (!user) return null
 
   return (
@@ -46,6 +59,7 @@ export default function CalendarPage() {
         currentDate={currentDate}
         onViewChange={handleViewChange}
         onDateChange={handleDateChange}
+        onNewTask={handleNewTask}
       />
 
       <div className="flex-1 overflow-hidden">
@@ -59,6 +73,13 @@ export default function CalendarPage() {
           <DayView currentDate={currentDate} onDateChange={handleDateChange} />
         )}
       </div>
+
+      <TaskEditDialog
+        task={editingTask}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        defaultDate={currentDate}
+      />
     </div>
   )
 }
