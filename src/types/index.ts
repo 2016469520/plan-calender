@@ -177,6 +177,86 @@ export interface UserPreferences {
   updated_at: string
 }
 
+// ---------- Countdown ----------
+
+export interface Countdown {
+  id: string
+  user_id: string
+  title: string
+  target_date: string // YYYY-MM-DD
+  description?: string
+  color: string
+  icon?: string
+  category?: string
+  is_yearly: boolean
+  linked_task_id?: string
+  show_on_home: boolean
+  is_pinned: boolean
+  sort_order: number
+  archived_at?: string
+  created_at: string
+  updated_at: string
+  // Computed fields (not stored)
+  days_remaining?: number
+  display_text?: string
+}
+
+export interface CountdownFormData {
+  title: string
+  target_date: string
+  description?: string
+  color?: string
+  icon?: string
+  category?: string
+  is_yearly?: boolean
+  linked_task_id?: string
+  show_on_home?: boolean
+}
+
+// ---------- Focus Session ----------
+
+export type FocusMode = 'focus' | 'short_break' | 'long_break'
+export type FocusStatus = 'ready' | 'running' | 'paused' | 'completed' | 'cancelled'
+
+export interface FocusSession {
+  id: string
+  user_id: string
+  task_id?: string
+  title?: string
+  mode: FocusMode
+  planned_minutes: number
+  actual_seconds: number
+  started_at?: string
+  paused_at?: string
+  completed_at?: string
+  cancelled_at?: string
+  status: FocusStatus
+  pause_count: number
+  note?: string
+  created_at: string
+  updated_at: string
+  // Populated relations
+  task?: Task
+}
+
+export interface FocusPreferences {
+  default_duration: number // minutes, default 25
+  short_break_duration: number // default 5
+  long_break_duration: number // default 15
+  sound_enabled: boolean
+  auto_add_to_task: boolean // accumulate focus time to task actual_minutes
+  desktop_notification: boolean
+  default_mode: FocusMode
+}
+
+export interface FocusSessionFormData {
+  task_id?: string
+  title?: string
+  mode?: FocusMode
+  planned_minutes: number
+  note?: string
+}
+
 // ---------- UI state types ----------
 
 export interface TaskFormData {

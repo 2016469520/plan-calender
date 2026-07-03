@@ -11,7 +11,7 @@ let dbPromise: Promise<IDBPDatabase> | null = null
  * Get or create the IndexedDB database.
  * v1: Initial schema with all 10 stores.
  * v2: Schema unchanged; version bump signals tag-dedup readiness.
- *     Deduplication is performed in useInitializeDefaultTags() hook.
+ * v3: Added countdowns and focus_sessions stores.
  */
 export function getDB(): Promise<IDBPDatabase> {
   if (dbPromise) return dbPromise
@@ -21,7 +21,10 @@ export function getDB(): Promise<IDBPDatabase> {
       if (oldVersion < 1) {
         createV1Schema(db)
       }
-      // v2: no schema changes — dedup handled at application level
+      // v2: no schema changes
+      if (oldVersion < 3) {
+        createV3Schema(db)
+      }
     },
   })
 
@@ -95,6 +98,23 @@ function createV1Schema(db: IDBPDatabase) {
     const excStore = db.createObjectStore('recurrence_exceptions', { keyPath: 'id' })
     excStore.createIndex('task_id', 'task_id')
     excStore.createIndex('user_id', 'user_id')
+  }
+}
+
+function createV3Schema(db: IDBPDatabase) {
+  // Countdowns store
+  if (!db.objectStoreNames.contains('countdowns')) {
+    const cdStore = db.createObjectStore('countdowns', { keyPath: 'id' })
+    cdStore.createIndex('user_id', 'user_id')
+    cdStore.createIndex('user_date', ['user_id', 'target_date'])
+  }
+
+  // Focus sessions store
+  if (!db.objectStoreNames.contains('focus_sessions')) {
+    const fsStore = db.createObjectStore('focus_sessions', { keyPath: 'id' })
+    fsStore.createIndex('user_id', 'user_id')
+    fsStore.createIndex('user_status', ['user_id', 'status'])
+    fsStore.createIndex('task_id', 'task_id')
   }
 }
 

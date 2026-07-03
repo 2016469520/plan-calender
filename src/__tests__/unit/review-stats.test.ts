@@ -142,6 +142,29 @@ describe('review stats', () => {
       expect(result.avgScore).toBe(8)
     })
 
+    it('includes zero in averages (0 is a valid value, not missing)', () => {
+      const reviews = [
+        makeReview({ review_date: '2026-07-01', subjective_completion: 0 }),
+        makeReview({ review_date: '2026-07-02', subjective_completion: 100, id: '2' }),
+      ]
+
+      const result = calculateMonthlyReviewSummary(reviews, 2026, 7)
+      expect(result.avgCompletion).toBe(50) // (0+100)/2 = 50
+      expect(result.reviewedDays).toBe(2)
+    })
+
+    it('distinguishes 0 from null (null = not filled, 0 = explicit zero)', () => {
+      const reviews = [
+        makeReview({ review_date: '2026-07-01', subjective_completion: 0 }),
+        makeReview({ review_date: '2026-07-02', id: '2' }), // no completion (null)
+        makeReview({ review_date: '2026-07-03', subjective_completion: 30, id: '3' }),
+      ]
+
+      const result = calculateMonthlyReviewSummary(reviews, 2026, 7)
+      // Only reviews with non-null completion: 0 and 30
+      expect(result.avgCompletion).toBe(15) // (0+30)/2 = 15
+    })
+
     it('correct totalDays for different months', () => {
       const result31 = calculateMonthlyReviewSummary([], 2026, 7)
       expect(result31.totalDays).toBe(31)

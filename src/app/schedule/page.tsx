@@ -17,9 +17,12 @@ import { TaskDetailPanel } from '@/components/schedule/task-detail-panel'
 import { TaskListItem } from '@/components/schedule/task-list-item'
 import { CategoryView } from '@/components/calendar/category-view'
 import { TaskEditDialog } from '@/components/plans/task-edit-dialog'
+import { HomeFocusTimer } from '@/components/focus/focus-timer'
+import { HomeCountdowns } from '@/components/countdowns/home-countdowns'
+import { HomeHabitsSummary } from '@/components/habits/home-habits-summary'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useMediaQuery } from '@/hooks/use-media-query'
-import { getMonthRange, todayStr } from '@/lib/utils/date'
+import { todayStr } from '@/lib/utils/date'
 import type { Task, Period } from '@/types'
 import { FolderOpen, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -202,6 +205,15 @@ export default function SchedulePage() {
                           activeTaskId={activeTaskId}
                           onTaskClick={handleTaskClick}
                         />
+
+                        {/* Mobile: Focus, Countdowns, Habits */}
+                        {!isDesktop && (
+                          <div className="space-y-3 lg:hidden">
+                            <HomeFocusTimer />
+                            <HomeCountdowns />
+                            <HomeHabitsSummary />
+                          </div>
+                        )}
                       </>
                     )}
                   </div>
@@ -267,14 +279,20 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      {/* Desktop: Task detail side panel */}
-      {isDesktop && (
+      {/* Desktop: Right panel (focus, countdowns, habits) or task detail */}
+      {isDesktop && showDetailPanel ? (
         <TaskDetailPanel
           task={activeTask}
           open={showDetailPanel}
           onClose={handleClosePanel}
         />
-      )}
+      ) : isDesktop ? (
+        <div className="w-72 xl:w-80 border-l bg-card/50 h-full overflow-y-auto shrink-0 p-3 space-y-3">
+          <HomeFocusTimer />
+          <HomeCountdowns />
+          <HomeHabitsSummary />
+        </div>
+      ) : null}
     </div>
   )
 }

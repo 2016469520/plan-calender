@@ -14,6 +14,8 @@ import type {
   UserProfile,
   UserPreferences,
   RecurrenceException,
+  Countdown,
+  FocusSession,
   DateRange,
 } from '@/types'
 
@@ -127,6 +129,34 @@ export interface IRecurrenceExceptionRepository {
   delete(userId: string, id: string): Promise<void>
 }
 
+// ---------- Countdown Repository ----------
+
+export interface ICountdownRepository {
+  list(userId: string, includeArchived?: boolean): Promise<Countdown[]>
+  getById(userId: string, id: string): Promise<Countdown | null>
+  create(userId: string, data: Omit<Countdown, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'days_remaining' | 'display_text'>): Promise<Countdown>
+  update(userId: string, id: string, data: Partial<Countdown>): Promise<Countdown>
+  archive(userId: string, id: string): Promise<void>
+  unarchive(userId: string, id: string): Promise<void>
+  delete(userId: string, id: string): Promise<void>
+  reorder(userId: string, ids: string[]): Promise<void>
+  getUpcoming(userId: string, limit?: number): Promise<Countdown[]>
+  getPinned(userId: string): Promise<Countdown[]>
+}
+
+// ---------- Focus Session Repository ----------
+
+export interface IFocusSessionRepository {
+  getActive(userId: string): Promise<FocusSession | null>
+  getById(userId: string, id: string): Promise<FocusSession | null>
+  create(userId: string, data: Omit<FocusSession, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<FocusSession>
+  update(userId: string, id: string, data: Partial<FocusSession>): Promise<FocusSession>
+  delete(userId: string, id: string): Promise<void>
+  getByDateRange(userId: string, range: DateRange): Promise<FocusSession[]>
+  getByTask(userId: string, taskId: string): Promise<FocusSession[]>
+  getStats(userId: string, range: DateRange): Promise<{ total_seconds: number; total_sessions: number; completed_sessions: number }>
+}
+
 // ---------- Combined Repository Factory ----------
 
 export interface RepositoryFactory {
@@ -139,4 +169,6 @@ export interface RepositoryFactory {
   taskTemplates: ITaskTemplateRepository
   users: IUserRepository
   recurrenceExceptions: IRecurrenceExceptionRepository
+  countdowns: ICountdownRepository
+  focusSessions: IFocusSessionRepository
 }

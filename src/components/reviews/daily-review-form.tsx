@@ -128,6 +128,7 @@ export function DailyReviewForm({ date = todayStr(), onSaved }: DailyReviewFormP
               max={100}
               step={10}
               unit="%"
+              includeZero
             />
             <ScoreSelect
               label="心情"
@@ -186,6 +187,7 @@ function ScoreSelect({
   max,
   step = 1,
   unit = '',
+  includeZero = false,
 }: {
   label: string
   icon?: React.ReactNode
@@ -194,9 +196,11 @@ function ScoreSelect({
   max: number
   step?: number
   unit?: string
+  includeZero?: boolean
 }) {
-  const options = Array.from({ length: max / step }, (_, i) => (i + 1) * step)
-  const stringValue = value?.toString() ?? ''
+  const baseOptions = Array.from({ length: max / step }, (_, i) => (i + 1) * step)
+  const options = includeZero ? [0, ...baseOptions] : baseOptions
+  const stringValue = value != null ? value.toString() : ''
 
   return (
     <div className="space-y-1.5">

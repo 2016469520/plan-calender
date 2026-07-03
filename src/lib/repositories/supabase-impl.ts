@@ -15,6 +15,8 @@ import type {
   IUserRepository,
   ITaskSubitemRepository,
   IRecurrenceExceptionRepository,
+  ICountdownRepository,
+  IFocusSessionRepository,
   RepositoryFactory,
 } from '@/lib/repositories/interfaces'
 import type {
@@ -28,6 +30,8 @@ import type {
   UserProfile,
   UserPreferences,
   RecurrenceException,
+  Countdown,
+  FocusSession,
   DateRange,
 } from '@/types'
 
@@ -1201,6 +1205,219 @@ class SupabaseRecurrenceExceptionRepository implements IRecurrenceExceptionRepos
   }
 }
 
+// ---------- Countdown Repository ----------
+
+class SupabaseCountdownRepository implements ICountdownRepository {
+  async list(userId: string, includeArchived = false): Promise<Countdown[]> {
+    const supabase = getSupabase()
+    let query = supabase.from('countdowns').select('*').eq('user_id', userId)
+    if (!includeArchived) query = query.is('archived_at', null)
+    const { data, error } = await query.order('sort_order', { ascending: true })
+    if (error) handleError('list countdowns', error)
+    return (data || []) as Countdown[]
+  }
+
+  async getById(userId: string, id: string): Promise<Countdown | null> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('countdowns')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single()
+    if (error) return null
+    return data as Countdown
+  }
+
+  async create(
+    userId: string,
+    data: Omit<Countdown, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'days_remaining' | 'display_text'>
+  ): Promise<Countdown> {
+    const supabase = getSupabase()
+    const { data: record, error } = await supabase
+      .from('countdowns')
+      .insert({ ...data, user_id: userId })
+      .select()
+      .single()
+    if (error) handleError('create countdown', error)
+    return record as Countdown
+  }
+
+  async update(userId: string, id: string, data: Partial<Countdown>): Promise<Countdown> {
+    const supabase = getSupabase()
+    const { data: record, error } = await supabase
+      .from('countdowns')
+      .update(data)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single()
+    if (error) handleError('update countdown', error)
+    return record as Countdown
+  }
+
+  async archive(userId: string, id: string): Promise<void> {
+    await this.update(userId, id, { archived_at: new Date().toISOString() })
+  }
+
+  async unarchive(userId: string, id: string): Promise<void> {
+    const { data: record } = await getSupabase()
+      .from('countdowns')
+      .update({ archived_at: null })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single()
+    // Silently handle - unarchive is not critical
+    void record
+  }
+
+  async delete(userId: string, id: string): Promise<void> {
+    const supabase = getSupabase()
+    const { error } = await supabase
+      .from('countdowns')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId)
+    if (error) handleError('delete countdown', error)
+  }
+
+  async reorder(userId: string, ids: string[]): Promise<void> {
+    const supabase = getSupabase()
+    for (let i = 0; i < ids.length; i++) {
+      await supabase.from('countdowns').update({ sort_order: i }).eq('id', ids[i]).eq('user_id', userId)
+    }
+  }
+
+  async getUpcoming(userId: string, limit = 4): Promise<Countdown[]> {
+    const all = await this.list(userId)
+    return all
+      .sort((a, b) => {
+        if (a.is_pinned && !b.is_pinned) return -1
+        if (!a.is_pinned && b.is_pinned) return 1
+        return a.sort_order - b.sort_order
+      })
+      .slice(0, limit)
+  }
+
+  async getPinned(userId: string): Promise<Countdown[]> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('countdowns')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_pinned', true)
+      .is('archived_at', null)
+      .order('sort_order')
+    if (error) handleError('getPinned countdowns', error)
+    return (data || []) as Countdown[]
+  }
+}
+
+// ---------- Focus Session Repository ----------
+
+class SupabaseFocusSessionRepository implements IFocusSessionRepository {
+  async getActive(userId: string): Promise<FocusSession | null> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('focus_sessions')
+      .select('*')
+      .eq('user_id', userId)
+      .in('status', ['running', 'paused'])
+      .order('started_at', { ascending: false })
+      .limit(1)
+    if (error) handleError('getActive focus', error)
+    return (data?.[0] as FocusSession) || null
+  }
+
+  async getById(userId: string, id: string): Promise<FocusSession | null> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('focus_sessions')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single()
+    if (error) return null
+    return data as FocusSession
+  }
+
+  async create(
+    userId: string,
+    data: Omit<FocusSession, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+  ): Promise<FocusSession> {
+    const supabase = getSupabase()
+    const { data: record, error } = await supabase
+      .from('focus_sessions')
+      .insert({ ...data, user_id: userId })
+      .select()
+      .single()
+    if (error) handleError('create focus session', error)
+    return record as FocusSession
+  }
+
+  async update(userId: string, id: string, data: Partial<FocusSession>): Promise<FocusSession> {
+    const supabase = getSupabase()
+    const { data: record, error } = await supabase
+      .from('focus_sessions')
+      .update(data)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single()
+    if (error) handleError('update focus session', error)
+    return record as FocusSession
+  }
+
+  async delete(userId: string, id: string): Promise<void> {
+    const supabase = getSupabase()
+    const { error } = await supabase
+      .from('focus_sessions')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId)
+    if (error) handleError('delete focus session', error)
+  }
+
+  async getByDateRange(userId: string, range: DateRange): Promise<FocusSession[]> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('focus_sessions')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('started_at', range.start)
+      .lte('started_at', range.end + 'T23:59:59')
+      .order('started_at', { ascending: false })
+    if (error) handleError('getByDateRange focus', error)
+    return (data || []) as FocusSession[]
+  }
+
+  async getByTask(userId: string, taskId: string): Promise<FocusSession[]> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('focus_sessions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('task_id', taskId)
+      .order('started_at', { ascending: false })
+    if (error) handleError('getByTask focus', error)
+    return (data || []) as FocusSession[]
+  }
+
+  async getStats(
+    userId: string,
+    range: DateRange
+  ): Promise<{ total_seconds: number; total_sessions: number; completed_sessions: number }> {
+    const sessions = await this.getByDateRange(userId, range)
+    const completed = sessions.filter((s) => s.status === 'completed')
+    return {
+      total_seconds: completed.reduce((sum, s) => sum + s.actual_seconds, 0),
+      total_sessions: sessions.length,
+      completed_sessions: completed.length,
+    }
+  }
+}
+
 // ---------- Factory ----------
 
 export function createSupabaseRepositoryFactory(): RepositoryFactory {
@@ -1214,5 +1431,7 @@ export function createSupabaseRepositoryFactory(): RepositoryFactory {
     taskTemplates: new SupabaseTaskTemplateRepository(),
     users: new SupabaseUserRepository(),
     recurrenceExceptions: new SupabaseRecurrenceExceptionRepository(),
+    countdowns: new SupabaseCountdownRepository(),
+    focusSessions: new SupabaseFocusSessionRepository(),
   }
 }

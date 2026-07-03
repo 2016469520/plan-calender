@@ -79,7 +79,7 @@ export const KEYBOARD_SHORTCUTS = {
 // ---------- IndexedDB ----------
 
 export const DB_NAME = 'my-plan-calendar-db'
-export const DB_VERSION = 2
+export const DB_VERSION = 3
 
 // ---------- Local storage keys ----------
 

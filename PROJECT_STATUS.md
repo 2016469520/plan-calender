@@ -1,16 +1,52 @@
 # PROJECT_STATUS.md — 项目状态
 
-## 当前阶段：任务中心改造 (2026-07-03)
+## 当前阶段：专注、倒数日和习惯增强 (2026-07-03)
 
 ## 验证状态：2026-07-03（最新）
 
 | 检查项 | 结果 |
 |--------|------|
 | npm install | ✅ 通过 |
-| ESLint | ✅ 0 errors, 66 warnings |
+| ESLint | ✅ 0 errors, 76 warnings |
 | TypeScript (tsc --noEmit) | ✅ 通过 |
-| Vitest (153 tests) | ✅ 全部通过 |
-| Next.js build | ✅ 通过 (10 routes) |
+| Vitest (155 tests) | ✅ 全部通过 |
+| Next.js build | ✅ 通过 (12 routes) |
+
+## 🆕 本次更新 (2026-07-03)
+
+### Bug 修复
+
+1. **完成度可设为 0**：`ScoreSelect` 组件添加 `includeZero` 属性，完成度下拉包含 0%。修复了 `value?.toString() ?? ''` 改为 `value != null ? value.toString() : ''` 使 0 不在渲染时被当作空值。
+2. **标签选择器显示修复**：全部 SelectItem 的 children 正确渲染为标签名称 + 色点，不显示源码或对象。
+3. **Falsy-value 审计**：修复 `value.count || ''` 改为 `value.count != null ? value.count : ''`。
+
+### 新功能：倒数日
+
+- **数据表**：`countdowns`（migration 005）
+- **Repository**：ICountdownRepository（Supabase + IndexedDB）
+- **首页组件**：`HomeCountdowns` — 紧凑卡片展示，支持行内创建、置顶、归档
+- **完整页面**：`/countdowns` — 列表/过滤/搜索/编辑/归档
+- **日期计算**：支持每年重复、过期天数、今天特殊显示
+
+### 新功能：专注
+
+- **数据表**：`focus_sessions`（migration 006）
+- **Repository**：IFocusSessionRepository（Supabase + IndexedDB）
+- **状态机 Hook**：`useFocus` — 基于时间戳计时，支持刷新恢复
+- **首页组件**：`HomeFocusTimer` — 预设时长、自定义时长、关联日程
+- **日程联动**：专注完成后累计到任务 `actual_minutes`
+
+### 习惯增强
+
+- **推荐习惯**：运动、喝水、睡眠、阅读、早起（含模板 ID 幂等创建）
+- **首页摘要**：`HomeHabitsSummary` — 布尔勾选 + 数值加减
+- **统计准备**：首页显示今日完成率、每个习惯进度
+
+### 首页整合
+
+- **桌面端**：左侧日程主体 + 右侧辅助栏（专注/倒数日/习惯）
+- **手机端**：日程下方嵌入三个组件
+- **保持日程为主**：辅助区域可折叠，不抢占主体
 
 ## 🆕 任务中心改造 (2026-07-03)
 

@@ -13,6 +13,8 @@ import type {
   IUserRepository,
   ITaskSubitemRepository,
   IRecurrenceExceptionRepository,
+  ICountdownRepository,
+  IFocusSessionRepository,
   RepositoryFactory,
 } from '@/lib/repositories/interfaces'
 import type {
@@ -26,6 +28,8 @@ import type {
   UserProfile,
   UserPreferences,
   RecurrenceException,
+  Countdown,
+  FocusSession,
   DateRange,
 } from '@/types'
 import { nowISO } from '@/lib/utils/date'
@@ -568,6 +572,173 @@ class IndexedDBRecurrenceExceptionRepository implements IRecurrenceExceptionRepo
   }
 }
 
+// ---------- Countdown Repository ----------
+
+class IndexedDBCountdownRepository implements ICountdownRepository {
+  async list(userId: string, includeArchived = false): Promise<Countdown[]> {
+    const db = await getDB()
+    const all = await db.getAllFromIndex('countdowns', 'user_id', userId)
+    if (includeArchived) return all
+    return all.filter((c) => !c.archived_at)
+  }
+
+  async getById(userId: string, id: string): Promise<Countdown | null> {
+    const db = await getDB()
+    const c = await db.get('countdowns', id)
+    if (!c || c.user_id !== userId) return null
+    return c
+  }
+
+  async create(
+    userId: string,
+    data: Omit<Countdown, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'days_remaining' | 'display_text'>
+  ): Promise<Countdown> {
+    const db = await getDB()
+    const record = makeRecord<Countdown>(userId, { ...data, archived_at: undefined })
+    await db.add('countdowns', record)
+    return record
+  }
+
+  async update(userId: string, id: string, data: Partial<Countdown>): Promise<Countdown> {
+    const db = await getDB()
+    const existing = await db.get('countdowns', id)
+    if (!existing || existing.user_id !== userId) throw new Error('Countdown not found')
+    const updated = { ...existing, ...data, updated_at: nowISO() }
+    await db.put('countdowns', updated)
+    return updated
+  }
+
+  async archive(userId: string, id: string): Promise<void> {
+    await this.update(userId, id, { archived_at: nowISO() })
+  }
+
+  async unarchive(userId: string, id: string): Promise<void> {
+    await this.update(userId, id, { archived_at: undefined })
+  }
+
+  async delete(userId: string, id: string): Promise<void> {
+    const db = await getDB()
+    const existing = await db.get('countdowns', id)
+    if (existing && existing.user_id === userId) {
+      await db.delete('countdowns', id)
+    }
+  }
+
+  async reorder(userId: string, ids: string[]): Promise<void> {
+    const db = await getDB()
+    for (let i = 0; i < ids.length; i++) {
+      const c = await db.get('countdowns', ids[i])
+      if (c && c.user_id === userId) {
+        c.sort_order = i
+        c.updated_at = nowISO()
+        await db.put('countdowns', c)
+      }
+    }
+  }
+
+  async getUpcoming(userId: string, limit = 4): Promise<Countdown[]> {
+    const all = await this.list(userId)
+    const now = new Date().toISOString().slice(0, 10)
+    return all
+      .filter((c) => !c.archived_at)
+      .sort((a, b) => {
+        const aDays = Math.abs(dateDiffInDaysLocal(a.target_date, now))
+        const bDays = Math.abs(dateDiffInDaysLocal(b.target_date, now))
+        if (a.is_pinned && !b.is_pinned) return -1
+        if (!a.is_pinned && b.is_pinned) return 1
+        return aDays - bDays
+      })
+      .slice(0, limit)
+  }
+
+  async getPinned(userId: string): Promise<Countdown[]> {
+    const all = await this.list(userId)
+    return all.filter((c) => c.is_pinned && !c.archived_at)
+  }
+}
+
+// ---------- Focus Session Repository ----------
+
+class IndexedDBFocusSessionRepository implements IFocusSessionRepository {
+  async getActive(userId: string): Promise<FocusSession | null> {
+    const db = await getDB()
+    const all = await db.getAllFromIndex('focus_sessions', 'user_status', [userId, 'running'])
+    if (all.length > 0) return all[0]
+    const paused = await db.getAllFromIndex('focus_sessions', 'user_status', [userId, 'paused'])
+    return paused.length > 0 ? paused[0] : null
+  }
+
+  async getById(userId: string, id: string): Promise<FocusSession | null> {
+    const db = await getDB()
+    const s = await db.get('focus_sessions', id)
+    if (!s || s.user_id !== userId) return null
+    return s
+  }
+
+  async create(
+    userId: string,
+    data: Omit<FocusSession, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+  ): Promise<FocusSession> {
+    const db = await getDB()
+    const record = makeRecord<FocusSession>(userId, data)
+    await db.add('focus_sessions', record)
+    return record
+  }
+
+  async update(userId: string, id: string, data: Partial<FocusSession>): Promise<FocusSession> {
+    const db = await getDB()
+    const existing = await db.get('focus_sessions', id)
+    if (!existing || existing.user_id !== userId) throw new Error('Session not found')
+    const updated = { ...existing, ...data, updated_at: nowISO() }
+    await db.put('focus_sessions', updated)
+    return updated
+  }
+
+  async delete(userId: string, id: string): Promise<void> {
+    const db = await getDB()
+    const existing = await db.get('focus_sessions', id)
+    if (existing && existing.user_id === userId) {
+      await db.delete('focus_sessions', id)
+    }
+  }
+
+  async getByDateRange(userId: string, range: DateRange): Promise<FocusSession[]> {
+    const db = await getDB()
+    const all = await db.getAllFromIndex('focus_sessions', 'user_id', userId)
+    return all.filter((s) => {
+      const started = s.started_at?.slice(0, 10)
+      return started && started >= range.start && started <= range.end
+    })
+  }
+
+  async getByTask(userId: string, taskId: string): Promise<FocusSession[]> {
+    const db = await getDB()
+    const all = await db.getAllFromIndex('focus_sessions', 'task_id', taskId)
+    return all.filter((s) => s.user_id === userId)
+  }
+
+  async getStats(
+    userId: string,
+    range: DateRange
+  ): Promise<{ total_seconds: number; total_sessions: number; completed_sessions: number }> {
+    const sessions = await this.getByDateRange(userId, range)
+    const completed = sessions.filter((s) => s.status === 'completed')
+    return {
+      total_seconds: completed.reduce((sum, s) => sum + s.actual_seconds, 0),
+      total_sessions: sessions.length,
+      completed_sessions: completed.length,
+    }
+  }
+}
+
+// ---------- Helpers ----------
+
+function dateDiffInDaysLocal(a: string, b: string): number {
+  const d1 = new Date(a + 'T00:00:00')
+  const d2 = new Date(b + 'T00:00:00')
+  return Math.round((d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24))
+}
+
 // ---------- Factory ----------
 
 export function createIndexedDBRepositoryFactory(): RepositoryFactory {
@@ -581,5 +752,7 @@ export function createIndexedDBRepositoryFactory(): RepositoryFactory {
     taskTemplates: new IndexedDBTaskTemplateRepository(),
     users: new IndexedDBUserRepository(),
     recurrenceExceptions: new IndexedDBRecurrenceExceptionRepository(),
+    countdowns: new IndexedDBCountdownRepository(),
+    focusSessions: new IndexedDBFocusSessionRepository(),
   }
 }

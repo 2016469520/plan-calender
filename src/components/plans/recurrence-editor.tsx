@@ -304,7 +304,7 @@ export function RecurrenceEditor({ value, onChange }: RecurrenceEditorProps) {
               type="number"
               min={1}
               max={999}
-              value={value.count || ''}
+              value={value.count != null ? value.count : ''}
               onChange={(e) => handleEndCount(parseInt(e.target.value) || 0)}
               className="h-7 w-20 text-sm text-center"
               placeholder="次数"
