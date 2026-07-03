@@ -1,18 +1,71 @@
 # PROJECT_STATUS.md — 项目状态
 
-## 当前阶段：专注、倒数日和习惯增强 (2026-07-03)
+## 当前阶段：日历、专注、设置工作区优化 (2026-07-04)
 
-## 验证状态：2026-07-03（最新）
+## 验证状态：2026-07-04（最新）
 
 | 检查项 | 结果 |
 |--------|------|
 | npm install | ✅ 通过 |
-| ESLint | ✅ 0 errors, 76 warnings |
+| ESLint | ✅ 0 errors, 80 warnings |
 | TypeScript (tsc --noEmit) | ✅ 通过 |
 | Vitest (155 tests) | ✅ 全部通过 |
-| Next.js build | ✅ 通过 (12 routes) |
+| Next.js build | ✅ 通过 (14 routes) |
 
-## 🆕 本次更新 (2026-07-03)
+## 🆕 本次更新 (2026-07-04)
+
+### 日历高密度布局优化
+- 周视图每单元格限制显示 3 条任务，超出显示"还有 N 项"
+- 添加 TaskListSheet 组件用于查看溢出任务
+- 统一上午/下午/晚上行高，严格对齐 7 个日期列
+- 小屏横向滚动，最小列宽 80px
+- 时段标签 sticky 定位
+
+### 日历任务详情交互
+- 周视图/月视图点击任务卡片打开 TaskDetailPanel
+- 完成按钮、拖拽手柄与详情打开正确分离
+- 桌面端右侧面板，手机端全屏详情
+
+### 全局中文化
+- 统一显示映射：CALENDAR_VIEW_LABELS, WEEK_START_LABELS, DIFFICULTY_LABELS, URGENCY_LABELS, WEEKDAY_NAMES, FOCUS_MODE_LABELS
+- 修复设置页、快速新增、专注计时器的中文显示
+- 周视图日期头使用中文（周日-周六）
+
+### 难度与自动紧迫度
+- 新增 difficulty 字段（easy/medium/hard/very_hard），替换 priority 用户选择
+- 新增 due_at 字段用于截止时间
+- 紧迫度基于 due_at 自动计算：已逾期/紧急/较紧急/近期/时间充足
+- Supabase migration 007：添加 difficulty + due_at 列及索引
+- 旧 priority 字段保留为 legacy 兼容
+
+### 专注升级为一级功能
+- 左侧导航新增"专注"入口
+- 新建 /focus 页面：计时器 + 今日/本周/月度统计 + 7天趋势图 + 历史记录
+- 手机端导航新增专注入口
+
+### 每日总结入口恢复
+- 左侧导航新增"每日总结"
+- /reviews/today 直接打开今日评价表单
+- 页面提供"查看历史记录"入口
+
+### 设置页重构
+- 桌面端：二级导航侧栏 + 内容区布局，max-w-4xl
+- 分区管理：外观、日历、专注、提醒、标签、数据、账户
+- 宽屏卡片使用两列网格
+- 手机端：横向滚动分区 tabs
+
+### 新增文件
+- src/app/focus/page.tsx — 专注完整页面
+- src/app/reviews/today/page.tsx — 每日总结直达页
+- src/components/calendar/task-list-sheet.tsx — 溢出任务列表
+- src/lib/utils/urgency.ts — 紧迫度计算纯函数
+- supabase/migrations/007_difficulty_due_at.sql
+
+### 新增 Migration
+- `007_difficulty_due_at.sql`：tasks 表添加 difficulty、due_at 字段
+- **尚未应用到生产 Supabase**
+
+## 历史更新 (2026-07-03)
 
 ### Bug 修复
 
