@@ -14,9 +14,10 @@ import {
 import { useRepos } from '@/providers/repo-provider'
 import { useAuth } from '@/providers/auth-provider'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
-import { PERIOD_LABELS, PRIORITY_LABELS, STATUS_LABELS } from '@/lib/constants'
+import { PERIOD_LABELS, DIFFICULTY_LABELS, STATUS_LABELS, URGENCY_LABELS } from '@/lib/constants'
 import { todayStr, formatDisplayDate } from '@/lib/utils/date'
-import type { Task, Period, Priority, TaskStatus } from '@/types'
+import { calcUrgency } from '@/lib/utils/urgency'
+import type { Task, Period, Difficulty, TaskStatus } from '@/types'
 import {
   X,
   Trash2,
@@ -54,7 +55,8 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
   const [taskDate, setTaskDate] = useState('')
   const [period, setPeriod] = useState<Period>('morning')
   const [tagId, setTagId] = useState('')
-  const [priority, setPriority] = useState<Priority>('normal')
+  const [difficulty, setDifficulty] = useState<Difficulty>('medium')
+  const [dueAt, setDueAt] = useState('')
   const [status, setStatus] = useState<TaskStatus>('todo')
   const [estimatedMinutes, setEstimatedMinutes] = useState('')
 
@@ -67,7 +69,8 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
         setTaskDate(task.task_date)
         setPeriod(task.period)
         setTagId(task.tag_id || 'none')
-        setPriority(task.priority)
+        setDifficulty(task.difficulty || 'medium')
+        setDueAt(task.due_at ? task.due_at.slice(0, 16) : '')
         setStatus(task.status)
         setEstimatedMinutes(task.estimated_minutes?.toString() || '')
       })
@@ -167,25 +170,47 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
           </Select>
         </div>
 
-        {/* Priority */}
+        {/* Difficulty */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground w-12">优先级</span>
+          <span className="text-xs text-muted-foreground w-12">难度</span>
           <Select
-            value={priority}
+            value={difficulty}
             onValueChange={(v) => {
-              setPriority(v as Priority)
-              saveField('priority', v)
+              setDifficulty(v as Difficulty)
+              saveField('difficulty', v)
             }}
           >
             <SelectTrigger className="h-8 text-xs flex-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(PRIORITY_LABELS).map(([k, v]) => (
+              {(Object.entries(DIFFICULTY_LABELS) as [Difficulty, string][]).map(([k, v]) => (
                 <SelectItem key={k} value={k}>{v}</SelectItem>
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Due date */}
+        <div className="flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+          <div className="flex-1 space-y-1">
+            <Input
+              type="datetime-local"
+              value={dueAt}
+              onChange={(e) => {
+                setDueAt(e.target.value)
+                const val = e.target.value ? new Date(e.target.value).toISOString() : null
+                saveField('due_at', val)
+              }}
+              className="h-8 text-xs"
+            />
+            {task.due_at && (
+              <span className="text-[10px] text-muted-foreground">
+                紧迫度：{URGENCY_LABELS[calcUrgency(task)]}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Date */}

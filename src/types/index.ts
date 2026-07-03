@@ -6,6 +6,8 @@
 
 export type Period = 'morning' | 'afternoon' | 'evening'
 export type Priority = 'low' | 'normal' | 'high' | 'urgent'
+export type Difficulty = 'easy' | 'medium' | 'hard' | 'very_hard'
+export type UrgencyLevel = 'overdue' | 'urgent' | 'soon' | 'upcoming' | 'plenty' | 'none'
 export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'cancelled'
 export type CalendarView = 'month' | 'week' | 'day'
 export type MeasurementType = 'boolean' | 'count' | 'duration' | 'numeric'
@@ -36,7 +38,9 @@ export interface Task {
   start_time?: string // HH:mm
   end_time?: string // HH:mm
   tag_id?: string
-  priority: Priority
+  priority: Priority // legacy — kept for backward compat
+  difficulty?: Difficulty // new — defaults to 'medium' in DB
+  due_at?: string // ISO datetime — deadline for auto urgency calculation
   status: TaskStatus
   estimated_minutes?: number
   actual_minutes?: number
@@ -267,7 +271,9 @@ export interface TaskFormData {
   start_time?: string
   end_time?: string
   tag_id?: string
-  priority: Priority
+  priority?: Priority // legacy
+  difficulty?: Difficulty
+  due_at?: string
   status: TaskStatus
   estimated_minutes?: number
   reminder_at?: string

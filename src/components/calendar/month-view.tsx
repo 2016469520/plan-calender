@@ -13,6 +13,7 @@ interface MonthViewProps {
   currentDate: string
   onDateClick: (date: string) => void
   onViewChange: (view: CalendarView) => void
+  onTaskClick?: (task: Task) => void
 }
 
 function getCalendarDays(year: number, month: number, weekStartsOn: 0 | 1 | 6 = 0) {
@@ -38,7 +39,7 @@ function getCalendarDays(year: number, month: number, weekStartsOn: 0 | 1 | 6 = 
   return days
 }
 
-export function MonthView({ currentDate, onDateClick, onViewChange }: MonthViewProps) {
+export function MonthView({ currentDate, onDateClick, onViewChange, onTaskClick }: MonthViewProps) {
   const { user } = useAuth()
   const { tasks } = useRepos()
 
@@ -130,8 +131,22 @@ export function MonthView({ currentDate, onDateClick, onViewChange }: MonthViewP
                 {dayTasks.slice(0, 3).map((task) => (
                   <div
                     key={task.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onTaskClick?.(task)
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.stopPropagation()
+                        e.preventDefault()
+                        onTaskClick?.(task)
+                      }
+                    }}
                     className={cn(
-                      'text-[10px] leading-tight truncate px-1 py-0.5 rounded',
+                      'text-[10px] leading-tight truncate px-1 py-0.5 rounded cursor-pointer',
+                      'hover:ring-1 hover:ring-primary/30 transition-all',
                       task.status === 'done' ? 'line-through text-muted-foreground/50' : '',
                       task.priority === 'urgent' && !(task.status === 'done')
                         ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
@@ -140,6 +155,7 @@ export function MonthView({ currentDate, onDateClick, onViewChange }: MonthViewP
                     style={{
                       borderLeft: task.tag?.color ? `3px solid ${task.tag.color}` : undefined,
                     }}
+                    title={task.title}
                   >
                     {task.title}
                   </div>

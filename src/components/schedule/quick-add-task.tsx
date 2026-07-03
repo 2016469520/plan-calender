@@ -14,8 +14,8 @@ import { useRepos } from '@/providers/repo-provider'
 import { useAuth } from '@/providers/auth-provider'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { todayStr } from '@/lib/utils/date'
-import { PERIOD_LABELS, PRIORITY_LABELS } from '@/lib/constants'
-import type { Period, Priority, Task } from '@/types'
+import { PERIOD_LABELS, DIFFICULTY_LABELS } from '@/lib/constants'
+import type { Period, Difficulty, Task } from '@/types'
 import { Plus, X, Loader2, Tag } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -37,7 +37,7 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
   const [date, setDate] = useState(defaultDate || todayStr())
   const [period, setPeriod] = useState<Period>('morning')
   const [tagId, setTagId] = useState<string>(defaultTagId || 'none')
-  const [priority, setPriority] = useState<Priority>('normal')
+  const [difficulty, setDifficulty] = useState<Difficulty>('medium')
   const [saving, setSaving] = useState(false)
 
   const { data: tagList = [] } = useQuery({
@@ -51,7 +51,7 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
     setDate(defaultDate || todayStr())
     setPeriod('morning')
     setTagId(defaultTagId || 'none')
-    setPriority('normal')
+    setDifficulty('medium')
     setExpanded(false)
   }, [defaultDate, defaultTagId])
 
@@ -64,7 +64,8 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
         task_date: date,
         period,
         tag_id: tagId === 'none' ? undefined : tagId,
-        priority,
+        priority: 'normal' as const, // legacy
+        difficulty,
         status: 'todo',
         order_index: 0,
       } as Omit<Task, 'id' | 'user_id' | 'created_at' | 'updated_at'>)
@@ -77,7 +78,7 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
     } finally {
       setSaving(false)
     }
-  }, [title, date, period, tagId, priority, user, taskRepo, queryClient, reset])
+  }, [title, date, period, tagId, difficulty, user, taskRepo, queryClient, reset])
 
   // Keyboard handling
   const handleKeyDown = useCallback(
@@ -207,12 +208,12 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
             </div>
 
             <div>
-              <Select value={priority} onValueChange={(v) => setPriority(v as Priority)}>
+              <Select value={difficulty} onValueChange={(v) => v && setDifficulty(v as Difficulty)}>
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(PRIORITY_LABELS).map(([k, v]) => (
+                  {(Object.entries(DIFFICULTY_LABELS) as [Difficulty, string][]).map(([k, v]) => (
                     <SelectItem key={k} value={k}>{v}</SelectItem>
                   ))}
                 </SelectContent>

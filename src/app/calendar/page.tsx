@@ -9,8 +9,9 @@ import { DayView } from '@/components/calendar/day-view'
 import { CategoryView } from '@/components/calendar/category-view'
 import { TaskEditDialog } from '@/components/plans/task-edit-dialog'
 import { TaskDetailPanel } from '@/components/schedule/task-detail-panel'
+import { TaskListSheet } from '@/components/calendar/task-list-sheet'
 import { useMediaQuery } from '@/hooks/use-media-query'
-import type { CalendarView, Task } from '@/types'
+import type { CalendarView, Task, Period } from '@/types'
 import { todayStr } from '@/lib/utils/date'
 import { STORAGE_KEYS } from '@/lib/constants'
 
@@ -46,6 +47,13 @@ export default function CalendarPage() {
   const [newTaskTagId, setNewTaskTagId] = useState<string | undefined>()
   // New detail panel state
   const [detailTask, setDetailTask] = useState<Task | null>(null)
+  // Overflow task list sheet state
+  const [overflowSheet, setOverflowSheet] = useState<{
+    open: boolean
+    date: string
+    period: Period
+    tasks: Task[]
+  }>({ open: false, date: '', period: 'morning' as Period, tasks: [] })
 
   const handleViewChange = useCallback((view: CalendarView) => {
     setCurrentView(view)
@@ -81,6 +89,10 @@ export default function CalendarPage() {
     }
   }, [isDesktop])
 
+  const handleOverflowClick = useCallback((date: string, period: Period, tasks: Task[]) => {
+    setOverflowSheet({ open: true, date, period, tasks })
+  }, [])
+
   if (!user) return null
 
   return (
@@ -100,10 +112,14 @@ export default function CalendarPage() {
           {presentationMode === 'time' && (
             <>
               {currentView === 'month' && (
-                <MonthView currentDate={currentDate} onDateClick={handleDateChange} onViewChange={handleViewChange} />
+                <MonthView currentDate={currentDate} onDateClick={handleDateChange} onViewChange={handleViewChange} onTaskClick={handleEditTask} />
               )}
               {currentView === 'week' && (
-                <WeekView currentDate={currentDate} />
+                <WeekView
+                  currentDate={currentDate}
+                  onTaskClick={handleEditTask}
+                  onOverflowClick={handleOverflowClick}
+                />
               )}
               {currentView === 'day' && (
                 <DayView currentDate={currentDate} onDateChange={handleDateChange} />
@@ -140,6 +156,16 @@ export default function CalendarPage() {
           onClose={() => setDetailTask(null)}
         />
       )}
+
+      {/* Overflow task list sheet */}
+      <TaskListSheet
+        open={overflowSheet.open}
+        onOpenChange={(open) => setOverflowSheet((prev) => ({ ...prev, open }))}
+        date={overflowSheet.date}
+        period={overflowSheet.period}
+        tasks={overflowSheet.tasks}
+        onTaskClick={handleEditTask}
+      />
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import type { Tag, Period } from '@/types'
+import type { Tag, Period, CalendarView, WeekStartDay } from '@/types'
 
 // ---------- App branding ----------
 
@@ -19,7 +19,7 @@ export const DEFAULT_TAGS: Omit<Tag, 'user_id' | 'created_at' | 'updated_at'>[] 
   { id: 'tag-other', name: '其他', color: '#94a3b8', icon: 'Ellipsis', is_default: true, is_visible: true, sort_order: 7 },
 ]
 
-// ---------- Period labels ----------
+// ---------- Unified display labels (Chinese localization) ----------
 
 export const PERIOD_LABELS: Record<Period, string> = {
   morning: '上午',
@@ -29,7 +29,21 @@ export const PERIOD_LABELS: Record<Period, string> = {
 
 export const PERIOD_ORDER: Period[] = ['morning', 'afternoon', 'evening']
 
-// ---------- Priority ----------
+export const CALENDAR_VIEW_LABELS: Record<CalendarView, string> = {
+  month: '月视图',
+  week: '周视图',
+  day: '日视图',
+}
+
+export const WEEK_START_LABELS: Record<WeekStartDay, string> = {
+  0: '周日',
+  1: '周一',
+  6: '周六',
+}
+
+export const WEEKDAY_NAMES = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'] as const
+
+// ---------- Priority (legacy — kept for backward compat) ----------
 
 export const PRIORITY_LABELS = {
   low: '低',
@@ -45,6 +59,42 @@ export const PRIORITY_COLORS = {
   urgent: 'text-red-600 dark:text-red-400',
 } as const
 
+// ---------- Difficulty (new — replaces priority for user choice) ----------
+
+export const DIFFICULTY_LABELS = {
+  easy: '简单',
+  medium: '一般',
+  hard: '困难',
+  very_hard: '极难',
+} as const
+
+export const DIFFICULTY_COLORS = {
+  easy: 'text-emerald-600 dark:text-emerald-400',
+  medium: 'text-blue-600 dark:text-blue-400',
+  hard: 'text-orange-600 dark:text-orange-400',
+  very_hard: 'text-red-600 dark:text-red-400',
+} as const
+
+// ---------- Urgency (auto-calculated from due_at) ----------
+
+export const URGENCY_LABELS = {
+  overdue: '已逾期',
+  urgent: '紧急',
+  soon: '较紧急',
+  upcoming: '近期',
+  plenty: '时间充足',
+  none: '未设截止',
+} as const
+
+export const URGENCY_COLORS = {
+  overdue: 'text-red-600 dark:text-red-400',
+  urgent: 'text-red-500 dark:text-red-400',
+  soon: 'text-orange-500 dark:text-orange-400',
+  upcoming: 'text-amber-500 dark:text-amber-400',
+  plenty: 'text-slate-400 dark:text-slate-500',
+  none: 'text-muted-foreground',
+} as const
+
 // ---------- Status ----------
 
 export const STATUS_LABELS = {
@@ -52,6 +102,22 @@ export const STATUS_LABELS = {
   in_progress: '进行中',
   done: '已完成',
   cancelled: '已取消',
+} as const
+
+// ---------- Select placeholder labels ----------
+
+export const SELECT_LABELS = {
+  tagNone: '未分类',
+  focusNone: '不关联日程',
+  noOption: '请选择',
+} as const
+
+// ---------- Focus mode labels ----------
+
+export const FOCUS_MODE_LABELS = {
+  focus: '专注',
+  short_break: '短休息',
+  long_break: '长休息',
 } as const
 
 // ---------- Navigation ----------
