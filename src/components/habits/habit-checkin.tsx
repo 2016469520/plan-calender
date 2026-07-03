@@ -129,17 +129,17 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
     [user, habitLogs, today, getLogForHabit]
   )
 
-  // ---- Debounced auto-save ----
+  // ---- Debounced auto-save (no state change during rapid scrolling) ----
   const debouncedSave = useCallback(
     (habitId: string, value: number, targetValue: number) => {
       // Clear existing timer
       if (debounceTimers.current[habitId]) {
         clearTimeout(debounceTimers.current[habitId])
       }
-      // Set saving state
-      setSaveStates((prev) => ({ ...prev, [habitId]: 'saving' }))
-      // Debounce
+      // Only show saving state when the debounced save actually fires
+      // (not during rapid wheel scrolling — avoids per-notch re-renders)
       debounceTimers.current[habitId] = setTimeout(async () => {
+        setSaveStates((prev) => ({ ...prev, [habitId]: 'saving' }))
         try {
           await saveValue(habitId, value, targetValue)
           setSaveStates((prev) => ({ ...prev, [habitId]: 'saved' }))

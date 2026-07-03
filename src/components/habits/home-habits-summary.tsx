@@ -138,12 +138,14 @@ export function HomeHabitsSummary() {
     [user, saveValue, getLog]
   )
 
-  // ---- Debounced save for wheel ----
+  // ---- Debounced save for wheel (no state change during rapid scrolling) ----
   const debouncedSave = useCallback(
     (habitId: string, value: number, targetValue: number) => {
       if (debounceTimers.current[habitId]) clearTimeout(debounceTimers.current[habitId])
-      setSaveStates((prev) => ({ ...prev, [habitId]: 'saving' }))
+      // Only show saving state when the debounced save actually fires
+      // (not during rapid wheel scrolling — avoids per-notch re-renders)
       debounceTimers.current[habitId] = setTimeout(async () => {
+        setSaveStates((prev) => ({ ...prev, [habitId]: 'saving' }))
         try {
           await saveValue(habitId, value, targetValue)
           setSaveStates((prev) => ({ ...prev, [habitId]: 'saved' }))
