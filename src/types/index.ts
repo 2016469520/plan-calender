@@ -10,7 +10,7 @@ export type Difficulty = 'easy' | 'medium' | 'hard' | 'very_hard'
 export type UrgencyLevel = 'overdue' | 'urgent' | 'soon' | 'upcoming' | 'plenty' | 'none'
 export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'cancelled'
 export type CalendarView = 'month' | 'week' | 'day'
-export type MeasurementType = 'boolean' | 'count' | 'duration' | 'numeric'
+export type MeasurementType = 'boolean' | 'count' | 'duration' | 'minutes' | 'hours' | 'numeric'
 export type ThemeMode = 'light' | 'dark' | 'system'
 export type WeekStartDay = 0 | 1 | 6 // Sunday, Monday, Saturday
 
@@ -221,6 +221,7 @@ export interface CountdownFormData {
 
 export type FocusMode = 'focus' | 'short_break' | 'long_break'
 export type FocusStatus = 'ready' | 'running' | 'paused' | 'completed' | 'cancelled'
+export type TimerMode = 'countdown' | 'stopwatch'
 
 export interface FocusSession {
   id: string
@@ -228,6 +229,7 @@ export interface FocusSession {
   task_id?: string
   title?: string
   mode: FocusMode
+  timer_mode: TimerMode
   planned_minutes: number
   actual_seconds: number
   started_at?: string
@@ -257,6 +259,7 @@ export interface FocusSessionFormData {
   task_id?: string
   title?: string
   mode?: FocusMode
+  timer_mode?: TimerMode
   planned_minutes: number
   note?: string
 }

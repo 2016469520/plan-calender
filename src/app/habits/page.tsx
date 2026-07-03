@@ -78,13 +78,14 @@ export default function HabitsPage() {
           <Select value={newType} onValueChange={(v: string | null) => v && setNewType(v as MeasurementType)}>
             <SelectTrigger>
               <SelectValue>
-                {{ boolean: '完成/未完成', count: '次数', duration: '分钟', numeric: '自定义数值' }[newType] || newType}
+                {{ boolean: '完成/未完成', count: '次数', duration: '分钟', minutes: '分钟', hours: '小时', numeric: '自定义数值' }[newType] || newType}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="boolean">完成/未完成</SelectItem>
               <SelectItem value="count">次数</SelectItem>
-              <SelectItem value="duration">分钟</SelectItem>
+              <SelectItem value="minutes">分钟</SelectItem>
+              <SelectItem value="hours">小时</SelectItem>
               <SelectItem value="numeric">自定义数值</SelectItem>
             </SelectContent>
           </Select>

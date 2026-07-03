@@ -30,7 +30,8 @@ import {
   ChevronRight,
   Pin,
   PinOff,
-  MoreHorizontal,
+  Pencil,
+  Archive,
   Trash2,
   Target,
 } from 'lucide-react'
@@ -46,6 +47,7 @@ export function HomeCountdowns() {
   const { countdowns: cdRepo } = useRepos()
   const queryClient = useQueryClient()
   const [showCreate, setShowCreate] = useState(false)
+  const [editTarget, setEditTarget] = useState<Countdown | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Countdown | null>(null)
   const [collapsed, setCollapsed] = useState(false)
 
@@ -55,6 +57,8 @@ export function HomeCountdowns() {
   const [isYearly, setIsYearly] = useState(false)
   const [color, setColor] = useState(COUNTDOWN_COLORS[0])
   const [icon, setIcon] = useState(COUNTDOWN_ICONS[0])
+  const [description, setDescription] = useState('')
+  const [showOnHome, setShowOnHome] = useState(true)
 
   const { data: rawList = [] } = useQuery({
     queryKey: ['countdowns'],
@@ -74,13 +78,16 @@ export function HomeCountdowns() {
         is_yearly: isYearly,
         color,
         icon,
-        show_on_home: true,
+        description: description || undefined,
+        show_on_home: showOnHome,
         is_pinned: false,
         sort_order: rawList.length,
       })
       queryClient.invalidateQueries({ queryKey: ['countdowns'] })
       setTitle('')
       setTargetDate('')
+      setDescription('')
+      setShowOnHome(true)
       setShowCreate(false)
       toast.success('倒数日已创建')
     } catch {
@@ -111,6 +118,55 @@ export function HomeCountdowns() {
       toast.error('删除失败')
     }
   }, [deleteTarget, user, cdRepo, queryClient])
+
+  const startEdit = useCallback((c: Countdown) => {
+    setEditTarget(c)
+    setTitle(c.title)
+    setTargetDate(c.target_date)
+    setIsYearly(c.is_yearly)
+    setColor(c.color)
+    setIcon(c.icon || COUNTDOWN_ICONS[0])
+    setDescription(c.description || '')
+    setShowOnHome(c.show_on_home !== false)
+  }, [])
+
+  const handleUpdate = useCallback(async () => {
+    if (!editTarget || !title.trim() || !targetDate || !user) return
+    try {
+      await cdRepo.update(user.id, editTarget.id, {
+        title: title.trim(),
+        target_date: targetDate,
+        is_yearly: isYearly,
+        color,
+        icon,
+        description: description || undefined,
+        show_on_home: showOnHome,
+      } as Partial<Countdown>)
+      queryClient.invalidateQueries({ queryKey: ['countdowns'] })
+      setEditTarget(null)
+      toast.success('已更新')
+    } catch {
+      toast.error('保存失败')
+    }
+  }, [editTarget, title, targetDate, isYearly, color, icon, description, showOnHome, user, cdRepo, queryClient])
+
+  const handleArchive = useCallback(
+    async (c: Countdown) => {
+      try {
+        if (c.archived_at) {
+          await cdRepo.unarchive(user!.id, c.id)
+          toast.success('已取消归档')
+        } else {
+          await cdRepo.archive(user!.id, c.id)
+          toast.success('已归档')
+        }
+        queryClient.invalidateQueries({ queryKey: ['countdowns'] })
+      } catch {
+        toast.error('操作失败')
+      }
+    },
+    [user, cdRepo, queryClient]
+  )
 
   if (displayCountdowns.length === 0 && !showCreate) {
     return (
@@ -200,6 +256,15 @@ export function HomeCountdowns() {
                       variant="ghost"
                       size="icon"
                       className="h-5 w-5"
+                      onClick={() => startEdit(c)}
+                      title="编辑"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5"
                       onClick={() => handleTogglePin(c)}
                       title={c.is_pinned ? '取消置顶' : '置顶'}
                     >
@@ -208,6 +273,15 @@ export function HomeCountdowns() {
                       ) : (
                         <Pin className="h-3 w-3" />
                       )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5"
+                      onClick={() => handleArchive(c)}
+                      title={c.archived_at ? '取消归档' : '归档'}
+                    >
+                      <Archive className="h-3 w-3" />
                     </Button>
                     <Button
                       variant="ghost"
@@ -300,6 +374,76 @@ export function HomeCountdowns() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>取消</Button>
             <Button variant="destructive" onClick={handleDelete}>删除</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit dialog */}
+      <Dialog open={!!editTarget} onOpenChange={() => setEditTarget(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>编辑倒数日</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="倒数日标题"
+              className="h-9 text-sm"
+              autoFocus
+            />
+            <Input
+              type="date"
+              value={targetDate}
+              onChange={(e) => setTargetDate(e.target.value)}
+              className="h-9 text-sm"
+            />
+            <Input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="描述（可选）"
+              className="h-9 text-sm"
+            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsYearly(!isYearly)}
+                className={cn(
+                  'h-8 px-3 text-xs rounded-md border transition-colors',
+                  isYearly ? 'bg-primary text-primary-foreground border-primary' : 'bg-transparent border-input'
+                )}
+              >
+                每年重复
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowOnHome(!showOnHome)}
+                className={cn(
+                  'h-8 px-3 text-xs rounded-md border transition-colors',
+                  showOnHome ? 'bg-primary text-primary-foreground border-primary' : 'bg-transparent border-input'
+                )}
+              >
+                显示在首页
+              </button>
+            </div>
+            <div className="flex gap-1">
+              {COUNTDOWN_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  className={cn(
+                    'w-6 h-6 rounded-full border-2 transition-all',
+                    color === c ? 'border-foreground scale-110' : 'border-transparent'
+                  )}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditTarget(null)}>取消</Button>
+            <Button onClick={handleUpdate} disabled={!title.trim() || !targetDate}>保存修改</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

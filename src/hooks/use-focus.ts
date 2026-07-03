@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect, startTransition } from 'react
 import { useAuth } from '@/providers/auth-provider'
 import { useRepos } from '@/providers/repo-provider'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import type { FocusSession, FocusSessionFormData } from '@/types'
+import type { FocusSession, FocusSessionFormData, TimerMode } from '@/types'
 import { toast } from 'sonner'
 
 const STORAGE_KEY = 'plan-calendar-active-focus'
@@ -12,6 +12,7 @@ const STORAGE_KEY = 'plan-calendar-active-focus'
 interface FocusState {
   sessionId: string
   plannedMinutes: number
+  timerMode: TimerMode
   startedAt: string
   pausedAt: string | null
   elapsedBeforePause: number
@@ -42,7 +43,9 @@ export function useFocus() {
   const [isRunning, setIsRunning] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [remainingSeconds, setRemainingSeconds] = useState(0)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [plannedMinutes, setPlannedMinutes] = useState(25)
+  const [timerMode, setTimerMode] = useState<TimerMode>('countdown')
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [taskId, setTaskId] = useState<string | undefined>(undefined)
   const [sessionTitle, setSessionTitle] = useState<string | undefined>(undefined)
@@ -50,10 +53,17 @@ export function useFocus() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const stateRef = useRef<FocusState | null>(null)
 
-  // Keep refs in sync with latest state for callbacks
-  const latestRef = useRef({ userId: '', sessionId: null as string | null, plannedMinutes: 25, taskId: undefined as string | undefined })
+  // Keep refs in sync for callbacks
+  const latestRef = useRef({
+    userId: '',
+    sessionId: null as string | null,
+    plannedMinutes: 25,
+    timerMode: 'countdown' as TimerMode,
+    taskId: undefined as string | undefined,
+    elapsedSeconds: 0,
+  })
   useEffect(() => {
-    latestRef.current = { userId: user?.id || '', sessionId, plannedMinutes, taskId }
+    latestRef.current = { userId: user?.id || '', sessionId, plannedMinutes, timerMode, taskId, elapsedSeconds }
   })
 
   const { data: activeSession } = useQuery({
@@ -63,23 +73,24 @@ export function useFocus() {
     refetchOnWindowFocus: true,
   })
 
-  // Complete callback via ref to avoid dependency issues in interval
+  // Complete callback via ref
   const completeRef = useRef<() => Promise<void>>(async () => {})
 
   const completeSession = useCallback(async () => {
-    const { userId: uid, sessionId: sid, plannedMinutes: mins, taskId: tid } = latestRef.current
+    const { userId: uid, sessionId: sid, plannedMinutes: mins, timerMode: mode, taskId: tid, elapsedSeconds: elapsed } = latestRef.current
 
     if (!uid || !sid) return
 
     setIsRunning(false)
     setIsPaused(false)
     const now = new Date().toISOString()
+    const actualSeconds = mode === 'stopwatch' ? Math.max(0, elapsed) : mins * 60
 
     try {
       await fsRepo.update(uid, sid, {
         status: 'completed',
         completed_at: now,
-        actual_seconds: mins * 60,
+        actual_seconds: actualSeconds,
       } as Partial<FocusSession>)
 
       if (tid) {
@@ -87,8 +98,9 @@ export function useFocus() {
           const task = await taskRepo.getById(uid, tid)
           if (task) {
             const currentActual = task.actual_minutes || 0
+            const accumulatedMins = Math.round(actualSeconds / 60)
             await taskRepo.update(uid, tid, {
-              actual_minutes: currentActual + Math.round(mins),
+              actual_minutes: currentActual + accumulatedMins,
             } as Partial<import('@/types').Task>)
           }
         } catch { /* non-critical */ }
@@ -96,6 +108,7 @@ export function useFocus() {
 
       localStorage.removeItem(STORAGE_KEY)
       stateRef.current = null
+      setElapsedSeconds(0)
       queryClient.invalidateQueries({ queryKey: ['focus', 'active'] })
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       queryClient.invalidateQueries({ queryKey: ['focus', 'stats'] })
@@ -114,15 +127,18 @@ export function useFocus() {
     if (activeSession && (activeSession.status === 'running' || activeSession.status === 'paused')) {
       const totalSeconds = activeSession.planned_minutes * 60
       const elapsed = calcElapsed(activeSession)
-      const remaining = Math.max(0, totalSeconds - elapsed)
+      const mode = activeSession.timer_mode || 'countdown'
+      const remaining = mode === 'stopwatch' ? 0 : Math.max(0, totalSeconds - elapsed)
 
       startTransition(() => {
         setSessionId(activeSession.id)
         setPlannedMinutes(activeSession.planned_minutes)
+        setTimerMode(mode)
         setTaskId(activeSession.task_id)
         setSessionTitle(activeSession.title || undefined)
         setIsPaused(activeSession.status === 'paused')
         setRemainingSeconds(remaining)
+        setElapsedSeconds(elapsed)
         if (activeSession.status === 'running') {
           setIsRunning(true)
         }
@@ -131,6 +147,7 @@ export function useFocus() {
       stateRef.current = {
         sessionId: activeSession.id,
         plannedMinutes: activeSession.planned_minutes,
+        timerMode: mode,
         startedAt: activeSession.started_at || new Date().toISOString(),
         pausedAt: activeSession.paused_at || null,
         elapsedBeforePause: elapsed,
@@ -145,6 +162,8 @@ export function useFocus() {
           startTransition(() => {
             setSessionId(parsed.sessionId)
             setPlannedMinutes(parsed.plannedMinutes)
+            setTimerMode(parsed.timerMode || 'countdown')
+            setElapsedSeconds(parsed.elapsedBeforePause || 0)
           })
         } catch {
           localStorage.removeItem(STORAGE_KEY)
@@ -164,13 +183,31 @@ export function useFocus() {
     }
 
     timerRef.current = setInterval(() => {
-      setRemainingSeconds((prev) => {
-        const next = Math.max(0, prev - 1)
-        if (next === 0) {
-          completeRef.current()
-        }
-        return next
-      })
+      if (timerMode === 'stopwatch') {
+        // Stopwatch: increment elapsed
+        setElapsedSeconds((prev) => {
+          const next = prev + 1
+          latestRef.current.elapsedSeconds = next
+          return next
+        })
+        // Also increment remainingSeconds for negative display in UI
+        setRemainingSeconds((prev) => prev - 1)
+      } else {
+        // Countdown: decrement remaining
+        setRemainingSeconds((prev) => {
+          const next = Math.max(0, prev - 1)
+          if (next === 0) {
+            completeRef.current()
+          }
+          return next
+        })
+        // Also update elapsed for progress
+        setElapsedSeconds((prev) => {
+          const next = prev + 1
+          latestRef.current.elapsedSeconds = next
+          return next
+        })
+      }
     }, 1000)
 
     return () => {
@@ -179,7 +216,7 @@ export function useFocus() {
         timerRef.current = null
       }
     }
-  }, [isRunning, isPaused])
+  }, [isRunning, isPaused, timerMode])
 
   const start = useCallback(
     async (data: FocusSessionFormData) => {
@@ -190,11 +227,13 @@ export function useFocus() {
       }
 
       const now = new Date().toISOString()
+      const mode = data.timer_mode || 'countdown'
       try {
         const session = await fsRepo.create(user.id, {
           task_id: data.task_id,
           title: data.title,
           mode: data.mode || 'focus',
+          timer_mode: mode,
           planned_minutes: data.planned_minutes,
           actual_seconds: 0,
           started_at: now,
@@ -204,15 +243,24 @@ export function useFocus() {
 
         setSessionId(session.id)
         setPlannedMinutes(data.planned_minutes)
-        setRemainingSeconds(data.planned_minutes * 60)
+        setTimerMode(mode)
         setTaskId(data.task_id)
         setSessionTitle(data.title)
         setIsRunning(true)
         setIsPaused(false)
 
+        if (mode === 'stopwatch') {
+          setRemainingSeconds(0)
+          setElapsedSeconds(0)
+        } else {
+          setRemainingSeconds(data.planned_minutes * 60)
+          setElapsedSeconds(0)
+        }
+
         stateRef.current = {
           sessionId: session.id,
           plannedMinutes: data.planned_minutes,
+          timerMode: mode,
           startedAt: now,
           pausedAt: null,
           elapsedBeforePause: 0,
@@ -230,8 +278,8 @@ export function useFocus() {
   const pause = useCallback(async () => {
     if (!user || !sessionId || !isRunning) return
     const now = new Date().toISOString()
+    const elapsed = timerMode === 'stopwatch' ? elapsedSeconds : plannedMinutes * 60 - remainingSeconds
     try {
-      const elapsed = plannedMinutes * 60 - remainingSeconds
       await fsRepo.update(user.id, sessionId, {
         status: 'paused',
         paused_at: now,
@@ -249,7 +297,7 @@ export function useFocus() {
     } catch {
       toast.error('暂停失败')
     }
-  }, [user, fsRepo, sessionId, isRunning, plannedMinutes, remainingSeconds, activeSession, queryClient])
+  }, [user, fsRepo, sessionId, isRunning, plannedMinutes, remainingSeconds, timerMode, elapsedSeconds, activeSession, queryClient])
 
   const resume = useCallback(async () => {
     if (!user || !sessionId) return
@@ -273,7 +321,7 @@ export function useFocus() {
   const cancel = useCallback(async () => {
     if (!user || !sessionId) return
     try {
-      const elapsed = plannedMinutes * 60 - remainingSeconds
+      const elapsed = timerMode === 'stopwatch' ? elapsedSeconds : plannedMinutes * 60 - remainingSeconds
       await fsRepo.update(user.id, sessionId, {
         status: 'cancelled',
         cancelled_at: new Date().toISOString(),
@@ -284,6 +332,7 @@ export function useFocus() {
       setIsPaused(false)
       setSessionId(null)
       setRemainingSeconds(0)
+      setElapsedSeconds(0)
 
       localStorage.removeItem(STORAGE_KEY)
       stateRef.current = null
@@ -292,22 +341,29 @@ export function useFocus() {
     } catch {
       toast.error('取消失败')
     }
-  }, [user, fsRepo, sessionId, plannedMinutes, remainingSeconds, queryClient])
+  }, [user, fsRepo, sessionId, plannedMinutes, remainingSeconds, timerMode, elapsedSeconds, queryClient])
 
-  const progress = plannedMinutes > 0
-    ? ((plannedMinutes * 60 - remainingSeconds) / (plannedMinutes * 60)) * 100
-    : 0
+  const progress = timerMode === 'stopwatch'
+    ? 0 // Stopwatch has no progress ring (indeterminate)
+    : plannedMinutes > 0
+      ? ((plannedMinutes * 60 - remainingSeconds) / (plannedMinutes * 60)) * 100
+      : 0
+
+  const displaySeconds = timerMode === 'stopwatch' ? elapsedSeconds : remainingSeconds
 
   return {
     isRunning,
     isPaused,
     remainingSeconds,
+    elapsedSeconds,
     plannedMinutes,
+    timerMode,
     sessionId,
     taskId,
     sessionTitle,
     progress,
-    formattedTime: fmtTime(remainingSeconds),
+    formattedTime: fmtTime(displaySeconds),
+    displaySeconds,
     start,
     pause,
     resume,

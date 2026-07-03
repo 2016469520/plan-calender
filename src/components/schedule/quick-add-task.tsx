@@ -15,7 +15,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { Plus, X, Loader2 } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Plus, X, Loader2, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -23,6 +29,49 @@ interface QuickAddTaskProps {
   defaultDate?: string
   defaultTagId?: string
   className?: string
+}
+
+function tomorrowStr(): string {
+  const d = new Date()
+  d.setDate(d.getDate() + 1)
+  return d.toISOString().slice(0, 10)
+}
+
+function thisWeekendStr(): string {
+  const d = new Date()
+  const day = d.getDay()
+  // Saturday = 6, if today is Sat/Sun, use next Sat
+  const daysUntilSat = day === 6 ? 7 : (6 - day)
+  d.setDate(d.getDate() + daysUntilSat)
+  return d.toISOString().slice(0, 10)
+}
+
+function nextWeekStr(): string {
+  const d = new Date()
+  const day = d.getDay()
+  // Days until next Monday
+  const daysUntilMon = day === 1 ? 7 : (8 - day) % 7 || 7
+  d.setDate(d.getDate() + daysUntilMon)
+  return d.toISOString().slice(0, 10)
+}
+
+function formatDateChinese(dateStr: string): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr + 'T00:00:00')
+  const year = d.getFullYear()
+  const month = d.getMonth() + 1
+  const day = d.getDate()
+  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+  const weekday = weekdays[d.getDay()]
+  return `${year}年${month}月${day}日 ${weekday}`
+}
+
+/** Fallback period based on current time */
+function defaultPeriodByTime(): Period {
+  const h = new Date().getHours()
+  if (h >= 6 && h < 12) return 'morning'
+  if (h >= 12 && h < 18) return 'afternoon'
+  return 'evening'
 }
 
 export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddTaskProps) {
@@ -34,10 +83,11 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
   const [expanded, setExpanded] = useState(false)
   const [title, setTitle] = useState('')
   const [date, setDate] = useState(defaultDate || todayStr())
-  const [period, setPeriod] = useState<Period>('morning')
+  const [period, setPeriod] = useState<Period | ''>('')
   const [tagId, setTagId] = useState<string>(defaultTagId || '')
-  const [difficulty, setDifficulty] = useState<Difficulty>('medium')
+  const [difficulty, setDifficulty] = useState<Difficulty | ''>('')
   const [saving, setSaving] = useState(false)
+  const [calendarOpen, setCalendarOpen] = useState(false)
 
   const { data: tagList = [] } = useQuery({
     queryKey: ['tags'],
@@ -48,9 +98,9 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
   const reset = useCallback(() => {
     setTitle('')
     setDate(defaultDate || todayStr())
-    setPeriod('morning')
+    setPeriod('')
     setTagId(defaultTagId || '')
-    setDifficulty('medium')
+    setDifficulty('')
     setExpanded(false)
   }, [defaultDate, defaultTagId])
 
@@ -58,12 +108,14 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
     if (!title.trim() || !user) return
     setSaving(true)
     try {
+      const savePeriod: Period = period || defaultPeriodByTime()
+      const saveDifficulty: Difficulty = difficulty || 'medium'
       await taskRepo.create(user.id, {
         title: title.trim(),
         task_date: date,
-        period,
+        period: savePeriod,
         tag_id: tagId || undefined,
-        difficulty,
+        difficulty: saveDifficulty,
         priority: 'normal' as const,
         status: 'todo',
         order_index: 0,
@@ -86,9 +138,7 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
         if (title.trim()) handleSave()
       }
       if (e.key === 'Escape') {
-        if (title) {
-          reset()
-        }
+        if (title) reset()
       }
     },
     [handleSave, reset, title]
@@ -109,8 +159,16 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  // Display labels for SelectValues
+  // Display labels
   const tagDisplay = getTagDisplayName(tagList, tagId)
+  const isToday = date === todayStr()
+  const isTomorrow = date === tomorrowStr()
+
+  const getDateLabel = () => {
+    if (isToday) return '今天'
+    if (isTomorrow) return '明天'
+    return formatDateChinese(date)
+  }
 
   return (
     <div className={cn('space-y-2', className)}>
@@ -157,27 +215,80 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
         {/* Expanded fields: date, period, tag, difficulty */}
         {expanded && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 pt-3 border-t border-border/50">
-            {/* 1. Date */}
+            {/* 1. Date with calendar picker */}
             <div>
-              <Select value={date} onValueChange={(v) => v && setDate(v)}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="选择日期">
-                    {date === todayStr() ? '今天' : date}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={todayStr()}>今天</SelectItem>
-                  <SelectItem value={tomorrowStr()}>明天</SelectItem>
-                </SelectContent>
-              </Select>
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                <PopoverTrigger>
+                  <Button
+                    variant="outline"
+                    className="h-8 text-xs w-full justify-start font-normal"
+                    type="button"
+                  >
+                    <Calendar className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                    {getDateLabel()}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-2" align="start">
+                  <div className="space-y-2">
+                    {/* Quick shortcuts */}
+                    <div className="grid grid-cols-2 gap-1">
+                      <Button
+                        variant={isToday ? 'default' : 'outline'}
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => { setDate(todayStr()); setCalendarOpen(false) }}
+                      >
+                        今天
+                      </Button>
+                      <Button
+                        variant={isTomorrow ? 'default' : 'outline'}
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => { setDate(tomorrowStr()); setCalendarOpen(false) }}
+                      >
+                        明天
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => { setDate(thisWeekendStr()); setCalendarOpen(false) }}
+                      >
+                        本周末
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => { setDate(nextWeekStr()); setCalendarOpen(false) }}
+                      >
+                        下周
+                      </Button>
+                    </div>
+                    {/* Calendar date input */}
+                    <div className="border-t pt-2">
+                      <p className="text-[10px] text-muted-foreground mb-1">选择日期</p>
+                      <Input
+                        type="date"
+                        value={date}
+                        onChange={(e) => {
+                          setDate(e.target.value)
+                          setCalendarOpen(false)
+                        }}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
-            {/* 2. Period */}
+            {/* 2. Period — placeholder until selected */}
             <div>
-              <Select value={period} onValueChange={(v) => v && setPeriod(v as Period)}>
+              <Select value={period || ''} onValueChange={(v) => setPeriod((v as Period) || '')}>
                 <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="选择时段">
-                    {getPeriodLabel(period)}
+                  <SelectValue>
+                    {period ? getPeriodLabel(period) : '选择时段'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -225,12 +336,12 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
               </Select>
             </div>
 
-            {/* 4. Difficulty */}
+            {/* 4. Difficulty — placeholder until selected */}
             <div>
-              <Select value={difficulty} onValueChange={(v) => v && setDifficulty(v as Difficulty)}>
+              <Select value={difficulty || ''} onValueChange={(v) => setDifficulty((v as Difficulty) || '')}>
                 <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="选择难度">
-                    {getDifficultyLabel(difficulty)}
+                  <SelectValue>
+                    {difficulty ? getDifficultyLabel(difficulty) : '选择难度'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -246,10 +357,4 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
       </div>
     </div>
   )
-}
-
-function tomorrowStr(): string {
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  return d.toISOString().slice(0, 10)
 }

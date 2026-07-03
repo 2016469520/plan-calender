@@ -82,6 +82,21 @@ export const FOCUS_MODE_LABELS = {
   long_break: '长休息',
 } as const
 
+// ---------- Measurement Type ----------
+
+export const MEASUREMENT_TYPE_LABELS: Record<string, string> = {
+  boolean: '完成/未完成',
+  count: '次数',
+  duration: '分钟',
+  minutes: '分钟',
+  hours: '小时',
+  numeric: '自定义数值',
+}
+
+export function getMeasurementTypeLabel(type: string): string {
+  return MEASUREMENT_TYPE_LABELS[type] || type
+}
+
 // ---------- Select placeholder text ----------
 
 export const SELECT_PLACEHOLDER = {

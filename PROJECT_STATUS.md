@@ -1,18 +1,88 @@
 # PROJECT_STATUS.md — 项目状态
 
-## 当前阶段：选择器显示修复与详情悬窗 (2026-07-04)
+## 当前阶段：习惯/倒数日/快速新增/专注交互改进 (2026-07-04)
 
 ## 验证状态：2026-07-04（最新）
 
 | 检查项 | 结果 |
 |--------|------|
 | npm install | ✅ 通过 |
-| ESLint | ✅ 0 errors, 79 warnings |
+| ESLint | ✅ 0 errors, 89 warnings |
 | TypeScript (tsc --noEmit) | ✅ 通过 |
-| Vitest (155 tests) | ✅ 全部通过 |
+| Vitest (187 tests) | ✅ 全部通过 |
 | Next.js build | ✅ 通过 (14 routes) |
 
-## 🔧 本次修复 (2026-07-04 第二版)
+## 🔧 本次修复 (2026-07-04 第三版)
+
+### 习惯打卡交互修复
+1. **按计量方式拆分 UI**：
+   - `boolean`：完成/未完成勾选切换
+   - `count`：+/- 1 按钮 + 直接输入次数
+   - `minutes`/`duration`：快捷按钮（+5/+10/+15/+30）+ 直接输入分钟
+   - `hours`：快捷按钮（+0.5/+1/+2）+ 直接输入小时
+   - `numeric`：+/- 步进 + 直接输入数值 + 单位显示
+2. **MeasurementType 扩展**：新增 `minutes` 和 `hours`，`duration` 保持为 `minutes` 的别名向后兼容
+3. **首页习惯摘要**：根据计量方式显示不同控件，分钟型可快捷输入
+4. **习惯记录编辑**：点击编辑按钮弹出 Dialog 修改值
+5. **习惯记录删除**：点击删除按钮弹出确认 Dialog
+6. **修改/删除后**：所有视图（首页、习惯页、统计）立即更新
+
+### 倒数日编辑增强
+- **首页倒数日卡片增加编辑按钮**：编辑标题、日期、颜色、每年重复、显示在首页等
+- **首页增加归档按钮**：可快速归档/取消归档
+- 编辑使用 Dialog 展示编辑表单
+- 原有删除和置顶功能保留
+
+### 快速新增日期选择器
+- **增加日历 Popover**：点击日期按钮弹出日期选择器
+- **快捷选项**：今天、明天、本周末、下周
+- **日历输入**：支持原生 date input 选择任意日期
+- **跨月跨年**：支持选择任意日期
+- **中文日期显示**：选择后显示「2026年7月4日 周六」格式
+
+### 快速新增 placeholder 策略
+- **时段初始显示"选择时段"**：不再默认显示"上午"
+- **难度初始显示"选择难度"**：不再默认显示"一般"
+- **保存 fallback**：未选时段根据当前时间推断（6-12→上午, 12-18→下午, 18-6→晚上），未选难度默认 medium
+- **向后兼容**：旧代码中的默认值逻辑不变，仅 UI 层面初始化改为空
+
+### 专注时长交互增强
+- **鼠标滚轮**：在时长区域 hover 时滚轮 ±5 分钟，范围 1-240
+- **滑块**：@base-ui/react Slider，范围 1-240，步进 5，拖动实时更新
+- **直接输入**：数字输入框，非法值（<1 或 >240）显示错误并在失焦时规范化
+- **保留 +/- 5 按钮**：原有步进按钮保持
+
+### 专注正计时（Stopwatch）
+- **模式切换**：倒计时 | 正计时 切换按钮
+- **倒计时**：设定目标时长（25/5/15/45 分钟预设 + 自定义），倒计时到 0 完成
+- **正计时**：从 00:00 开始累计，手动完成，保存实际时长
+- **状态机**：两种模式都支持 开始→暂停→继续→完成/放弃
+- **刷新恢复**：基于时间戳（started_at, paused_at），刷新后正确恢复
+- **统计**：completed 计入统计，cancelled 不计入
+- **数据迁移**：008_focus_timer_mode.sql 添加 timer_mode 字段，默认 'countdown'
+
+### 修改文件
+- `src/types/index.ts` — MeasurementType 扩展，FocusSession 添加 timer_mode
+- `src/lib/display-labels.ts` — MEASUREMENT_TYPE_LABELS 映射
+- `src/components/habits/habit-checkin.tsx` — 按计量方式拆分打卡 UI + 编辑/删除
+- `src/components/habits/home-habits-summary.tsx` — 首页不同类型不同控件 + 编辑/删除
+- `src/app/habits/page.tsx` — 新建习惯增加 minutes/hours 选项
+- `src/components/countdowns/home-countdowns.tsx` — 增加编辑/归档按钮和编辑 Dialog
+- `src/components/schedule/quick-add-task.tsx` — 日历日期选择器 + placeholder 策略
+- `src/components/ui/slider.tsx` — 新增 Slider 组件
+- `src/components/focus/focus-timer.tsx` — 滚轮/滑块/输入 + 正计时模式
+- `src/hooks/use-focus.ts` — 支持 stopwatch 状态机
+- `supabase/migrations/008_focus_timer_mode.sql` — 新增 migration
+
+### 新增测试
+- `src/__tests__/unit/measurement-labels.test.ts` — 6 个测试（计量方式 + 时段 + 难度）
+- `src/__tests__/unit/focus-timer-mode.test.ts` — 12 个测试（timer_mode + 统计 + 时间计算）
+
+### 新增 Migration
+- `008_focus_timer_mode.sql`：focus_sessions 表添加 timer_mode 字段
+- **尚未应用到生产 Supabase**
+
+## 历史更新
 
 ### 选择器显示修复
 1. **标签 UUID → 标签名称**：所有 Select 的 SelectValue 现在通过 children/render 显示中文标签名，不再显示原始 value（UUID/enum）
@@ -345,3 +415,5 @@
 3. 统计页面缺少图表，仅展示基础数字
 4. React Compiler 警告：RHF watch() 在 ScoreSelect 组件中使用
 5. **Supabase 生产数据库 migration 004 尚未应用**（标签去重和唯一约束）
+6. **Supabase 生产数据库 migration 007 尚未应用**（difficulty + due_at 字段）
+7. **Supabase 生产数据库 migration 008 尚未应用**（focus_sessions.timer_mode 字段）

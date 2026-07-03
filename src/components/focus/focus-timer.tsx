@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useFocus } from '@/hooks/use-focus'
 import { useRepos } from '@/providers/repo-provider'
 import { useAuth } from '@/providers/auth-provider'
@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
+import { Slider } from '@/components/ui/slider'
 import {
   Select,
   SelectContent,
@@ -52,6 +53,8 @@ export function HomeFocusTimer() {
   const focus = useFocus()
 
   const [customMinutes, setCustomMinutes] = useState(25)
+  const [localTimerMode, setLocalTimerMode] = useState<'countdown' | 'stopwatch'>('countdown')
+  const durationAreaRef = useRef<HTMLDivElement>(null)
   // Focus category (tag-based) — separate from linked task
   const [focusTagId, setFocusTagId] = useState<string>('')
   // Linked task — optional, associates session with a specific task
@@ -80,12 +83,13 @@ export function HomeFocusTimer() {
     (minutes: number, mode: 'focus' | 'short_break' | 'long_break' = 'focus') => {
       focus.start({
         planned_minutes: minutes,
+        timer_mode: localTimerMode,
         task_id: linkedTaskId || undefined,
         title: focusTagId ? `分类：${getTagDisplayName(tagList, focusTagId)}` : undefined,
         mode,
       })
     },
-    [focus, linkedTaskId, focusTagId, tagList]
+    [focus, linkedTaskId, focusTagId, tagList, localTimerMode]
   )
 
   const handleCustomStart = () => {
@@ -111,6 +115,7 @@ export function HomeFocusTimer() {
 
   // Active focus state
   if (focus.isRunning || focus.isPaused) {
+    const isStopwatch = focus.timerMode === 'stopwatch'
     return (
       <Card className={cn('shadow-none', focus.isPaused && 'border-amber-400/50')}>
         <CardContent className="p-4">
@@ -121,39 +126,57 @@ export function HomeFocusTimer() {
                 focus.isPaused ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500 animate-pulse'
               )} />
               <span className="text-xs font-medium text-muted-foreground">
-                {focus.isPaused ? '已暂停' : '专注中'}
+                {focus.isPaused ? '已暂停' : isStopwatch ? '正计时中' : '专注中'}
               </span>
             </div>
             <span className="text-xs text-muted-foreground">
-              {focus.plannedMinutes} 分钟
+              {isStopwatch ? '正计时' : `${focus.plannedMinutes} 分钟`}
             </span>
           </div>
 
           {/* Timer display */}
           <div className="flex flex-col items-center py-3">
             <div className="relative w-32 h-32">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-                <circle
-                  cx="60" cy="60" r="54"
-                  fill="none" stroke="currentColor" strokeWidth="4"
-                  className="text-muted/20"
-                />
-                <circle
-                  cx="60" cy="60" r="54"
-                  fill="none" stroke="currentColor" strokeWidth="4"
-                  strokeLinecap="round"
-                  className={cn(
-                    'transition-all duration-1000',
-                    focus.isPaused ? 'text-amber-500' : 'text-emerald-500'
-                  )}
-                  strokeDasharray={circumference}
-                  strokeDashoffset={strokeDashoffset}
-                />
-              </svg>
+              {!isStopwatch && (
+                <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+                  <circle
+                    cx="60" cy="60" r="54"
+                    fill="none" stroke="currentColor" strokeWidth="4"
+                    className="text-muted/20"
+                  />
+                  <circle
+                    cx="60" cy="60" r="54"
+                    fill="none" stroke="currentColor" strokeWidth="4"
+                    strokeLinecap="round"
+                    className={cn(
+                      'transition-all duration-1000',
+                      focus.isPaused ? 'text-amber-500' : 'text-emerald-500'
+                    )}
+                    strokeDasharray={circumference}
+                    strokeDashoffset={strokeDashoffset}
+                  />
+                </svg>
+              )}
+              {isStopwatch && (
+                <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+                  <circle
+                    cx="60" cy="60" r="54"
+                    fill="none" stroke="currentColor" strokeWidth="2"
+                    className="text-emerald-500 animate-pulse"
+                    strokeDasharray="10 5"
+                  />
+                </svg>
+              )}
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-bold tabular-nums tracking-tight">
+                <span className={cn(
+                  'text-2xl font-bold tabular-nums tracking-tight',
+                  isStopwatch && 'font-mono'
+                )}>
                   {focus.formattedTime}
                 </span>
+                {isStopwatch && (
+                  <span className="text-[10px] text-muted-foreground">已用时间</span>
+                )}
                 {focus.sessionTitle && (
                   <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">
                     {focus.sessionTitle}
@@ -261,7 +284,34 @@ export function HomeFocusTimer() {
               </SelectContent>
             </Select>
 
-            {/* Preset durations */}
+            {/* Timer mode toggle */}
+            <div className="flex rounded-md bg-muted p-0.5">
+              <button
+                onClick={() => setLocalTimerMode('countdown')}
+                className={cn(
+                  'flex-1 py-1 text-xs rounded-sm transition-colors',
+                  localTimerMode === 'countdown'
+                    ? 'bg-background shadow-sm font-medium'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                倒计时
+              </button>
+              <button
+                onClick={() => setLocalTimerMode('stopwatch')}
+                className={cn(
+                  'flex-1 py-1 text-xs rounded-sm transition-colors',
+                  localTimerMode === 'stopwatch'
+                    ? 'bg-background shadow-sm font-medium'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                正计时
+              </button>
+            </div>
+
+            {/* Preset durations — only for countdown */}
+            {localTimerMode === 'countdown' && (
             <div className="grid grid-cols-4 gap-1">
               {PRESET_DURATIONS.map((p) => (
                 <button
@@ -274,32 +324,84 @@ export function HomeFocusTimer() {
                 </button>
               ))}
             </div>
+            )}
 
-            {/* Custom duration */}
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline" size="icon" className="h-7 w-7"
-                onClick={() => setCustomMinutes(Math.max(1, customMinutes - 5))}
-              >
-                <Minus className="h-3 w-3" />
-              </Button>
-              <Input
-                type="number" min={1} max={180}
-                value={customMinutes}
-                onChange={(e) => setCustomMinutes(parseInt(e.target.value) || 1)}
-                className="h-7 text-xs text-center w-16"
+            {/* Custom duration with wheel, slider, input */}
+            {localTimerMode === 'countdown' ? (
+            <div
+              ref={durationAreaRef}
+              className="space-y-2"
+              onWheel={(e) => {
+                e.preventDefault()
+                const delta = e.deltaY < 0 ? 5 : -5
+                setCustomMinutes((prev) => Math.min(240, Math.max(1, prev + delta)))
+              }}
+            >
+              {/* Slider for quick adjustment */}
+              <Slider
+                value={[customMinutes]}
+                onValueChange={(v) => {
+                  const arr = v as number[]
+                  if (arr.length > 0) setCustomMinutes(arr[0] ?? 25)
+                }}
+                min={1}
+                max={240}
+                step={5}
+                aria-label="专注时长（分钟）"
+                className="px-1"
               />
-              <Button
-                variant="outline" size="icon" className="h-7 w-7"
-                onClick={() => setCustomMinutes(Math.min(180, customMinutes + 5))}
-              >
-                <Plus className="h-3 w-3" />
-              </Button>
-              <span className="text-xs text-muted-foreground">分钟</span>
-              <Button size="sm" className="h-7 text-xs ml-auto" onClick={handleCustomStart}>
-                <Play className="h-3 w-3 mr-1" />开始
+
+              {/* Buttons + input + start */}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline" size="icon" className="h-7 w-7"
+                  onClick={() => setCustomMinutes(Math.max(1, customMinutes - 5))}
+                >
+                  <Minus className="h-3 w-3" />
+                </Button>
+                <Input
+                  type="number" min={1} max={240}
+                  value={customMinutes}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value)
+                    if (isNaN(v) || v < 1) {
+                      setCustomMinutes(1)
+                    } else if (v > 240) {
+                      setCustomMinutes(240)
+                    } else {
+                      setCustomMinutes(v)
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const v = parseInt(e.target.value)
+                    if (isNaN(v) || v < 1) setCustomMinutes(25)
+                    else if (v > 240) setCustomMinutes(240)
+                  }}
+                  className="h-7 text-xs text-center w-16"
+                />
+                <Button
+                  variant="outline" size="icon" className="h-7 w-7"
+                  onClick={() => setCustomMinutes(Math.min(240, customMinutes + 5))}
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+                <span className="text-xs text-muted-foreground">分钟</span>
+                <Button size="sm" className="h-7 text-xs ml-auto" onClick={handleCustomStart}>
+                  <Play className="h-3 w-3 mr-1" />开始
+                </Button>
+              </div>
+            </div>
+          ) : (
+            /* Stopwatch mode: simple start button */
+            <div className="flex flex-col items-center py-2 space-y-2">
+              <p className="text-[10px] text-muted-foreground text-center">
+                正计时从 00:00 开始累计<br />完成后保存实际时长
+              </p>
+              <Button size="sm" onClick={() => handleStart(0)} className="h-8">
+                <Play className="h-4 w-4 mr-1" />开始正计时
               </Button>
             </div>
+          )}
           </div>
         )}
       </CardContent>
