@@ -1,5 +1,54 @@
 # DECISIONS.md — 技术决策记录
 
+## 决策 63：滚轮输入 draft/persist 分离 (2026-07-04)
+- **决策**: 引入本地 draftValue 与数据库 persistedValue 分离的架构
+- **原因**: 滚轮事件从 TanStack Query 缓存读取 persistedValue，但 debounce 导致缓存不更新，每次滚轮都读相同值，无法累积（从 0 滚 20 次只能 +1）。draft 独立于 query 缓存，即时更新 UI，停止后才保存。
+- **实现**:
+  - `draftValuesRef`（useRef）存储本地草稿值，wheel/click 事件即时更新
+  - `draftVersion`（useState）计数器触发重渲染
+  - 显示值 = draft ?? persisted
+  - 保存成功后若 draft 与 savedValue 匹配则清除 draft
+- **日期**: 2026-07-04
+
+## 决策 64：debounce 保存时间 600ms (2026-07-04)
+- **决策**: wheel、+/- 按钮、直接输入均使用 600ms debounce 自动保存
+- **原因**:
+  - 400ms 太短，用户稍微停顿即触发保存
+  - 1000ms 太长，用户等待过久
+  - 600ms 在快速性与等待感之间平衡
+- **日期**: 2026-07-04
+
+## 决策 65：saveVersion 竞态保护 (2026-07-04)
+- **决策**: 使用 saveVersion 计数器防止旧保存回调覆盖新值
+- **原因**:
+  - 用户滚到 31，debounce 触发保存，但保存异步
+  - 保存中用户继续滚到 45，新 debounce 设置 version+1
+  - 旧 version 的回调检测到 version 不匹配，自动跳过
+  - clearDraftIfMatch 只清除匹配值，不会误清更新的 draft
+- **日期**: 2026-07-04
+
+## 决策 66：减少 Query invalidate 频率 (2026-07-04)
+- **决策**: 仅在 debounce 后的最终保存中调用 invalidateLogs()，滚动期间不触发任何 invalidate
+- **原因**: 之前每次 wheel 事件都间接触发 invalidate（通过 saveValue），导致全量 refetch。现在只在 600ms 后最终保存时 invalidate 一次。
+- **日期**: 2026-07-04
+
+## 决策 67：useRef 稳定回调避免 wheel listener 重建 (2026-07-04)
+- **决策**: `createWheelHandler` 仅依赖 `today`（一天不变），通过 `getLogForHabitRef` 等 ref 访问最新值
+- **原因**: 若依赖 draftValues state，每次 draft 变化都重建回调 → useEffect 重新绑 定/解绑 listener → 滚轮事件丢失
+- **日期**: 2026-07-04
+
+## 决策 68：保存失败保留 draft 并提供重试 (2026-07-04)
+- **决策**: 保存失败时不回滚 draft，UI 仍显示用户最新输入；点击失败状态可重试
+- **原因**: 不回滚到旧 persistedValue 以免用户输入丢失；用户可见失败指示并可主动重试
+- **日期**: 2026-07-04
+
+## 决策 69：+/- 按钮也使用 debounce 而非立即保存 (2026-07-04)
+- **决策**: +/- 按钮与滚轮使用相同的 draft accumulation + debounce 策略
+- **原因**: 连续快速点击 + 不应每次都触发独立保存；停止点击后保存最终值
+- **日期**: 2026-07-04
+
+---
+
 ## 决策 1：包管理器
 - **决策**: 使用 npm
 - **原因**: pnpm 不可用，npm 11.x 可用

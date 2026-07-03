@@ -16,10 +16,12 @@ import {
 } from '@/components/ui/dialog'
 import { todayStr } from '@/lib/utils/date'
 import type { Habit, HabitLog, MeasurementType } from '@/types'
-import { CheckSquare, ChevronRight, Plus, Minus, Check, Pencil, Trash2, Loader2, X } from 'lucide-react'
+import { CheckSquare, ChevronRight, Plus, Minus, Check, Pencil, Trash2, Loader2, X, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+
+const DEBOUNCE_MS = 600
 
 export function HomeHabitsSummary() {
   const { user } = useAuth()
@@ -31,8 +33,14 @@ export function HomeHabitsSummary() {
   const [deleteLog, setDeleteLog] = useState<HabitLog | null>(null)
   const [editValue, setEditValue] = useState('')
   const [saveStates, setSaveStates] = useState<Record<string, 'idle' | 'saving' | 'saved' | 'error'>>({})
+
+  // === Draft/persist separation ===
+  const draftValuesRef = useRef<Record<string, number>>({})
+  const [draftVersion, setDraftVersion] = useState(0)
+
   const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
   const wheelThrottle = useRef<Record<string, number>>({})
+  const saveVersionRef = useRef<Record<string, number>>({})
 
   const today = todayStr()
 
@@ -53,17 +61,51 @@ export function HomeHabitsSummary() {
   const getLog = (habitId: string): HabitLog | undefined =>
     todayLogs.find((l) => l.habit_id === habitId)
 
+  // Stable ref for getLog
+  const getLogRef = useRef(getLog)
+  getLogRef.current = getLog
+
   const invalidateLogs = () => {
     queryClient.invalidateQueries({ queryKey: ['habitLogs', today] })
     queryClient.invalidateQueries({ queryKey: ['habits'] })
   }
+
+  // ---- Draft helpers ----
+  const getDisplayValue = useCallback(
+    (habitId: string, persistedValue: number) => {
+      const key = `${habitId}-${today}`
+      const draft = draftValuesRef.current[key]
+      return draft !== undefined ? draft : persistedValue
+    },
+    [today]
+  )
+
+  const setDraftValue = useCallback(
+    (habitId: string, value: number) => {
+      const key = `${habitId}-${today}`
+      draftValuesRef.current[key] = value
+      setDraftVersion((v) => v + 1)
+    },
+    [today]
+  )
+
+  const clearDraftIfMatch = useCallback(
+    (habitId: string, savedValue: number) => {
+      const key = `${habitId}-${today}`
+      if (draftValuesRef.current[key] === savedValue) {
+        delete draftValuesRef.current[key]
+        setDraftVersion((v) => v + 1)
+      }
+    },
+    [today]
+  )
 
   // ---- Core save ----
   const saveValue = useCallback(
     async (habitId: string, value: number, targetValue: number) => {
       if (!user) return
       const sane = Math.max(0, value)
-      const existing = getLog(habitId)
+      const existing = getLogRef.current(habitId)
       const isCompleted = sane >= targetValue
       if (existing) {
         await logRepo.update(user.id, existing.id, { value: sane, is_completed: isCompleted })
@@ -77,7 +119,7 @@ export function HomeHabitsSummary() {
       }
       invalidateLogs()
     },
-    [user, logRepo, today, getLog]
+    [user, logRepo, today]
   )
 
   // ---- Boolean toggle ----
@@ -86,7 +128,7 @@ export function HomeHabitsSummary() {
       if (!user || togglingIds.has(habit.id)) return
       setTogglingIds((prev) => new Set(prev).add(habit.id))
       try {
-        const existing = getLog(habit.id)
+        const existing = getLogRef.current(habit.id)
         if (existing?.is_completed) {
           await logRepo.update(user.id, existing.id, { is_completed: false, value: 0 })
         } else if (existing) {
@@ -110,44 +152,25 @@ export function HomeHabitsSummary() {
         })
       }
     },
-    [user, logRepo, togglingIds, today, getLog]
+    [user, logRepo, togglingIds, today]
   )
 
-  // ---- Immediate adjust ----
-  const handleAdjust = useCallback(
-    async (habit: Habit, delta: number) => {
-      if (!user) return
-      const existing = getLog(habit.id)
-      const newValue = Math.max(0, (existing?.value ?? 0) + delta)
-      setSaveStates((prev) => ({ ...prev, [habit.id]: 'saving' }))
-      try {
-        await saveValue(habit.id, newValue, habit.target_value)
-        setSaveStates((prev) => ({ ...prev, [habit.id]: 'saved' }))
-        setTimeout(() => {
-          setSaveStates((prev) => {
-            const next = { ...prev }
-            if (next[habit.id] === 'saved') next[habit.id] = 'idle'
-            return next
-          })
-        }, 1500)
-      } catch {
-        setSaveStates((prev) => ({ ...prev, [habit.id]: 'error' }))
-        toast.error('记录失败')
-      }
-    },
-    [user, saveValue, getLog]
-  )
-
-  // ---- Debounced save for wheel (no state change during rapid scrolling) ----
+  // ---- Debounced save with race-condition protection ----
   const debouncedSave = useCallback(
     (habitId: string, value: number, targetValue: number) => {
       if (debounceTimers.current[habitId]) clearTimeout(debounceTimers.current[habitId])
-      // Only show saving state when the debounced save actually fires
-      // (not during rapid wheel scrolling — avoids per-notch re-renders)
+
+      const version = (saveVersionRef.current[habitId] || 0) + 1
+      saveVersionRef.current[habitId] = version
+
       debounceTimers.current[habitId] = setTimeout(async () => {
+        // Check if a newer save was queued
+        if (saveVersionRef.current[habitId] !== version) return
+
         setSaveStates((prev) => ({ ...prev, [habitId]: 'saving' }))
         try {
           await saveValue(habitId, value, targetValue)
+          clearDraftIfMatch(habitId, value)
           setSaveStates((prev) => ({ ...prev, [habitId]: 'saved' }))
           setTimeout(() => {
             setSaveStates((prev) => {
@@ -159,28 +182,67 @@ export function HomeHabitsSummary() {
         } catch {
           setSaveStates((prev) => ({ ...prev, [habitId]: 'error' }))
         }
-      }, 400)
+      }, DEBOUNCE_MS)
     },
-    [saveValue]
+    [saveValue, clearDraftIfMatch]
   )
 
-  // ---- Wheel handler (1 unit per notch) ----
-  const createWheelHandler = useCallback(
-    (habit: Habit) => (e: WheelEvent) => {
-      e.preventDefault()
-      const now = Date.now()
-      const last = wheelThrottle.current[habit.id] || 0
-      if (now - last < 80) return
-      wheelThrottle.current[habit.id] = now
-      const existing = getLog(habit.id)
-      const currentValue = existing?.value ?? 0
-      const step = getHomeStep(habit)
-      const delta = e.deltaY < 0 ? step : e.deltaY > 0 ? -step : 0
-      if (delta === 0) return
-      const newValue = Math.max(0, currentValue + delta)
+  // ---- Immediate adjust (draft accumulation + debounce) ----
+  const handleAdjust = useCallback(
+    (habit: Habit, delta: number) => {
+      const key = `${habit.id}-${today}`
+      const draftVal = draftValuesRef.current[key]
+      const existing = getLogRef.current(habit.id)
+      const baseValue = draftVal !== undefined ? draftVal : (existing?.value ?? 0)
+      const newValue = Math.max(0, baseValue + delta)
+
+      draftValuesRef.current[key] = newValue
+      setDraftVersion((v) => v + 1)
+
       debouncedSave(habit.id, newValue, habit.target_value)
     },
-    [debouncedSave, getLog]
+    [debouncedSave, today]
+  )
+
+  // ---- Wheel handler (draft accumulation, no per-notch save) ----
+  const createWheelHandler = useCallback(
+    (habit: Habit) => {
+      return (e: WheelEvent) => {
+        e.preventDefault()
+        const now = Date.now()
+        const last = wheelThrottle.current[habit.id] || 0
+        if (now - last < 80) return
+        wheelThrottle.current[habit.id] = now
+
+        const key = `${habit.id}-${today}`
+        const draftVal = draftValuesRef.current[key]
+        const existing = getLogRef.current(habit.id)
+        const baseValue = draftVal !== undefined ? draftVal : (existing?.value ?? 0)
+        const step = getHomeStep(habit)
+        const delta = e.deltaY < 0 ? step : e.deltaY > 0 ? -step : 0
+        if (delta === 0) return
+        const newValue = Math.max(0, baseValue + delta)
+
+        draftValuesRef.current[key] = newValue
+        setDraftVersion((v) => v + 1)
+
+        debouncedSave(habit.id, newValue, habit.target_value)
+      }
+    },
+    [debouncedSave, today]
+  )
+
+  // ---- Retry failed save ----
+  const retrySave = useCallback(
+    (habit: Habit) => {
+      const key = `${habit.id}-${today}`
+      const draftVal = draftValuesRef.current[key]
+      const existing = getLogRef.current(habit.id)
+      const valueToSave = draftVal !== undefined ? draftVal : (existing?.value ?? 0)
+      setSaveStates((prev) => ({ ...prev, [habit.id]: 'idle' }))
+      debouncedSave(habit.id, valueToSave, habit.target_value)
+    },
+    [debouncedSave, today]
   )
 
   // ---- Edit/Delete log ----
@@ -269,10 +331,11 @@ export function HomeHabitsSummary() {
               {activeHabits.map((habit) => {
                 const log = getLog(habit.id)
                 const isDone = log?.is_completed
-                const currentValue = log?.value ?? 0
+                const persistedValue = log?.value ?? 0
                 const type = (habit.measurement_type as MeasurementType)
                 const effectiveType = type === 'duration' ? 'minutes' : type
                 const saveState = saveStates[habit.id] || 'idle'
+                const displayValue = getDisplayValue(habit.id, persistedValue)
 
                 return (
                   <HomeHabitRow
@@ -280,7 +343,8 @@ export function HomeHabitsSummary() {
                     habit={habit}
                     log={log}
                     isDone={isDone}
-                    currentValue={currentValue}
+                    displayValue={displayValue}
+                    persistedValue={persistedValue}
                     effectiveType={effectiveType}
                     saveState={saveState}
                     togglingIds={togglingIds}
@@ -289,6 +353,7 @@ export function HomeHabitsSummary() {
                     onWheel={createWheelHandler(habit)}
                     onEditLog={handleEditLog}
                     onDeleteLog={setDeleteLog}
+                    onRetry={() => retrySave(habit)}
                   />
                 )
               })}
@@ -345,13 +410,14 @@ export function HomeHabitsSummary() {
 // ---- Home habit row ----
 
 function HomeHabitRow({
-  habit, log, isDone, currentValue, effectiveType, saveState, togglingIds,
-  onToggle, onAdjust, onWheel, onEditLog, onDeleteLog,
+  habit, log, isDone, displayValue, persistedValue, effectiveType, saveState, togglingIds,
+  onToggle, onAdjust, onWheel, onEditLog, onDeleteLog, onRetry,
 }: {
   habit: Habit
   log: HabitLog | undefined
   isDone: boolean | undefined
-  currentValue: number
+  displayValue: number
+  persistedValue: number
   effectiveType: string
   saveState: 'idle' | 'saving' | 'saved' | 'error'
   togglingIds: Set<string>
@@ -360,6 +426,7 @@ function HomeHabitRow({
   onWheel: (e: WheelEvent) => void
   onEditLog: (l: HabitLog) => void
   onDeleteLog: (l: HabitLog) => void
+  onRetry: () => void
 }) {
   const wheelRef = useRef<HTMLDivElement>(null)
 
@@ -372,6 +439,7 @@ function HomeHabitRow({
 
   const step = getHomeStep(habit)
   const unit = getHomeUnit(effectiveType, habit)
+  const hasDraft = displayValue !== persistedValue
 
   return (
     <div
@@ -388,7 +456,7 @@ function HomeHabitRow({
         <div className="text-xs font-medium truncate">{habit.name}</div>
         {effectiveType !== 'boolean' && (
           <div className="text-[10px] text-muted-foreground">
-            {log?.value ?? 0}/{habit.target_value}{habit.unit || (effectiveType === 'minutes' ? '分钟' : effectiveType === 'hours' ? '小时' : '')}
+            {displayValue}/{habit.target_value}{habit.unit || (effectiveType === 'minutes' ? '分钟' : effectiveType === 'hours' ? '小时' : '')}
           </div>
         )}
       </div>
@@ -419,16 +487,30 @@ function HomeHabitRow({
               <Button
                 variant="ghost" size="icon" className="h-6 w-6"
                 onClick={() => onAdjust(habit, -step)}
-                disabled={currentValue <= 0}
+                disabled={displayValue <= 0}
               >
                 <Minus className="h-3 w-3" />
               </Button>
 
-              {/* Wheel-aware value display */}
+              {/* Wheel-aware value display — click on error to retry */}
               <div ref={wheelRef} className="shrink-0">
-                <span className="inline-flex items-center justify-center h-6 min-w-[2rem] px-1 text-xs font-medium tabular-nums rounded border border-transparent">
-                  {log?.value ?? 0}
-                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (saveState === 'error') onRetry()
+                  }}
+                  className={cn(
+                    'inline-flex items-center justify-center h-6 min-w-[2rem] px-1 text-xs font-medium tabular-nums rounded border',
+                    saveState === 'error'
+                      ? 'border-destructive text-destructive'
+                      : hasDraft
+                        ? 'border-amber-300 dark:border-amber-600 bg-amber-50/30 dark:bg-amber-950/10'
+                        : 'border-transparent'
+                  )}
+                  title={saveState === 'error' ? '保存失败，点击重试' : hasDraft ? '未保存的更改' : undefined}
+                >
+                  {displayValue}
+                </button>
               </div>
 
               <Button
@@ -471,7 +553,7 @@ function MiniSaveState({ state }: { state: 'idle' | 'saving' | 'saved' | 'error'
     <span className="inline-flex items-center justify-center w-4 h-4 shrink-0">
       {state === 'saving' && <Loader2 className="h-2.5 w-2.5 animate-spin text-muted-foreground" />}
       {state === 'saved' && <Check className="h-3 w-3 text-emerald-500" />}
-      {state === 'error' && <X className="h-3 w-3 text-destructive" />}
+      {state === 'error' && <AlertCircle className="h-3 w-3 text-destructive" />}
     </span>
   )
 }

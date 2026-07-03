@@ -18,13 +18,15 @@ import {
 } from '@/components/ui/dialog'
 import { todayStr } from '@/lib/utils/date'
 import type { Habit, HabitLog, MeasurementType } from '@/types'
-import { CheckCircle2, Circle, Flame, Target, Pencil, Trash2, Plus, Minus, Loader2, Check, X } from 'lucide-react'
+import { CheckCircle2, Circle, Flame, Target, Pencil, Trash2, Plus, Minus, Loader2, Check, X, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
 interface HabitCheckinProps {
   compact?: boolean
 }
+
+const DEBOUNCE_MS = 600
 
 export function HabitCheckin({ compact = false }: HabitCheckinProps) {
   const { user } = useAuth()
@@ -40,10 +42,20 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
   const [saveStates, setSaveStates] = useState<Record<string, 'idle' | 'saving' | 'saved' | 'error'>>({})
   // Per-habit input values (for direct text entry)
   const [inputValues, setInputValues] = useState<Record<string, string>>({})
+
+  // === Draft/persist separation ===
+  // draftValuesRef: local draft values that accumulate during rapid wheel/click,
+  // independent of the query cache. Display shows draft ?? persisted.
+  const draftValuesRef = useRef<Record<string, number>>({})
+  // Bump this counter to trigger re-renders when draft changes
+  const [draftVersion, setDraftVersion] = useState(0)
+
   // Debounce timers
   const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
-  // Wheel throttle
+  // Wheel throttle timestamps
   const wheelThrottle = useRef<Record<string, number>>({})
+  // Save version per habit for race-condition protection
+  const saveVersionRef = useRef<Record<string, number>>({})
 
   const { data: habitList = [], isLoading } = useQuery({
     queryKey: ['habits'],
@@ -65,13 +77,47 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
   const getLogForHabit = (habitId: string) =>
     todayLogs.find((l) => l.habit_id === habitId)
 
+  // Stable refs for use in callbacks (avoids recreating wheel/click handlers)
+  const getLogForHabitRef = useRef(getLogForHabit)
+  getLogForHabitRef.current = getLogForHabit
+
+  // ---- Draft helpers ----
+  const getDisplayValue = useCallback(
+    (habitId: string, persistedValue: number) => {
+      const key = `${habitId}-${today}`
+      const draft = draftValuesRef.current[key]
+      return draft !== undefined ? draft : persistedValue
+    },
+    [today]
+  )
+
+  const setDraftValue = useCallback(
+    (habitId: string, value: number) => {
+      const key = `${habitId}-${today}`
+      draftValuesRef.current[key] = value
+      setDraftVersion((v) => v + 1)
+    },
+    [today]
+  )
+
+  const clearDraftIfMatch = useCallback(
+    (habitId: string, savedValue: number) => {
+      const key = `${habitId}-${today}`
+      if (draftValuesRef.current[key] === savedValue) {
+        delete draftValuesRef.current[key]
+        setDraftVersion((v) => v + 1)
+      }
+    },
+    [today]
+  )
+
   // ---- Boolean toggle ----
   const toggleBoolean = useCallback(
     async (habit: Habit) => {
       if (!user || savingIds.has(habit.id)) return
       setSavingIds((prev) => new Set(prev).add(habit.id))
       try {
-        const existing = getLogForHabit(habit.id)
+        const existing = getLogForHabitRef.current(habit.id)
         if (existing?.is_completed) {
           await habitLogs.update(user.id, existing.id, { is_completed: false, value: 0 })
         } else if (existing) {
@@ -99,7 +145,7 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
         })
       }
     },
-    [user, habitLogs, today, savingIds, getLogForHabit]
+    [user, habitLogs, today, savingIds]
   )
 
   // ---- Core save function ----
@@ -107,41 +153,47 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
     async (habitId: string, value: number, targetValue: number) => {
       if (!user) return
       const sane = Math.max(0, value)
-      const existing = getLogForHabit(habitId)
+      const existing = getLogForHabitRef.current(habitId)
       const isCompleted = sane >= targetValue
-      try {
-        if (existing) {
-          await habitLogs.update(user.id, existing.id, { value: sane, is_completed: isCompleted })
-        } else {
-          await habitLogs.create(user.id, {
-            habit_id: habitId,
-            log_date: today,
-            value: sane,
-            is_completed: isCompleted,
-          })
-        }
-        invalidateLogs()
-        return true
-      } catch {
-        throw new Error('Save failed')
+      if (existing) {
+        await habitLogs.update(user.id, existing.id, { value: sane, is_completed: isCompleted })
+      } else {
+        await habitLogs.create(user.id, {
+          habit_id: habitId,
+          log_date: today,
+          value: sane,
+          is_completed: isCompleted,
+        })
       }
+      // Invalidate queries after save (only fires on debounced final save, not per-notch)
+      invalidateLogs()
     },
-    [user, habitLogs, today, getLogForHabit]
+    [user, habitLogs, today]
   )
 
-  // ---- Debounced auto-save (no state change during rapid scrolling) ----
+  // ---- Debounced auto-save with race-condition protection ----
   const debouncedSave = useCallback(
     (habitId: string, value: number, targetValue: number) => {
       // Clear existing timer
       if (debounceTimers.current[habitId]) {
         clearTimeout(debounceTimers.current[habitId])
       }
-      // Only show saving state when the debounced save actually fires
-      // (not during rapid wheel scrolling — avoids per-notch re-renders)
+
+      // Increment save version for race-condition protection
+      const version = (saveVersionRef.current[habitId] || 0) + 1
+      saveVersionRef.current[habitId] = version
+
+      // Set timer — save only fires after user stops adjusting for DEBOUNCE_MS
       debounceTimers.current[habitId] = setTimeout(async () => {
+        // Check if a newer save was queued while we were waiting
+        if (saveVersionRef.current[habitId] !== version) return
+
         setSaveStates((prev) => ({ ...prev, [habitId]: 'saving' }))
         try {
           await saveValue(habitId, value, targetValue)
+          // Only clear draft if the saved value matches current draft
+          // (if user kept scrolling, draft is newer and should stay)
+          clearDraftIfMatch(habitId, value)
           setSaveStates((prev) => ({ ...prev, [habitId]: 'saved' }))
           // Clear saved state after 1.5s
           setTimeout(() => {
@@ -152,59 +204,66 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
             })
           }, 1500)
         } catch {
+          // Save failed but draft value stays — user doesn't lose input
           setSaveStates((prev) => ({ ...prev, [habitId]: 'error' }))
         }
-      }, 400)
+      }, DEBOUNCE_MS)
     },
-    [saveValue]
+    [saveValue, clearDraftIfMatch]
   )
 
-  // ---- Immediate adjust (for +/- button clicks) ----
-  const adjustValue = useCallback(
-    async (habit: Habit, delta: number) => {
-      if (!user) return
-      const existing = getLogForHabit(habit.id)
-      const newValue = Math.max(0, (existing?.value ?? 0) + delta)
-      setSaveStates((prev) => ({ ...prev, [habit.id]: 'saving' }))
-      try {
-        await saveValue(habit.id, newValue, habit.target_value)
-        setSaveStates((prev) => ({ ...prev, [habit.id]: 'saved' }))
-        setTimeout(() => {
-          setSaveStates((prev) => {
-            const next = { ...prev }
-            if (next[habit.id] === 'saved') next[habit.id] = 'idle'
-            return next
-          })
-        }, 1500)
-      } catch {
-        setSaveStates((prev) => ({ ...prev, [habit.id]: 'error' }))
-        toast.error('记录失败')
+  // ---- Wheel handler (draft accumulation, no per-notch save) ----
+  const createWheelHandler = useCallback(
+    (habit: Habit) => {
+      return (e: WheelEvent) => {
+        e.preventDefault()
+        const now = Date.now()
+        const last = wheelThrottle.current[habit.id] || 0
+        // 80ms throttle to handle trackpad high-frequency events
+        if (now - last < 80) return
+        wheelThrottle.current[habit.id] = now
+
+        // Read base value: prefer draft (accumulated locally), fall back to persisted
+        const key = `${habit.id}-${today}`
+        const draftVal = draftValuesRef.current[key]
+        const existing = getLogForHabitRef.current(habit.id)
+        const baseValue = draftVal !== undefined ? draftVal : (existing?.value ?? 0)
+
+        const delta = e.deltaY < 0 ? 1 : e.deltaY > 0 ? -1 : 0
+        if (delta === 0) return
+        const newValue = Math.max(0, baseValue + delta)
+
+        // Update local draft immediately (UI updates without save)
+        draftValuesRef.current[key] = newValue
+        setDraftVersion((v) => v + 1)
+
+        // Debounced save (fires only after user stops scrolling)
+        debouncedSave(habit.id, newValue, habit.target_value)
       }
     },
-    [user, saveValue, getLogForHabit]
+    [debouncedSave, today]
   )
 
-  // ---- Wheel handler (1 minute per notch) ----
-  const createWheelHandler = useCallback(
-    (habit: Habit) => (e: WheelEvent) => {
-      e.preventDefault()
-      const now = Date.now()
-      const last = wheelThrottle.current[habit.id] || 0
-      // Throttle to ~80ms between adjustments to handle trackpad bursts
-      if (now - last < 80) return
-      wheelThrottle.current[habit.id] = now
+  // ---- +/- button adjust (draft accumulation + debounce) ----
+  const adjustValue = useCallback(
+    (habit: Habit, delta: number) => {
+      const key = `${habit.id}-${today}`
+      const draftVal = draftValuesRef.current[key]
+      const existing = getLogForHabitRef.current(habit.id)
+      const baseValue = draftVal !== undefined ? draftVal : (existing?.value ?? 0)
+      const newValue = Math.max(0, baseValue + delta)
 
-      const existing = getLogForHabit(habit.id)
-      const currentValue = existing?.value ?? 0
-      const delta = e.deltaY < 0 ? 1 : e.deltaY > 0 ? -1 : 0
-      if (delta === 0) return
-      const newValue = Math.max(0, currentValue + delta)
+      // Update draft
+      draftValuesRef.current[key] = newValue
+      setDraftVersion((v) => v + 1)
+
+      // Debounced save
       debouncedSave(habit.id, newValue, habit.target_value)
     },
-    [debouncedSave, getLogForHabit]
+    [debouncedSave, today]
   )
 
-  // ---- Direct input save ----
+  // ---- Direct input save (immediate: user explicitly confirmed via Enter/blur) ----
   const handleInputSave = useCallback(
     async (habit: Habit) => {
       if (!user) return
@@ -216,15 +275,24 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
         toast.error('请输入有效数值')
         return
       }
+      // Clear any pending debounced save for this habit
+      if (debounceTimers.current[habit.id]) {
+        clearTimeout(debounceTimers.current[habit.id])
+      }
+      // Bump save version to cancel any in-flight debounced save
+      saveVersionRef.current[habit.id] = (saveVersionRef.current[habit.id] || 0) + 1
+
       setSaveStates((prev) => ({ ...prev, [habit.id]: 'saving' }))
       try {
         await saveValue(habit.id, val, habit.target_value)
-        setSaveStates((prev) => ({ ...prev, [habit.id]: 'saved' }))
+        // Clear draft and input
+        clearDraftIfMatch(habit.id, val)
         setInputValues((prev) => {
           const next = { ...prev }
           delete next[key]
           return next
         })
+        setSaveStates((prev) => ({ ...prev, [habit.id]: 'saved' }))
         setTimeout(() => {
           setSaveStates((prev) => {
             const next = { ...prev }
@@ -237,10 +305,10 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
         toast.error('保存失败')
       }
     },
-    [user, saveValue, inputValues, today]
+    [user, saveValue, clearDraftIfMatch, inputValues, today]
   )
 
-  // ---- Edit log ----
+  // ---- Edit/Delete log ----
   const handleEditLog = (log: HabitLog) => {
     setEditLog(log)
     setEditValue(String(log.value))
@@ -277,6 +345,19 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
     }
   }, [user, habitLogs, deleteLog])
 
+  // Retry failed save with latest draft value
+  const retrySave = useCallback(
+    (habit: Habit) => {
+      const key = `${habit.id}-${today}`
+      const draftVal = draftValuesRef.current[key]
+      const existing = getLogForHabitRef.current(habit.id)
+      const valueToSave = draftVal !== undefined ? draftVal : (existing?.value ?? 0)
+      setSaveStates((prev) => ({ ...prev, [habit.id]: 'idle' }))
+      debouncedSave(habit.id, valueToSave, habit.target_value)
+    },
+    [debouncedSave, today]
+  )
+
   // Cleanup timers on unmount
   useEffect(() => {
     return () => {
@@ -312,13 +393,16 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
         {activeHabits.map((habit) => {
           const log = getLogForHabit(habit.id)
           const isChecked = log?.is_completed ?? false
-          const currentValue = log?.value ?? 0
+          const persistedValue = log?.value ?? 0
           const type = habit.measurement_type as MeasurementType
           const effectiveType = type === 'duration' ? 'minutes' : type
           const habitKey = `${habit.id}-${today}`
           const inputVal = inputValues[habitKey]
           const saveState = saveStates[habit.id] || 'idle'
           const isSaving = savingIds.has(habit.id)
+
+          // Display value: draft (local) takes precedence over persisted
+          const displayValue = getDisplayValue(habit.id, persistedValue)
 
           return (
             <Card
@@ -353,9 +437,9 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
                     {effectiveType !== 'boolean' && (
                       <span className={cn(
                         'ml-1',
-                        currentValue >= habit.target_value ? 'text-emerald-500 font-medium' : 'text-muted-foreground'
+                        displayValue >= habit.target_value ? 'text-emerald-500 font-medium' : 'text-muted-foreground'
                       )}>
-                        (已完成 {currentValue})
+                        (已完成 {displayValue})
                       </span>
                     )}
                   </div>
@@ -390,13 +474,15 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
                     <MinuteControl
                       habit={habit}
                       inputVal={inputVal}
-                      currentValue={currentValue}
+                      displayValue={displayValue}
+                      persistedValue={persistedValue}
                       effectiveType={effectiveType}
+                      saveState={saveState}
                       onInputChange={(v) => setInputValues((prev) => ({ ...prev, [habitKey]: v }))}
                       onInputSave={() => handleInputSave(habit)}
                       onAdjust={(delta) => adjustValue(habit, delta)}
                       onWheel={createWheelHandler(habit)}
-                      onDebouncedChange={(v) => debouncedSave(habit.id, v, habit.target_value)}
+                      onRetry={() => retrySave(habit)}
                     />
 
                     {/* === Fixed save-state slot (always present) === */}
@@ -488,7 +574,7 @@ function SaveStateSlot({ state }: { state: 'idle' | 'saving' | 'saved' | 'error'
     <span className="inline-flex items-center justify-center w-5 h-5 shrink-0">
       {state === 'saving' && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
       {state === 'saved' && <Check className="h-4 w-4 text-emerald-500" />}
-      {state === 'error' && <X className="h-4 w-4 text-destructive" />}
+      {state === 'error' && <AlertCircle className="h-4 w-4 text-destructive" />}
     </span>
   )
 }
@@ -497,30 +583,34 @@ function SaveStateSlot({ state }: { state: 'idle' | 'saving' | 'saved' | 'error'
 function MinuteControl({
   habit,
   inputVal,
-  currentValue,
+  displayValue,
+  persistedValue,
   effectiveType,
+  saveState,
   onInputChange,
   onInputSave,
   onAdjust,
   onWheel,
-  onDebouncedChange,
+  onRetry,
 }: {
   habit: Habit
   inputVal: string | undefined
-  currentValue: number
+  displayValue: number
+  persistedValue: number
   effectiveType: string
+  saveState: 'idle' | 'saving' | 'saved' | 'error'
   onInputChange: (v: string) => void
   onInputSave: () => void
   onAdjust: (delta: number) => void
   onWheel: (e: WheelEvent) => void
-  onDebouncedChange: (v: number) => void
+  onRetry: () => void
 }) {
   const wheelRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editText, setEditText] = useState('')
 
-  // Attach wheel listener
+  // Attach wheel listener (stable: onWheel identity only changes when today changes)
   useEffect(() => {
     const el = wheelRef.current
     if (!el) return
@@ -538,11 +628,14 @@ function MinuteControl({
 
   const step = getStepForType(effectiveType, habit)
   const unit = getUnitForType(effectiveType, habit)
+  const showValue = inputVal !== undefined ? inputVal : displayValue
+  const hasDraft = displayValue !== persistedValue
 
   const commitEdit = () => {
     const val = parseFloat(editText)
     if (!isNaN(val) && val >= 0) {
-      onDebouncedChange(val)
+      onInputChange(String(val))
+      onInputSave()
     }
     setIsEditing(false)
     setEditText('')
@@ -561,13 +654,13 @@ function MinuteControl({
         size="icon"
         className="h-8 w-8 shrink-0"
         onClick={() => onAdjust(-step)}
-        disabled={currentValue <= 0}
+        disabled={displayValue <= 0}
         aria-label={`减少 ${step}`}
       >
         <Minus className="h-3.5 w-3.5" />
       </Button>
 
-      {/* Value display / input (wheel-aware) */}
+      {/* Value display / input (wheel-aware) — clicking failed state retries */}
       <div ref={wheelRef} className="relative shrink-0">
         {isEditing ? (
           <input
@@ -581,20 +674,34 @@ function MinuteControl({
               if (e.key === 'Enter') commitEdit()
               if (e.key === 'Escape') cancelEdit()
             }}
-            className="h-8 w-14 rounded-lg border-2 border-ring bg-background text-center text-sm font-medium tabular-nums outline-none"
+            className={cn(
+              'h-8 w-14 rounded-lg border-2 bg-background text-center text-sm font-medium tabular-nums outline-none',
+              saveState === 'error' ? 'border-destructive' : 'border-ring'
+            )}
             aria-label="输入数值"
           />
         ) : (
           <button
             type="button"
             onClick={() => {
-              setIsEditing(true)
-              setEditText(inputVal !== undefined ? inputVal : String(currentValue))
+              if (saveState === 'error') {
+                onRetry()
+              } else {
+                setIsEditing(true)
+                setEditText(String(showValue))
+              }
             }}
-            className="h-8 w-14 rounded-lg border border-input bg-background text-center text-sm font-medium tabular-nums hover:bg-muted/50 transition-colors cursor-text"
-            aria-label={`当前值 ${inputVal !== undefined ? inputVal : currentValue}，点击编辑`}
+            className={cn(
+              'h-8 w-14 rounded-lg border bg-background text-center text-sm font-medium tabular-nums transition-colors cursor-text',
+              hasDraft && 'border-amber-300 dark:border-amber-600 bg-amber-50/30 dark:bg-amber-950/10',
+              saveState === 'error'
+                ? 'border-destructive hover:border-destructive/80'
+                : 'border-input hover:bg-muted/50'
+            )}
+            aria-label={`当前值 ${showValue}${hasDraft ? '（未保存）' : ''}，点击编辑`}
+            title={saveState === 'error' ? '保存失败，点击重试' : hasDraft ? '未保存的更改' : undefined}
           >
-            {inputVal !== undefined ? inputVal : currentValue}
+            {showValue}
           </button>
         )}
       </div>

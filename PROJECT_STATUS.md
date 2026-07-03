@@ -1,45 +1,46 @@
 # PROJECT_STATUS.md — 项目状态
 
-## 当前阶段：习惯分钟输入稳定性修复 (2026-07-04)
+## 当前阶段：习惯分钟滚轮连续输入修复 (2026-07-04)
 
 ## 验证状态：2026-07-04（最新）
 
 | 检查项 | 结果 |
 |--------|------|
 | npm install | ✅ 通过 |
-| ESLint | ✅ 0 errors, 94 warnings |
+| ESLint | ✅ 0 errors |
 | TypeScript (tsc --noEmit) | ✅ 通过 |
-| Vitest (210 tests) | ✅ 全部通过 |
+| Vitest (224 tests) | ✅ 全部通过 |
 | Next.js build | ✅ 通过 (14 routes) |
 
-## 🔧 本次修复 (2026-07-04 第五版)：习惯分钟输入稳定性
+## 🔧 本次修复 (2026-07-04 第六版)：滚轮连续输入流畅性
 
-### 问题根因
-1. **保存按钮条件渲染**：`{inputVal !== undefined && (<Button>保存</Button>)}` 在 flex row 中动态插入元素，挤开时间数字区域
-2. **编辑/删除按钮条件渲染**：`{log && (...)}` 同样在 flex row 中动态插入
-3. **无保存状态预留空间**：保存中/成功/失败图标出现时改变布局
-4. **+5/+10/+15/+30 快捷按钮**：用户不需要大步进按钮
-5. **滚轮步进太大**：每次 5 分钟，微调不便
+### 真实问题根因
+1. **draft 与 persisted 未分离**：`createWheelHandler` 每次滚轮事件都从 TanStack Query 缓存读取 `currentValue`（`getLogForHabit(habit.id)`），但 debounce 机制导致 `saveValue`（含 `invalidateLogs`）只在 400ms 后触发。快速滚动期间 query 缓存从不更新，每次滚轮读取相同的 `currentValue`，永远只能 +1
+   - 例：从 0 连续滚 20 次 → 每次都读 0、+1、调用 `debouncedSave(1)` → 最终只保存了 1，不是 20
+2. **每次滚轮触发状态更新**：之前 `setSaveStates('saving')` 在每次 `debouncedSave` 调用时立即执行，导致每 80ms 一次 React 重渲染
+3. **无竞态保护**：保存响应可能覆盖更新的输入值
 
 ### 修复方案
-1. **固定操作区**：保存状态用固定 `w-5` 容器，编辑/删除用固定 `w-12` 容器，始终占位
-2. **移除大步进按钮**：删除 +5/+10/+15/+30
-3. **滚轮 1 分钟步进**：wheel up +1, wheel down -1，节流 80ms
-4. **+/- 微调 1 分钟**：按钮每次 ±1
-5. **debounce 400ms 自动保存**：滚轮调整后自动保存
-6. **隐藏原生 spinner**：`type="text"` + `inputMode="decimal"` + CSS 隐藏
-7. **tabular-nums**：固定数字宽度
+1. **Draft/Persist 分离**：`draftValuesRef` (useRef) 存储本地草稿，wheel/click 即时更新；显示值 = draft ?? persisted
+2. **稳定的 wheel handler**：`createWheelHandler` 仅依赖 `today`（一天不变），通过 ref 访问最新值，避免 listener 反复重建
+3. **600ms debounce 保存**：停止操作 600ms 后才触发唯一一次保存
+4. **saveVersion 竞态保护**：旧保存回调检测 version 不匹配自动跳过
+5. **保存失败保护**：失败不回滚 draft，点击失败状态可重试
+6. **+/- 按钮 debounce**：连续点击不每次立即保存
 
 ### 修改文件
-- `src/components/habits/habit-checkin.tsx` — 重构稳定布局
-- `src/components/habits/home-habits-summary.tsx` — 重构稳定布局
-- `src/app/globals.css` — 隐藏原生 spinner
-- `src/__tests__/unit/habit-minute-stability.test.ts` — 新增 23 个测试
-- `DECISIONS.md` — 新增决策 58-62
+- `src/components/habits/habit-checkin.tsx` — draft/persist 分离、竞态保护、稳定回调
+- `src/components/habits/home-habits-summary.tsx` — 同上
+- `src/__tests__/unit/habit-minute-stability.test.ts` — 新增 14 个测试（共 37 个）
+- `DECISIONS.md` — 新增决策 63-69
 - `docs/features/habit-number-wheel-input/SPEC.md` — 更新
+- `docs/features/habit-number-wheel-input/IMPLEMENTATION_PLAN.md` — 新增
+- `docs/features/habit-number-wheel-input/TEST_PLAN.md` — 新增
+- `docs/features/habit-number-wheel-input/UI_ACCEPTANCE.md` — 新增
+- `README.md` — 更新习惯输入说明
 
 ### 测试结果
-- Vitest: 210 个测试全部通过（+23 新增）
+- Vitest: 224 个测试全部通过（+14 新增 draft/persist/race condition 测试）
 
 ## 历史更新
 
