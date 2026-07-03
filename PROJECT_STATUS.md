@@ -1,18 +1,49 @@
 # PROJECT_STATUS.md — 项目状态
 
-## 当前阶段：习惯/倒数日/快速新增/专注交互改进 (2026-07-04)
+## 当前阶段：习惯分钟输入稳定性修复 (2026-07-04)
 
 ## 验证状态：2026-07-04（最新）
 
 | 检查项 | 结果 |
 |--------|------|
 | npm install | ✅ 通过 |
-| ESLint | ✅ 0 errors, 89 warnings |
+| ESLint | ✅ 0 errors, 94 warnings |
 | TypeScript (tsc --noEmit) | ✅ 通过 |
-| Vitest (187 tests) | ✅ 全部通过 |
+| Vitest (210 tests) | ✅ 全部通过 |
 | Next.js build | ✅ 通过 (14 routes) |
 
-## 🔧 本次修复 (2026-07-04 第三版)
+## 🔧 本次修复 (2026-07-04 第五版)：习惯分钟输入稳定性
+
+### 问题根因
+1. **保存按钮条件渲染**：`{inputVal !== undefined && (<Button>保存</Button>)}` 在 flex row 中动态插入元素，挤开时间数字区域
+2. **编辑/删除按钮条件渲染**：`{log && (...)}` 同样在 flex row 中动态插入
+3. **无保存状态预留空间**：保存中/成功/失败图标出现时改变布局
+4. **+5/+10/+15/+30 快捷按钮**：用户不需要大步进按钮
+5. **滚轮步进太大**：每次 5 分钟，微调不便
+
+### 修复方案
+1. **固定操作区**：保存状态用固定 `w-5` 容器，编辑/删除用固定 `w-12` 容器，始终占位
+2. **移除大步进按钮**：删除 +5/+10/+15/+30
+3. **滚轮 1 分钟步进**：wheel up +1, wheel down -1，节流 80ms
+4. **+/- 微调 1 分钟**：按钮每次 ±1
+5. **debounce 400ms 自动保存**：滚轮调整后自动保存
+6. **隐藏原生 spinner**：`type="text"` + `inputMode="decimal"` + CSS 隐藏
+7. **tabular-nums**：固定数字宽度
+
+### 修改文件
+- `src/components/habits/habit-checkin.tsx` — 重构稳定布局
+- `src/components/habits/home-habits-summary.tsx` — 重构稳定布局
+- `src/app/globals.css` — 隐藏原生 spinner
+- `src/__tests__/unit/habit-minute-stability.test.ts` — 新增 23 个测试
+- `DECISIONS.md` — 新增决策 58-62
+- `docs/features/habit-number-wheel-input/SPEC.md` — 更新
+
+### 测试结果
+- Vitest: 210 个测试全部通过（+23 新增）
+
+## 历史更新
+
+### 🔧 习惯打卡交互修复 (2026-07-04 第三版)
 
 ### 习惯打卡交互修复
 1. **按计量方式拆分 UI**：
