@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useAuth } from '@/providers/auth-provider'
 import { useRepos } from '@/providers/repo-provider'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { NumberWheel } from '@/components/ui/number-wheel'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
@@ -17,12 +17,13 @@ import {
 } from '@/components/ui/dialog'
 import { todayStr } from '@/lib/utils/date'
 import type { Habit, HabitLog, MeasurementType } from '@/types'
-import { CheckSquare, ChevronRight, Plus, Minus, Check, Pencil, Trash2, Loader2 } from 'lucide-react'
+import { CheckSquare, ChevronRight, Check, Pencil, Trash2, Loader2, X } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
 const MINUTE_SHORTCUTS = [5, 10, 15, 30]
+const HOUR_SHORTCUTS = [0.5, 1, 2]
 
 export function HomeHabitsSummary() {
   const { user } = useAuth()
@@ -30,10 +31,12 @@ export function HomeHabitsSummary() {
   const queryClient = useQueryClient()
   const [collapsed, setCollapsed] = useState(false)
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set())
-  const [inputValues, setInputValues] = useState<Record<string, string>>({})
   const [editLog, setEditLog] = useState<HabitLog | null>(null)
   const [deleteLog, setDeleteLog] = useState<HabitLog | null>(null)
   const [editValue, setEditValue] = useState('')
+  // Per-habit save state
+  const [saveStates, setSaveStates] = useState<Record<string, 'idle' | 'saving' | 'saved' | 'error'>>({})
+  const timersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
   const today = todayStr()
 
@@ -58,8 +61,6 @@ export function HomeHabitsSummary() {
     queryClient.invalidateQueries({ queryKey: ['habitLogs', today] })
     queryClient.invalidateQueries({ queryKey: ['habits'] })
   }
-
-  const getInputKey = (habit: Habit) => `home-${habit.id}-${today}`
 
   // ---- Boolean toggle ----
   const handleToggle = useCallback(
@@ -94,23 +95,60 @@ export function HomeHabitsSummary() {
     [user, logRepo, togglingIds, today, getLog]
   )
 
-  // ---- Adjust value by delta ----
-  const handleAdjustValue = useCallback(
+  // ---- Debounced save for wheel adjustments ----
+  const handleWheelSave = useCallback(
+    async (habit: Habit, value: number) => {
+      if (!user) return
+      const sane = Math.max(0, value)
+
+      // Clear existing timer
+      if (timersRef.current[habit.id]) clearTimeout(timersRef.current[habit.id])
+
+      setSaveStates((prev) => ({ ...prev, [habit.id]: 'idle' }))
+
+      timersRef.current[habit.id] = setTimeout(async () => {
+        setSaveStates((prev) => ({ ...prev, [habit.id]: 'saving' }))
+        try {
+          const existing = getLog(habit.id)
+          const isCompleted = sane >= habit.target_value
+          if (existing) {
+            await logRepo.update(user.id, existing.id, { value: sane, is_completed: isCompleted })
+          } else {
+            await logRepo.create(user.id, {
+              habit_id: habit.id,
+              log_date: today,
+              value: sane,
+              is_completed: isCompleted,
+            })
+          }
+          invalidateLogs()
+          setSaveStates((prev) => ({ ...prev, [habit.id]: 'saved' }))
+          setTimeout(() => setSaveStates((prev) => ({ ...prev, [habit.id]: 'idle' })), 1500)
+        } catch {
+          setSaveStates((prev) => ({ ...prev, [habit.id]: 'error' }))
+        }
+      }, 400)
+    },
+    [user, logRepo, today, getLog]
+  )
+
+  // ---- Quick add (immediate, not debounced) ----
+  const handleQuickAdd = useCallback(
     async (habit: Habit, delta: number) => {
       if (!user) return
+      const existing = getLog(habit.id)
+      const currentValue = existing?.value ?? 0
+      const newValue = Math.max(0, currentValue + delta)
       try {
-        const existing = getLog(habit.id)
+        const isCompleted = newValue >= habit.target_value
         if (existing) {
-          const newValue = Math.max(0, existing.value + delta)
-          const isCompleted = newValue >= habit.target_value
           await logRepo.update(user.id, existing.id, { value: newValue, is_completed: isCompleted })
         } else {
-          const value = Math.max(0, delta > 0 ? delta : 0)
           await logRepo.create(user.id, {
             habit_id: habit.id,
             log_date: today,
-            value,
-            is_completed: value >= habit.target_value,
+            value: newValue,
+            is_completed: isCompleted,
           })
         }
         invalidateLogs()
@@ -119,45 +157,6 @@ export function HomeHabitsSummary() {
       }
     },
     [user, logRepo, today, getLog]
-  )
-
-  // ---- Save direct input ----
-  const handleSaveInput = useCallback(
-    async (habit: Habit) => {
-      if (!user) return
-      const key = getInputKey(habit)
-      const raw = inputValues[key]
-      if (raw === undefined || raw === '') return
-      const val = parseFloat(raw)
-      if (isNaN(val) || val < 0) {
-        toast.error('请输入有效数值')
-        return
-      }
-      try {
-        const existing = getLog(habit.id)
-        const isCompleted = val >= habit.target_value
-        if (existing) {
-          await logRepo.update(user.id, existing.id, { value: val, is_completed: isCompleted })
-        } else {
-          await logRepo.create(user.id, {
-            habit_id: habit.id,
-            log_date: today,
-            value: val,
-            is_completed: isCompleted,
-          })
-        }
-        setInputValues((prev) => {
-          const next = { ...prev }
-          delete next[key]
-          return next
-        })
-        invalidateLogs()
-        toast.success('已记录')
-      } catch {
-        toast.error('记录失败')
-      }
-    },
-    [user, logRepo, today, inputValues, getLog]
   )
 
   // ---- Edit/Delete log ----
@@ -211,162 +210,6 @@ export function HomeHabitsSummary() {
     return log?.is_completed
   }).length
 
-  const renderActions = (habit: Habit) => {
-    const log = getLog(habit.id)
-    const isDone = log?.is_completed
-    const currentValue = log?.value ?? 0
-    const key = getInputKey(habit)
-    const inputVal = inputValues[key]
-    const type = (habit.measurement_type as MeasurementType)
-    const effectiveType = type === 'duration' ? 'minutes' : type
-
-    switch (effectiveType) {
-      case 'boolean':
-        return (
-          <button
-            onClick={() => handleToggle(habit)}
-            disabled={togglingIds.has(habit.id)}
-            className={cn(
-              'h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0',
-              isDone
-                ? 'bg-emerald-500 border-emerald-500 text-white'
-                : 'border-muted-foreground/30 hover:border-emerald-400'
-            )}
-          >
-            {togglingIds.has(habit.id) ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : isDone ? (
-              <Check className="h-3 w-3" />
-            ) : null}
-          </button>
-        )
-
-      case 'count':
-        return (
-          <div className="flex items-center gap-0.5 shrink-0">
-            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleAdjustValue(habit, -1)} disabled={currentValue <= 0}>
-              <Minus className="h-3 w-3" />
-            </Button>
-            <span className="text-xs tabular-nums w-6 text-center">{currentValue}</span>
-            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleAdjustValue(habit, 1)}>
-              <Plus className="h-3 w-3" />
-            </Button>
-            {log && (
-              <>
-                <Button variant="ghost" size="icon" className="h-4 w-4 ml-0.5" onClick={() => handleEditLog(log)}>
-                  <Pencil className="h-2.5 w-2.5 text-muted-foreground" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => setDeleteLog(log)}>
-                  <Trash2 className="h-2.5 w-2.5 text-destructive/60" />
-                </Button>
-              </>
-            )}
-          </div>
-        )
-
-      case 'minutes':
-        return (
-          <div className="flex items-center gap-1 shrink-0">
-            {MINUTE_SHORTCUTS.slice(0, 3).map((m) => (
-              <Button key={m} variant="outline" size="sm" className="h-5 text-[9px] px-1" onClick={() => handleAdjustValue(habit, m)}>
-                +{m}
-              </Button>
-            ))}
-            <div className="flex items-center gap-0.5">
-              <Input
-                type="number" min={0}
-                value={inputVal !== undefined ? inputVal : ''}
-                onChange={(e) => setInputValues((prev) => ({ ...prev, [key]: e.target.value }))}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleSaveInput(habit) }}
-                placeholder={String(currentValue)}
-                className="h-5 w-12 text-[10px] text-center px-1"
-              />
-              {inputVal !== undefined && inputVal !== '' && (
-                <Button size="sm" className="h-5 text-[10px] px-1" onClick={() => handleSaveInput(habit)}>保存</Button>
-              )}
-            </div>
-            {log && (
-              <>
-                <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => handleEditLog(log)}>
-                  <Pencil className="h-2.5 w-2.5 text-muted-foreground" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => setDeleteLog(log)}>
-                  <Trash2 className="h-2.5 w-2.5 text-destructive/60" />
-                </Button>
-              </>
-            )}
-          </div>
-        )
-
-      case 'hours':
-        return (
-          <div className="flex items-center gap-1 shrink-0">
-            {[0.5, 1, 2].map((h) => (
-              <Button key={h} variant="outline" size="sm" className="h-5 text-[9px] px-1" onClick={() => handleAdjustValue(habit, h)}>
-                +{h}
-              </Button>
-            ))}
-            <Input
-              type="number" min={0} step={0.5}
-              value={inputVal !== undefined ? inputVal : ''}
-              onChange={(e) => setInputValues((prev) => ({ ...prev, [key]: e.target.value }))}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleSaveInput(habit) }}
-              placeholder={String(currentValue)}
-              className="h-5 w-12 text-[10px] text-center px-1"
-            />
-            {inputVal !== undefined && inputVal !== '' && (
-              <Button size="sm" className="h-5 text-[10px] px-1" onClick={() => handleSaveInput(habit)}>保存</Button>
-            )}
-            {log && (
-              <>
-                <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => handleEditLog(log)}>
-                  <Pencil className="h-2.5 w-2.5 text-muted-foreground" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => setDeleteLog(log)}>
-                  <Trash2 className="h-2.5 w-2.5 text-destructive/60" />
-                </Button>
-              </>
-            )}
-          </div>
-        )
-
-      case 'numeric':
-      default:
-        return (
-          <div className="flex items-center gap-0.5 shrink-0">
-            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleAdjustValue(habit, -1)} disabled={currentValue <= 0}>
-              <Minus className="h-3 w-3" />
-            </Button>
-            <Input
-              type="number" min={0}
-              value={inputVal !== undefined ? inputVal : ''}
-              onChange={(e) => setInputValues((prev) => ({ ...prev, [key]: e.target.value }))}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleSaveInput(habit) }}
-              placeholder={String(currentValue)}
-              className="h-5 w-12 text-[10px] text-center px-1"
-            />
-            <span className="text-[10px] text-muted-foreground">{habit.unit || ''}</span>
-            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleAdjustValue(habit, 1)}>
-              <Plus className="h-3 w-3" />
-            </Button>
-            {inputVal !== undefined && inputVal !== '' && (
-              <Button size="sm" className="h-5 text-[10px] px-1" onClick={() => handleSaveInput(habit)}>保存</Button>
-            )}
-            {log && (
-              <>
-                <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => handleEditLog(log)}>
-                  <Pencil className="h-2.5 w-2.5 text-muted-foreground" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => setDeleteLog(log)}>
-                  <Trash2 className="h-2.5 w-2.5 text-destructive/60" />
-                </Button>
-              </>
-            )}
-          </div>
-        )
-    }
-  }
-
   return (
     <>
       <Card className="shadow-none">
@@ -397,6 +240,7 @@ export function HomeHabitsSummary() {
               {activeHabits.map((habit) => {
                 const log = getLog(habit.id)
                 const isDone = log?.is_completed
+                const currentValue = log?.value ?? 0
                 const type = (habit.measurement_type as MeasurementType)
                 const effectiveType = type === 'duration' ? 'minutes' : type
 
@@ -420,7 +264,91 @@ export function HomeHabitsSummary() {
                         </div>
                       )}
                     </div>
-                    {renderActions(habit)}
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {effectiveType === 'boolean' ? (
+                        <button
+                          onClick={() => handleToggle(habit)}
+                          disabled={togglingIds.has(habit.id)}
+                          className={cn(
+                            'h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0',
+                            isDone
+                              ? 'bg-emerald-500 border-emerald-500 text-white'
+                              : 'border-muted-foreground/30 hover:border-emerald-400'
+                          )}
+                        >
+                          {togglingIds.has(habit.id) ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : isDone ? (
+                            <Check className="h-3 w-3" />
+                          ) : null}
+                        </button>
+                      ) : (
+                        <>
+                          {/* Quick add buttons */}
+                          {effectiveType === 'minutes' && (
+                            <div className="flex items-center gap-0.5">
+                              {MINUTE_SHORTCUTS.slice(0, 3).map((m) => (
+                                <Button
+                                  key={m}
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-[10px] px-1.5"
+                                  onClick={() => handleQuickAdd(habit, m)}
+                                >
+                                  +{m}
+                                </Button>
+                              ))}
+                            </div>
+                          )}
+                          {effectiveType === 'hours' && (
+                            <div className="flex items-center gap-0.5">
+                              {HOUR_SHORTCUTS.map((h) => (
+                                <Button
+                                  key={h}
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-[10px] px-1.5"
+                                  onClick={() => handleQuickAdd(habit, h)}
+                                >
+                                  +{Number.isInteger(h) ? h : h.toFixed(1)}
+                                </Button>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* NumberWheel with debounced auto-save */}
+                          <NumberWheel
+                            value={currentValue}
+                            onChange={(val) => handleWheelSave(habit, val)}
+                            min={0}
+                            step={getHomeStep(effectiveType, habit)}
+                            unit={getHomeUnit(effectiveType, habit)}
+                            compactButtons={effectiveType === 'count'}
+                            showAdjacent={false}
+                            size="sm"
+                          />
+
+                          {/* Save state */}
+                          <SaveDot state={saveStates[habit.id] || 'idle'} />
+                        </>
+                      )}
+
+                      {/* Fixed operation area */}
+                      <div className="flex items-center w-9 shrink-0 justify-end">
+                        {log && (
+                          <>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEditLog(log)}>
+                              <Pencil className="h-3 w-3 text-muted-foreground" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setDeleteLog(log)}>
+                              <Trash2 className="h-3 w-3 text-destructive/60" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )
               })}
@@ -437,13 +365,12 @@ export function HomeHabitsSummary() {
             <DialogDescription>修改 {editLog?.log_date} 的记录值</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            <Input
-              type="number" min={0} step={0.5}
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              placeholder="输入数值"
-              autoFocus
-              onKeyDown={(e) => { if (e.key === 'Enter') saveEditLog() }}
+            <NumberWheel
+              value={parseFloat(editValue) || 0}
+              onChange={(v) => setEditValue(String(v))}
+              min={0}
+              step={0.5}
+              showAdjacent={false}
             />
           </div>
           <DialogFooter>
@@ -470,4 +397,50 @@ export function HomeHabitsSummary() {
       </Dialog>
     </>
   )
+}
+
+// ---- Helpers ----
+
+function SaveDot({ state }: { state: 'idle' | 'saving' | 'saved' | 'error' }) {
+  if (state === 'idle') return null
+  return (
+    <span className="shrink-0 w-3 flex items-center justify-center">
+      {state === 'saving' && <Loader2 className="h-2.5 w-2.5 animate-spin text-muted-foreground" />}
+      {state === 'saved' && <Check className="h-3 w-3 text-emerald-500" />}
+      {state === 'error' && <X className="h-3 w-3 text-destructive" />}
+    </span>
+  )
+}
+
+function getHomeStep(effectiveType: MeasurementType, habit: Habit): number {
+  switch (effectiveType) {
+    case 'minutes':
+      return 5
+    case 'hours':
+      return 0.5
+    case 'count':
+      return 1
+    case 'numeric':
+      if (habit.unit === '小时' || habit.unit === 'h') return 0.5
+      if (habit.target_value <= 10) return 1
+      if (habit.target_value <= 100) return 5
+      return 10
+    default:
+      return 1
+  }
+}
+
+function getHomeUnit(effectiveType: MeasurementType, habit: Habit): string | undefined {
+  switch (effectiveType) {
+    case 'minutes':
+      return '分钟'
+    case 'hours':
+      return '小时'
+    case 'count':
+      return '次'
+    case 'numeric':
+      return habit.unit || undefined
+    default:
+      return undefined
+  }
 }

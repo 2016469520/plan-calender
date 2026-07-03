@@ -1,18 +1,72 @@
 # PROJECT_STATUS.md — 项目状态
 
-## 当前阶段：习惯/倒数日/快速新增/专注交互改进 (2026-07-04)
+## 当前阶段：习惯数值滚轮交互优化 (2026-07-04)
 
 ## 验证状态：2026-07-04（最新）
 
 | 检查项 | 结果 |
 |--------|------|
 | npm install | ✅ 通过 |
-| ESLint | ✅ 0 errors, 89 warnings |
+| ESLint | ✅ 0 errors, 94 warnings |
 | TypeScript (tsc --noEmit) | ✅ 通过 |
-| Vitest (187 tests) | ✅ 全部通过 |
+| Vitest (216 tests) | ✅ 全部通过 |
 | Next.js build | ✅ 通过 (14 routes) |
 
-## 🔧 本次修复 (2026-07-04 第三版)
+## 🔧 本次修复 (2026-07-04 第四版)：习惯数值滚轮输入
+
+### 问题根因
+1. **原生 input number spinner**：`<Input type="number">` 显示浏览器原生上下箭头，样式差且难以点击
+2. **快捷按钮过小**：+5/+10/+15/+30 按钮 `h-6 text-[10px]` 桌面勉强可用，手机极易误触
+3. **保存按钮布局跳动**：输入值后"保存"按钮条件渲染出现，挤开周边元素导致卡片重排
+4. **缺少滚轮交互**：不能通过鼠标滚轮或触控滑动调整数值
+5. **编辑态无自动保存**：需手动点击保存按钮，频繁操作体验差
+
+### 修复方案
+
+#### 1. 新建 NumberWheel 通用组件
+- `src/components/ui/number-wheel.tsx` — 数字滚轮组件
+- 核心交互：
+  - **鼠标滚轮**：hover 时向上增加、向下减少，阻止页面滚动
+  - **点击相邻值**：上下相邻数字可点击切换
+  - **键盘**：ArrowUp/Right 增加，ArrowDown/Left 减少
+  - **触控拖动**：上下滑动改变值（每 20px 触发一步）
+  - **直接输入**：点击当前值进入编辑模式，Enter 确认，Esc 取消，失焦保存
+- 当前值最突出（大号、加粗、最深色），相邻值渐弱
+- 支持不同 step：count(1)、minutes(5)、hours(0.5)、numeric(自适应)
+- 无原生 spinner（CSS `appearance: textfield` + `-webkit-inner-spin-button: none`）
+- 过渡动画尊重 `prefers-reduced-motion`
+
+#### 2. 习惯卡片保存交互重构
+- **自动保存**：NumberWheel 调整通过 debounce 400ms 自动保存
+- **固定操作区**：编辑/删除图标始终占据固定宽度（w-10），不参与条件渲染
+- **保存状态指示**：小型图标（spinner / 绿色勾 / 红色叉）显示保存进度
+- 不再有"保存"按钮突然出现挤压布局
+
+#### 3. 快捷按钮优化
+- 尺寸从 `h-6 text-[10px] px-1` 增大至 `h-8 px-2 text-xs`
+- 点击区域 ≥ 32px 高度
+- minutes 型保留 +5/+10/+15/+30
+- hours 型保留 +0.5/+1/+2
+- count 型保留 +1
+
+#### 4. 全局 spinner 隐藏
+- `globals.css` 添加 CSS 规则隐藏所有 `input[type="number"]` 原生箭头
+
+### 修改文件
+- `src/components/ui/number-wheel.tsx` — 新建通用数字滚轮组件
+- `src/components/habits/habit-checkin.tsx` — 重构：NumberWheel + 自动保存 + 固定操作区
+- `src/components/habits/home-habits-summary.tsx` — 重构：NumberWheel + 自动保存 + 固定操作区
+- `src/app/globals.css` — 隐藏原生 spinner + reduced-motion 支持
+- `src/__tests__/unit/number-wheel.test.tsx` — 新建 29 个测试
+- `docs/features/habit-number-wheel-input/*.md` — Harness 文档
+
+### 测试结果
+- Vitest: 216 个测试全部通过（+29 新增）
+- NumberWheel 组件测试：渲染、点击、键盘、滚轮、触控、直接输入、边界、紧凑模式
+
+## 历史更新
+
+### 🔧 习惯打卡交互修复 (2026-07-04 第三版)
 
 ### 习惯打卡交互修复
 1. **按计量方式拆分 UI**：
