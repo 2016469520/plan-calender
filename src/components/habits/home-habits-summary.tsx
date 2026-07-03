@@ -65,6 +65,12 @@ export function HomeHabitsSummary() {
   const getLogRef = useRef(getLog)
   getLogRef.current = getLog
 
+  // Stable ref for debouncedSave so createWheelHandler doesn't depend on it
+  const debouncedSaveRef = useRef<((habitId: string, value: number, targetValue: number) => void) | null>(null)
+
+  // Cache per-habit wheel handlers so they don't change on every render
+  const wheelHandlersRef = useRef<Record<string, (e: WheelEvent) => void>>({})
+
   const invalidateLogs = () => {
     queryClient.invalidateQueries({ queryKey: ['habitLogs', today] })
     queryClient.invalidateQueries({ queryKey: ['habits'] })
@@ -186,6 +192,7 @@ export function HomeHabitsSummary() {
     },
     [saveValue, clearDraftIfMatch]
   )
+  debouncedSaveRef.current = debouncedSave
 
   // ---- Immediate adjust (draft accumulation + debounce) ----
   const handleAdjust = useCallback(
@@ -205,6 +212,7 @@ export function HomeHabitsSummary() {
   )
 
   // ---- Wheel handler (draft accumulation, no per-notch save) ----
+  // Only depends on [today] — stable across renders. Uses refs for all mutable values.
   const createWheelHandler = useCallback(
     (habit: Habit) => {
       return (e: WheelEvent) => {
@@ -226,10 +234,10 @@ export function HomeHabitsSummary() {
         draftValuesRef.current[key] = newValue
         setDraftVersion((v) => v + 1)
 
-        debouncedSave(habit.id, newValue, habit.target_value)
+        debouncedSaveRef.current?.(habit.id, newValue, habit.target_value)
       }
     },
-    [debouncedSave, today]
+    [today]
   )
 
   // ---- Retry failed save ----
@@ -337,6 +345,13 @@ export function HomeHabitsSummary() {
                 const saveState = saveStates[habit.id] || 'idle'
                 const displayValue = getDisplayValue(habit.id, persistedValue)
 
+                // Get or create stable wheel handler (same ref across renders → no useEffect re-attach)
+                const wheelHandlerKey = `${habit.id}-${today}`
+                if (!wheelHandlersRef.current[wheelHandlerKey]) {
+                  wheelHandlersRef.current[wheelHandlerKey] = createWheelHandler(habit)
+                }
+                const wheelHandler = wheelHandlersRef.current[wheelHandlerKey]
+
                 return (
                   <HomeHabitRow
                     key={habit.id}
@@ -350,7 +365,7 @@ export function HomeHabitsSummary() {
                     togglingIds={togglingIds}
                     onToggle={handleToggle}
                     onAdjust={handleAdjust}
-                    onWheel={createWheelHandler(habit)}
+                    onWheel={wheelHandler}
                     onEditLog={handleEditLog}
                     onDeleteLog={setDeleteLog}
                     onRetry={() => retrySave(habit)}

@@ -81,6 +81,12 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
   const getLogForHabitRef = useRef(getLogForHabit)
   getLogForHabitRef.current = getLogForHabit
 
+  // Stable ref for debouncedSave so createWheelHandler doesn't depend on it
+  const debouncedSaveRef = useRef<((habitId: string, value: number, targetValue: number) => void) | null>(null)
+
+  // Cache per-habit wheel handlers so they don't change on every render
+  const wheelHandlersRef = useRef<Record<string, (e: WheelEvent) => void>>({})
+
   // ---- Draft helpers ----
   const getDisplayValue = useCallback(
     (habitId: string, persistedValue: number) => {
@@ -211,8 +217,12 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
     },
     [saveValue, clearDraftIfMatch]
   )
+  // Keep ref in sync so createWheelHandler can use it without depending on it
+  debouncedSaveRef.current = debouncedSave
 
   // ---- Wheel handler (draft accumulation, no per-notch save) ----
+  // Only depends on [today] — stable across renders (today changes once/day)
+  // Uses refs for all mutable values so callbacks never go stale
   const createWheelHandler = useCallback(
     (habit: Habit) => {
       return (e: WheelEvent) => {
@@ -237,11 +247,11 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
         draftValuesRef.current[key] = newValue
         setDraftVersion((v) => v + 1)
 
-        // Debounced save (fires only after user stops scrolling)
-        debouncedSave(habit.id, newValue, habit.target_value)
+        // Debounced save via ref (stable — doesn't recreate wheel handler)
+        debouncedSaveRef.current?.(habit.id, newValue, habit.target_value)
       }
     },
-    [debouncedSave, today]
+    [today]
   )
 
   // ---- +/- button adjust (draft accumulation + debounce) ----
@@ -404,6 +414,13 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
           // Display value: draft (local) takes precedence over persisted
           const displayValue = getDisplayValue(habit.id, persistedValue)
 
+          // Get or create stable wheel handler (same ref across renders → no useEffect re-attach)
+          const wheelHandlerKey = `${habit.id}-${today}`
+          if (!wheelHandlersRef.current[wheelHandlerKey]) {
+            wheelHandlersRef.current[wheelHandlerKey] = createWheelHandler(habit)
+          }
+          const wheelHandler = wheelHandlersRef.current[wheelHandlerKey]
+
           return (
             <Card
               key={habit.id}
@@ -481,7 +498,7 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
                       onInputChange={(v) => setInputValues((prev) => ({ ...prev, [habitKey]: v }))}
                       onInputSave={() => handleInputSave(habit)}
                       onAdjust={(delta) => adjustValue(habit, delta)}
-                      onWheel={createWheelHandler(habit)}
+                      onWheel={wheelHandler}
                       onRetry={() => retrySave(habit)}
                     />
 
