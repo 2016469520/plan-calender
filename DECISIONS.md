@@ -1,5 +1,16 @@
 # DECISIONS.md — 技术决策记录
 
+## 决策 70：缓存 per-habit wheel handler 防止 listener 反复重建 (2026-07-04)
+- **决策**: 使用 `wheelHandlersRef`（useRef）缓存每个 habit 的 wheel handler 函数引用，同一渲染周期复用同一引用
+- **原因**:
+  - `createWheelHandler(habit)` 在每次渲染中返回新函数引用
+  - `MinuteControl` 的 `useEffect([onWheel])` 检测到引用变化，卸载旧 listener 再绑定新 listener
+  - 每次 `draftVersion` 变化（80ms）触发一次完整拆装 → 滚轮事件在拆装间隙落到页面默认行为 → 页面抖动
+  - 缓存后同一 handler 引用跨渲染复用 → `useEffect` 不触发 → listener 不重建
+- **日期**: 2026-07-04
+
+---
+
 ## 决策 63：滚轮输入 draft/persist 分离 (2026-07-04)
 - **决策**: 引入本地 draftValue 与数据库 persistedValue 分离的架构
 - **原因**: 滚轮事件从 TanStack Query 缓存读取 persistedValue，但 debounce 导致缓存不更新，每次滚轮都读相同值，无法累积（从 0 滚 20 次只能 +1）。draft 独立于 query 缓存，即时更新 UI，停止后才保存。
