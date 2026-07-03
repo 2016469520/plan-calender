@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useAuth } from '@/providers/auth-provider'
 import { useRepos } from '@/providers/repo-provider'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -63,13 +63,15 @@ export function HomeHabitsSummary() {
 
   // Stable ref for getLog
   const getLogRef = useRef(getLog)
-  getLogRef.current = getLog
+  useEffect(() => {
+    getLogRef.current = getLog
+  })
 
   // Stable ref for debouncedSave so createWheelHandler doesn't depend on it
   const debouncedSaveRef = useRef<((habitId: string, value: number, targetValue: number) => void) | null>(null)
 
   // Cache per-habit wheel handlers so they don't change on every render
-  const wheelHandlersRef = useRef<Record<string, (e: WheelEvent) => void>>({})
+  // (wheelHandlersRef removed — using useMemo below instead)
 
   const invalidateLogs = () => {
     queryClient.invalidateQueries({ queryKey: ['habitLogs', today] })
@@ -192,7 +194,9 @@ export function HomeHabitsSummary() {
     },
     [saveValue, clearDraftIfMatch]
   )
-  debouncedSaveRef.current = debouncedSave
+  useEffect(() => {
+    debouncedSaveRef.current = debouncedSave
+  })
 
   // ---- Immediate adjust (draft accumulation + debounce) ----
   const handleAdjust = useCallback(
@@ -239,6 +243,17 @@ export function HomeHabitsSummary() {
     },
     [today]
   )
+
+  // ---- Pre-compute wheel handler map (no ref access during render) ----
+  const wheelHandlers = useMemo(() => {
+    const map: Record<string, (e: WheelEvent) => void> = {}
+    for (const habit of activeHabits) {
+      map[`${habit.id}-${today}`] = createWheelHandler(habit)
+    }
+    return map
+    // habits is stable (TanStack Query structural sharing)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [habits, today, createWheelHandler])
 
   // ---- Retry failed save ----
   const retrySave = useCallback(
@@ -345,12 +360,9 @@ export function HomeHabitsSummary() {
                 const saveState = saveStates[habit.id] || 'idle'
                 const displayValue = getDisplayValue(habit.id, persistedValue)
 
-                // Get or create stable wheel handler (same ref across renders → no useEffect re-attach)
+                // Stable wheel handler from pre-computed memo map
                 const wheelHandlerKey = `${habit.id}-${today}`
-                if (!wheelHandlersRef.current[wheelHandlerKey]) {
-                  wheelHandlersRef.current[wheelHandlerKey] = createWheelHandler(habit)
-                }
-                const wheelHandler = wheelHandlersRef.current[wheelHandlerKey]
+                const wheelHandler = wheelHandlers[wheelHandlerKey]
 
                 return (
                   <HomeHabitRow

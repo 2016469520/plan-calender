@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/providers/auth-provider'
 import { useRepos } from '@/providers/repo-provider'
@@ -79,13 +79,12 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
 
   // Stable refs for use in callbacks (avoids recreating wheel/click handlers)
   const getLogForHabitRef = useRef(getLogForHabit)
-  getLogForHabitRef.current = getLogForHabit
+  useEffect(() => {
+    getLogForHabitRef.current = getLogForHabit
+  })
 
   // Stable ref for debouncedSave so createWheelHandler doesn't depend on it
   const debouncedSaveRef = useRef<((habitId: string, value: number, targetValue: number) => void) | null>(null)
-
-  // Cache per-habit wheel handlers so they don't change on every render
-  const wheelHandlersRef = useRef<Record<string, (e: WheelEvent) => void>>({})
 
   // ---- Draft helpers ----
   const getDisplayValue = useCallback(
@@ -218,7 +217,9 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
     [saveValue, clearDraftIfMatch]
   )
   // Keep ref in sync so createWheelHandler can use it without depending on it
-  debouncedSaveRef.current = debouncedSave
+  useEffect(() => {
+    debouncedSaveRef.current = debouncedSave
+  })
 
   // ---- Wheel handler (draft accumulation, no per-notch save) ----
   // Only depends on [today] — stable across renders (today changes once/day)
@@ -253,6 +254,17 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
     },
     [today]
   )
+
+  // ---- Pre-compute wheel handler map (no ref access during render) ----
+  const wheelHandlers = useMemo(() => {
+    const map: Record<string, (e: WheelEvent) => void> = {}
+    for (const habit of activeHabits) {
+      map[`${habit.id}-${today}`] = createWheelHandler(habit)
+    }
+    return map
+    // activeHabits is stable (derived from useQuery data with structural sharing)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [habitList, today, createWheelHandler])
 
   // ---- +/- button adjust (draft accumulation + debounce) ----
   const adjustValue = useCallback(
@@ -414,12 +426,9 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
           // Display value: draft (local) takes precedence over persisted
           const displayValue = getDisplayValue(habit.id, persistedValue)
 
-          // Get or create stable wheel handler (same ref across renders → no useEffect re-attach)
+          // Stable wheel handler from pre-computed memo map
           const wheelHandlerKey = `${habit.id}-${today}`
-          if (!wheelHandlersRef.current[wheelHandlerKey]) {
-            wheelHandlersRef.current[wheelHandlerKey] = createWheelHandler(habit)
-          }
-          const wheelHandler = wheelHandlersRef.current[wheelHandlerKey]
+          const wheelHandler = wheelHandlers[wheelHandlerKey]
 
           return (
             <Card

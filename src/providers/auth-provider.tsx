@@ -40,6 +40,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     if (!supabaseUrl) {
       setIsDemoMode(true)
+      // Restore demo user from localStorage for session persistence
+      try {
+        const stored = localStorage.getItem('plan-calendar-demo-user')
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (parsed?.id && parsed?.email) {
+            setUser(parsed as User)
+          }
+        }
+      } catch { /* ignore parse errors */ }
       setIsLoading(false)
       return
     }
@@ -63,7 +73,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(async (email: string, password: string) => {
     if (isDemoMode) {
       // Demo mode: accept any credentials
-      setUser({ id: 'demo-user', email } as User)
+      const demoUser = { id: 'demo-user', email } as User
+      setUser(demoUser)
+      // Persist demo session so page refreshes don't log out
+      try { localStorage.setItem('plan-calendar-demo-user', JSON.stringify(demoUser)) } catch { /* ignore */ }
       return {}
     }
 
@@ -75,7 +88,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = useCallback(async (email: string, password: string) => {
     if (isDemoMode) {
-      setUser({ id: 'demo-user', email } as User)
+      const demoUser = { id: 'demo-user', email } as User
+      setUser(demoUser)
+      try { localStorage.setItem('plan-calendar-demo-user', JSON.stringify(demoUser)) } catch { /* ignore */ }
       return {}
     }
 
@@ -94,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     if (isDemoMode) {
       setUser(null)
+      try { localStorage.removeItem('plan-calendar-demo-user') } catch { /* ignore */ }
       return
     }
 

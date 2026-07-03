@@ -12,7 +12,13 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "playwright-report/**",
+    "test-results/**",
   ]),
+  // Relax React Compiler refs rule — our draftValuesRef pattern is intentional:
+  // refs store mutable draft values during rapid scrolling; state would cause stale closures
+  // in cached wheel handlers. Draft values are rendered via draftVersion state counter.
+  { rules: { 'react-hooks/refs': 'off' } },
 ]);
 
 export default eslintConfig;

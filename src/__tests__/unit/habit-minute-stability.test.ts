@@ -69,7 +69,7 @@ describe('Habit minute input — draft/persist separation', () => {
 
     it('prefers draft value over persisted when accumulating', () => {
       // Simulate: scroll to 5 (draft=5), then continue scrolling
-      let draft: number | undefined = 5
+      const draft: number | undefined = 5
       const persisted = 0 // outdated persisted
       const r = accumulateWheel(draft, persisted, -100, 1)
       expect(r.draft).toBe(6) // accumulates from draft (5), not persisted (0)
@@ -165,10 +165,8 @@ describe('Habit minute input — draft/persist separation', () => {
       vi.useFakeTimers()
       const saveFn = vi.fn().mockResolvedValue(undefined)
 
-      let timer: ReturnType<typeof setTimeout> | null = null
-
       // First event
-      timer = setTimeout(() => saveFn(5), 600)
+      setTimeout(() => saveFn(5), 600)
 
       // 300ms later — still no save
       vi.advanceTimersByTime(300)

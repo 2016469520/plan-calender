@@ -160,6 +160,11 @@ npm run dev
    - `supabase/migrations/002_rls_policies.sql` — RLS 策略 + 新用户触发器
    - `supabase/migrations/003_fix_handle_new_user.sql` — 修复注册 500 错误
    - `supabase/migrations/004_tag_deduplication.sql` — 标签去重和唯一约束
+   - `supabase/migrations/005_countdowns.sql` — 倒数日
+   - `supabase/migrations/006_focus_sessions.sql` — 专注记录
+   - `supabase/migrations/007_difficulty_due_at.sql` — 难度 + 截止时间
+   - `supabase/migrations/008_focus_timer_mode.sql` — 正计时模式
+   - `supabase/migrations/009_measurement_type_add_minutes_hours.sql` — 习惯计量类型扩展
 3. 在 Supabase Authentication 中启用 Email 登录（建议关闭邮箱确认）
 4. 创建 `.env.local` 文件：
 
@@ -180,7 +185,7 @@ npm run build         # 生产构建
 npm run start         # 启动生产服务器
 npm run lint          # ESLint 检查
 npx tsc --noEmit      # TypeScript 类型检查
-npx vitest run        # 运行单元测试（118 个）
+npx vitest run        # 运行单元测试（224 个）
 npx vitest            # 监视模式
 npx playwright test   # E2E 测试
 ```
