@@ -191,12 +191,14 @@ export function TaskEditDialog({
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {{ morning: '上午', afternoon: '下午', evening: '晚上' }[field.value as string] || field.value}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="morning">{PERIOD_LABELS.morning}</SelectItem>
-                  <SelectItem value="afternoon">{PERIOD_LABELS.afternoon}</SelectItem>
-                  <SelectItem value="evening">{PERIOD_LABELS.evening}</SelectItem>
+                  <SelectItem value="morning">上午</SelectItem>
+                  <SelectItem value="afternoon">下午</SelectItem>
+                  <SelectItem value="evening">晚上</SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -217,20 +219,22 @@ export function TaskEditDialog({
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label>优先级</Label>
+          <Label>难度</Label>
           <Controller
             name="priority"
             control={form.control}
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {{ low: '简单', normal: '一般', high: '困难', urgent: '极难', medium: '一般' }[field.value as string] || '一般'}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">低</SelectItem>
-                  <SelectItem value="normal">普通</SelectItem>
-                  <SelectItem value="high">高</SelectItem>
-                  <SelectItem value="urgent">紧急</SelectItem>
+                  <SelectItem value="low">简单</SelectItem>
+                  <SelectItem value="medium">一般</SelectItem>
+                  <SelectItem value="high">困难</SelectItem>
+                  <SelectItem value="urgent">极难</SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -242,12 +246,16 @@ export function TaskEditDialog({
             name="tag_id"
             control={form.control}
             render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select value={field.value || 'none'} onValueChange={field.onChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="无" />
+                  <SelectValue placeholder="未分类">
+                    {field.value && field.value !== 'none'
+                      ? (tagList.find((t) => t.id === field.value)?.name || '未分类')
+                      : '未分类'}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">无标签</SelectItem>
+                  <SelectItem value="none">未分类</SelectItem>
                   {tagList.map((tag) => (
                     <SelectItem key={tag.id} value={tag.id}>
                       <span className="flex items-center gap-1.5">
@@ -282,10 +290,12 @@ export function TaskEditDialog({
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue>
+                      {{ todo: '待办', in_progress: '进行中', done: '已完成', cancelled: '已取消' }[field.value as string] || field.value}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="todo">未开始</SelectItem>
+                    <SelectItem value="todo">待办</SelectItem>
                     <SelectItem value="in_progress">进行中</SelectItem>
                     <SelectItem value="done">已完成</SelectItem>
                     <SelectItem value="cancelled">已取消</SelectItem>

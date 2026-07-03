@@ -108,19 +108,6 @@ export default function SchedulePage() {
 
   if (!user) return null
 
-  // Mobile: when detail panel is open, show only the panel (full screen)
-  if (!isDesktop && showDetailPanel) {
-    return (
-      <div className="h-full">
-        <TaskDetailPanel
-          task={activeTask}
-          open={true}
-          onClose={handleClosePanel}
-        />
-      </div>
-    )
-  }
-
   return (
     <div className="flex h-full">
       {/* Main content area */}
@@ -279,20 +266,21 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      {/* Desktop: Right panel (focus, countdowns, habits) or task detail */}
-      {isDesktop && showDetailPanel ? (
-        <TaskDetailPanel
-          task={activeTask}
-          open={showDetailPanel}
-          onClose={handleClosePanel}
-        />
-      ) : isDesktop ? (
+      {/* Desktop: Right panel (focus, countdowns, habits) */}
+      {isDesktop && (
         <div className="w-72 xl:w-80 border-l bg-card/50 h-full overflow-y-auto shrink-0 p-3 space-y-3">
           <HomeFocusTimer />
           <HomeCountdowns />
           <HomeHabitsSummary />
         </div>
-      ) : null}
+      )}
+
+      {/* Floating task detail (dialog on desktop, drawer on mobile) */}
+      <TaskDetailPanel
+        task={activeTask}
+        open={showDetailPanel}
+        onClose={handleClosePanel}
+      />
     </div>
   )
 }

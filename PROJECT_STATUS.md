@@ -1,18 +1,59 @@
 # PROJECT_STATUS.md — 项目状态
 
-## 当前阶段：日历、专注、设置工作区优化 (2026-07-04)
+## 当前阶段：选择器显示修复与详情悬窗 (2026-07-04)
 
 ## 验证状态：2026-07-04（最新）
 
 | 检查项 | 结果 |
 |--------|------|
 | npm install | ✅ 通过 |
-| ESLint | ✅ 0 errors, 80 warnings |
+| ESLint | ✅ 0 errors, 79 warnings |
 | TypeScript (tsc --noEmit) | ✅ 通过 |
 | Vitest (155 tests) | ✅ 全部通过 |
 | Next.js build | ✅ 通过 (14 routes) |
 
-## 🆕 本次更新 (2026-07-04)
+## 🔧 本次修复 (2026-07-04 第二版)
+
+### 选择器显示修复
+1. **标签 UUID → 标签名称**：所有 Select 的 SelectValue 现在通过 children/render 显示中文标签名，不再显示原始 value（UUID/enum）
+2. **统一显示映射**：创建 `src/lib/display-labels.ts` 作为单一真相来源，constants.ts 重新导出
+3. **SelectValue 根因**：@base-ui/react 的 SelectValue 不同于 Radix——placeholder 仅在空值时显示，选中后需显式提供 children 才能显示文本
+4. **快速新增中文化**：四个控件依次显示：日期、时段（上午/下午/晚上）、标签（未分类/标签名）、难度（简单/一般/困难/极难）
+5. **任务详情中文化**：状态（待办/进行中/已完成/已取消）、时段、难度、标签全部显示中文
+6. **状态文案调整**：`todo` 从「未开始」改为「待办」
+7. **task-edit-dialog**：优先级→难度、标签显示中文、状态显示中文
+8. **习惯页**：计量方式选择器显示中文
+9. **重复规则**：频率选择器显示中文
+
+### 专注选择器重构
+- **分离专注分类与关联日程**：两个独立 Select 控件
+  - 专注分类：基于标签选择（学习/科研/工作等），用于专注统计归类
+  - 关联日程：可选绑定具体任务
+- 不再显示 `none`，改为「选择专注分类」和「不关联日程」
+- 专注统计支持按标签分类
+
+### 任务详情悬窗
+- **TaskDetailPanel 重构**：从固定右侧面板改为居中浮层
+  - 桌面端：Dialog（sm:max-w-lg, max-h-[88vh]）
+  - 手机端：Drawer（max-h-[92vh]）
+- 背景遮罩，点击遮罩/ESC 关闭
+- 日历和日程页同时受益
+- 不再贴屏幕右侧
+
+### 修改文件
+- `src/lib/display-labels.ts` — 新增统一显示映射
+- `src/lib/constants.ts` — 重新导出，消除重复
+- `src/components/schedule/task-detail-panel.tsx` — 重构为浮层
+- `src/components/schedule/quick-add-task.tsx` — 中文化
+- `src/components/focus/focus-timer.tsx` — 分离分类/任务
+- `src/components/plans/task-edit-dialog.tsx` — 中文化
+- `src/components/plans/recurrence-editor.tsx` — 中文化
+- `src/components/calendar/day-view.tsx` — 中文化
+- `src/app/calendar/page.tsx` — 浮层适配
+- `src/app/schedule/page.tsx` — 浮层适配
+- `src/app/habits/page.tsx` — 中文化
+
+## 🆕 历史更新 (2026-07-04 第一版)
 
 ### 日历高密度布局优化
 - 周视图每单元格限制显示 3 条任务，超出显示"还有 N 项"

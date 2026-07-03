@@ -1,4 +1,24 @@
 import type { Tag, Period, CalendarView, WeekStartDay } from '@/types'
+import {
+  PERIOD_LABELS as _PERIOD_LABELS,
+  STATUS_LABELS as _STATUS_LABELS,
+  DIFFICULTY_LABELS as _DIFFICULTY_LABELS,
+  CALENDAR_VIEW_LABELS as _CALENDAR_VIEW_LABELS,
+  WEEK_START_LABELS as _WEEK_START_LABELS,
+  WEEKDAY_NAMES as _WEEKDAY_NAMES,
+  URGENCY_LABELS as _URGENCY_LABELS,
+} from '@/lib/display-labels'
+
+// Re-export display labels so existing imports don't break
+export {
+  _PERIOD_LABELS as PERIOD_LABELS,
+  _STATUS_LABELS as STATUS_LABELS,
+  _DIFFICULTY_LABELS as DIFFICULTY_LABELS,
+  _CALENDAR_VIEW_LABELS as CALENDAR_VIEW_LABELS,
+  _WEEK_START_LABELS as WEEK_START_LABELS,
+  _WEEKDAY_NAMES as WEEKDAY_NAMES,
+  _URGENCY_LABELS as URGENCY_LABELS,
+}
 
 // ---------- App branding ----------
 
@@ -19,29 +39,7 @@ export const DEFAULT_TAGS: Omit<Tag, 'user_id' | 'created_at' | 'updated_at'>[] 
   { id: 'tag-other', name: '其他', color: '#94a3b8', icon: 'Ellipsis', is_default: true, is_visible: true, sort_order: 7 },
 ]
 
-// ---------- Unified display labels (Chinese localization) ----------
-
-export const PERIOD_LABELS: Record<Period, string> = {
-  morning: '上午',
-  afternoon: '下午',
-  evening: '晚上',
-}
-
 export const PERIOD_ORDER: Period[] = ['morning', 'afternoon', 'evening']
-
-export const CALENDAR_VIEW_LABELS: Record<CalendarView, string> = {
-  month: '月视图',
-  week: '周视图',
-  day: '日视图',
-}
-
-export const WEEK_START_LABELS: Record<WeekStartDay, string> = {
-  0: '周日',
-  1: '周一',
-  6: '周六',
-}
-
-export const WEEKDAY_NAMES = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'] as const
 
 // ---------- Priority (legacy — kept for backward compat) ----------
 
@@ -59,31 +57,11 @@ export const PRIORITY_COLORS = {
   urgent: 'text-red-600 dark:text-red-400',
 } as const
 
-// ---------- Difficulty (new — replaces priority for user choice) ----------
-
-export const DIFFICULTY_LABELS = {
-  easy: '简单',
-  medium: '一般',
-  hard: '困难',
-  very_hard: '极难',
-} as const
-
 export const DIFFICULTY_COLORS = {
   easy: 'text-emerald-600 dark:text-emerald-400',
   medium: 'text-blue-600 dark:text-blue-400',
   hard: 'text-orange-600 dark:text-orange-400',
   very_hard: 'text-red-600 dark:text-red-400',
-} as const
-
-// ---------- Urgency (auto-calculated from due_at) ----------
-
-export const URGENCY_LABELS = {
-  overdue: '已逾期',
-  urgent: '紧急',
-  soon: '较紧急',
-  upcoming: '近期',
-  plenty: '时间充足',
-  none: '未设截止',
 } as const
 
 export const URGENCY_COLORS = {
@@ -93,15 +71,6 @@ export const URGENCY_COLORS = {
   upcoming: 'text-amber-500 dark:text-amber-400',
   plenty: 'text-slate-400 dark:text-slate-500',
   none: 'text-muted-foreground',
-} as const
-
-// ---------- Status ----------
-
-export const STATUS_LABELS = {
-  todo: '未开始',
-  in_progress: '进行中',
-  done: '已完成',
-  cancelled: '已取消',
 } as const
 
 // ---------- Select placeholder labels ----------

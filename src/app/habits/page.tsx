@@ -77,7 +77,9 @@ export default function HabitsPage() {
           <Label>计量方式</Label>
           <Select value={newType} onValueChange={(v: string | null) => v && setNewType(v as MeasurementType)}>
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue>
+                {{ boolean: '完成/未完成', count: '次数', duration: '分钟', numeric: '自定义数值' }[newType] || newType}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="boolean">完成/未完成</SelectItem>

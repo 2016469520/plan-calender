@@ -613,19 +613,21 @@ function QuickAddDialog({
       </div>
       <div className="flex gap-2">
         <div className="flex-1">
-          <Label htmlFor="qt-priority">优先级</Label>
+          <Label htmlFor="qt-priority">难度</Label>
           <Select
-            defaultValue="normal"
+            defaultValue="medium"
             onValueChange={(v: string | null) => v && form.setValue('priority', v)}
           >
             <SelectTrigger id="qt-priority">
-              <SelectValue />
+              <SelectValue>
+                {{ low: '简单', normal: '普通', high: '高', urgent: '紧急', medium: '一般' }[form.watch('priority') || 'medium'] || '一般'}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="low">低</SelectItem>
-              <SelectItem value="normal">普通</SelectItem>
-              <SelectItem value="high">高</SelectItem>
-              <SelectItem value="urgent">紧急</SelectItem>
+              <SelectItem value="low">简单</SelectItem>
+              <SelectItem value="medium">一般</SelectItem>
+              <SelectItem value="high">困难</SelectItem>
+              <SelectItem value="urgent">极难</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -636,7 +638,11 @@ function QuickAddDialog({
             onValueChange={(v: string | null) => v && form.setValue('tag_id', v)}
           >
             <SelectTrigger id="qt-tag">
-              <SelectValue placeholder="无" />
+              <SelectValue placeholder="未分类">
+                {form.watch('tag_id') && form.watch('tag_id') !== 'none'
+                  ? (tagList.find((t) => t.id === form.watch('tag_id'))?.name || '未分类')
+                  : '未分类'}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">无标签</SelectItem>

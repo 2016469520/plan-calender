@@ -1,8 +1,12 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { useRepos } from '@/providers/repo-provider'
+import { useAuth } from '@/providers/auth-provider'
+import { useQueryClient, useQuery } from '@tanstack/react-query'
+import { todayStr } from '@/lib/utils/date'
+import { getPeriodLabel, getDifficultyLabel, getTagDisplayName } from '@/lib/display-labels'
+import type { Period, Difficulty, Task } from '@/types'
 import {
   Select,
   SelectContent,
@@ -10,13 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useRepos } from '@/providers/repo-provider'
-import { useAuth } from '@/providers/auth-provider'
-import { useQueryClient, useQuery } from '@tanstack/react-query'
-import { todayStr } from '@/lib/utils/date'
-import { PERIOD_LABELS, DIFFICULTY_LABELS } from '@/lib/constants'
-import type { Period, Difficulty, Task } from '@/types'
-import { Plus, X, Loader2, Tag } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Plus, X, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -36,7 +35,7 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
   const [title, setTitle] = useState('')
   const [date, setDate] = useState(defaultDate || todayStr())
   const [period, setPeriod] = useState<Period>('morning')
-  const [tagId, setTagId] = useState<string>(defaultTagId || 'none')
+  const [tagId, setTagId] = useState<string>(defaultTagId || '')
   const [difficulty, setDifficulty] = useState<Difficulty>('medium')
   const [saving, setSaving] = useState(false)
 
@@ -50,7 +49,7 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
     setTitle('')
     setDate(defaultDate || todayStr())
     setPeriod('morning')
-    setTagId(defaultTagId || 'none')
+    setTagId(defaultTagId || '')
     setDifficulty('medium')
     setExpanded(false)
   }, [defaultDate, defaultTagId])
@@ -63,9 +62,9 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
         title: title.trim(),
         task_date: date,
         period,
-        tag_id: tagId === 'none' ? undefined : tagId,
-        priority: 'normal' as const, // legacy
+        tag_id: tagId || undefined,
         difficulty,
+        priority: 'normal' as const,
         status: 'todo',
         order_index: 0,
       } as Omit<Task, 'id' | 'user_id' | 'created_at' | 'updated_at'>)
@@ -80,7 +79,6 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
     }
   }, [title, date, period, tagId, difficulty, user, taskRepo, queryClient, reset])
 
-  // Keyboard handling
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -88,18 +86,15 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
         if (title.trim()) handleSave()
       }
       if (e.key === 'Escape') {
-        if (expanded && title) {
-          // If expanded with content, first clear; second Esc collapses
-          if (title) {
-            reset()
-          }
+        if (title) {
+          reset()
         }
       }
     },
-    [handleSave, reset, expanded, title]
+    [handleSave, reset, title]
   )
 
-  // Global 'N' shortcut to focus
+  // Global 'N' shortcut
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const el = document.activeElement
@@ -113,6 +108,9 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [])
+
+  // Display labels for SelectValues
+  const tagDisplay = getTagDisplayName(tagList, tagId)
 
   return (
     <div className={cn('space-y-2', className)}>
@@ -156,49 +154,69 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
           )}
         </div>
 
-        {/* Expanded fields */}
+        {/* Expanded fields: date, period, tag, difficulty */}
         {expanded && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 pt-3 border-t border-border/50">
+            {/* 1. Date */}
             <div>
-              <Select value={date} onValueChange={(v) => setDate(v || '')}>
+              <Select value={date} onValueChange={(v) => v && setDate(v)}>
                 <SelectTrigger className="h-8 text-xs">
-                  <SelectValue />
+                  <SelectValue placeholder="选择日期">
+                    {date === todayStr() ? '今天' : date}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={todayStr()}>今天</SelectItem>
                   <SelectItem value={tomorrowStr()}>明天</SelectItem>
-                  <SelectItem value="">无日期</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
+            {/* 2. Period */}
             <div>
               <Select value={period} onValueChange={(v) => v && setPeriod(v as Period)}>
                 <SelectTrigger className="h-8 text-xs">
-                  <SelectValue />
+                  <SelectValue placeholder="选择时段">
+                    {getPeriodLabel(period)}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(PERIOD_LABELS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
-                  ))}
+                  <SelectItem value="morning">上午</SelectItem>
+                  <SelectItem value="afternoon">下午</SelectItem>
+                  <SelectItem value="evening">晚上</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
+            {/* 3. Tag */}
             <div>
-              <Select value={tagId} onValueChange={(v) => setTagId(v || 'none')}>
+              <Select value={tagId || 'none'} onValueChange={(v) => setTagId(v && v !== 'none' ? v : '')}>
                 <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="标签" />
+                  <SelectValue placeholder="选择标签">
+                    {tagId ? (
+                      <span className="flex items-center gap-1.5">
+                        {(() => {
+                          const t = tagList.find((tag) => tag.id === tagId)
+                          if (t) return (
+                            <>
+                              <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
+                              <span>{t.name}</span>
+                            </>
+                          )
+                          return <span>{tagDisplay}</span>
+                        })()}
+                      </span>
+                    ) : (
+                      '未分类'
+                    )}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">无标签</SelectItem>
+                  <SelectItem value="none">未分类</SelectItem>
                   {tagList.map((tag) => (
                     <SelectItem key={tag.id} value={tag.id}>
-                      <span className="flex items-center gap-1.5">
-                        <span
-                          className="h-2 w-2 rounded-full inline-block"
-                          style={{ backgroundColor: tag.color }}
-                        />
+                      <span className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: tag.color }} />
                         {tag.name}
                       </span>
                     </SelectItem>
@@ -207,15 +225,19 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
               </Select>
             </div>
 
+            {/* 4. Difficulty */}
             <div>
               <Select value={difficulty} onValueChange={(v) => v && setDifficulty(v as Difficulty)}>
                 <SelectTrigger className="h-8 text-xs">
-                  <SelectValue />
+                  <SelectValue placeholder="选择难度">
+                    {getDifficultyLabel(difficulty)}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {(Object.entries(DIFFICULTY_LABELS) as [Difficulty, string][]).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
-                  ))}
+                  <SelectItem value="easy">简单</SelectItem>
+                  <SelectItem value="medium">一般</SelectItem>
+                  <SelectItem value="hard">困难</SelectItem>
+                  <SelectItem value="very_hard">极难</SelectItem>
                 </SelectContent>
               </Select>
             </div>

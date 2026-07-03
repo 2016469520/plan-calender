@@ -36,7 +36,7 @@ import {
   Minus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { SELECT_LABELS } from '@/lib/constants'
+import { getTagDisplayName } from '@/lib/display-labels'
 import { toast } from 'sonner'
 
 const PRESET_DURATIONS = [
@@ -48,12 +48,14 @@ const PRESET_DURATIONS = [
 
 export function HomeFocusTimer() {
   const { user } = useAuth()
-  const { tasks: taskRepo } = useRepos()
+  const { tasks: taskRepo, tags: tagRepo } = useRepos()
   const focus = useFocus()
 
   const [customMinutes, setCustomMinutes] = useState(25)
-  const [selectedTaskId, setSelectedTaskId] = useState<string>('none')
-  const [focusTitle, setFocusTitle] = useState('')
+  // Focus category (tag-based) — separate from linked task
+  const [focusTagId, setFocusTagId] = useState<string>('')
+  // Linked task — optional, associates session with a specific task
+  const [linkedTaskId, setLinkedTaskId] = useState<string>('')
   const [collapsed, setCollapsed] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
@@ -66,18 +68,24 @@ export function HomeFocusTimer() {
     enabled: !!user,
   })
 
+  const { data: tagList = [] } = useQuery({
+    queryKey: ['tags'],
+    queryFn: () => tagRepo.getAll(user!.id),
+    enabled: !!user,
+  })
+
   const activeTasks = todayTasks.filter((t) => t.status !== 'done' && t.status !== 'cancelled')
 
   const handleStart = useCallback(
     (minutes: number, mode: 'focus' | 'short_break' | 'long_break' = 'focus') => {
       focus.start({
         planned_minutes: minutes,
-        task_id: selectedTaskId === 'none' ? undefined : selectedTaskId,
-        title: focusTitle || undefined,
+        task_id: linkedTaskId || undefined,
+        title: focusTagId ? `分类：${getTagDisplayName(tagList, focusTagId)}` : undefined,
         mode,
       })
     },
-    [focus, selectedTaskId, focusTitle]
+    [focus, linkedTaskId, focusTagId, tagList]
   )
 
   const handleCustomStart = () => {
@@ -91,6 +99,15 @@ export function HomeFocusTimer() {
   // Compute circular progress
   const circumference = 2 * Math.PI * 54
   const strokeDashoffset = circumference - (focus.progress / 100) * circumference
+
+  // Display labels
+  const focusCategoryLabel = focusTagId
+    ? getTagDisplayName(tagList, focusTagId)
+    : '选择专注分类'
+
+  const linkedTaskLabel = linkedTaskId
+    ? (todayTasks.find((t) => t.id === linkedTaskId)?.title || '未知任务')
+    : '不关联日程'
 
   // Active focus state
   if (focus.isRunning || focus.isPaused) {
@@ -117,21 +134,13 @@ export function HomeFocusTimer() {
             <div className="relative w-32 h-32">
               <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
                 <circle
-                  cx="60"
-                  cy="60"
-                  r="54"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="4"
+                  cx="60" cy="60" r="54"
+                  fill="none" stroke="currentColor" strokeWidth="4"
                   className="text-muted/20"
                 />
                 <circle
-                  cx="60"
-                  cy="60"
-                  r="54"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="4"
+                  cx="60" cy="60" r="54"
+                  fill="none" stroke="currentColor" strokeWidth="4"
                   strokeLinecap="round"
                   className={cn(
                     'transition-all duration-1000',
@@ -157,33 +166,20 @@ export function HomeFocusTimer() {
           {/* Controls */}
           <div className="flex items-center justify-center gap-2">
             {focus.isPaused ? (
-              <Button
-                size="sm"
-                onClick={focus.resume}
-                className="h-8"
-              >
-                <Play className="h-4 w-4 mr-1" />
-                继续
+              <Button size="sm" onClick={focus.resume} className="h-8">
+                <Play className="h-4 w-4 mr-1" />继续
               </Button>
             ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={focus.pause}
-                className="h-8"
-              >
-                <Pause className="h-4 w-4 mr-1" />
-                暂停
+              <Button size="sm" variant="outline" onClick={focus.pause} className="h-8">
+                <Pause className="h-4 w-4 mr-1" />暂停
               </Button>
             )}
             <Button
-              size="sm"
-              variant="outline"
+              size="sm" variant="outline"
               onClick={() => setShowCancelConfirm(true)}
               className="h-8 text-destructive hover:bg-destructive/10"
             >
-              <Square className="h-4 w-4 mr-1" />
-              结束
+              <Square className="h-4 w-4 mr-1" />结束
             </Button>
           </div>
 
@@ -228,10 +224,32 @@ export function HomeFocusTimer() {
 
         {!collapsed && (
           <div className="space-y-2">
-            {/* Task selector */}
-            <Select value={selectedTaskId} onValueChange={(v: string | null) => setSelectedTaskId(v || 'none')}>
+            {/* Focus category (tag-based) */}
+            <Select value={focusTagId || 'none'} onValueChange={(v) => setFocusTagId(v && v !== 'none' ? v : '')}>
               <SelectTrigger className="h-7 text-xs">
-                <SelectValue placeholder="关联日程（可选）" />
+                <SelectValue placeholder="选择专注分类">
+                  {focusTagId ? focusCategoryLabel : '选择专注分类'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">选择专注分类</SelectItem>
+                {tagList.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    <span className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
+                      {t.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Linked task (optional) */}
+            <Select value={linkedTaskId || 'none'} onValueChange={(v) => setLinkedTaskId(v && v !== 'none' ? v : '')}>
+              <SelectTrigger className="h-7 text-xs">
+                <SelectValue placeholder="不关联日程">
+                  {linkedTaskId ? linkedTaskLabel : '不关联日程'}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">不关联日程</SelectItem>
@@ -260,37 +278,26 @@ export function HomeFocusTimer() {
             {/* Custom duration */}
             <div className="flex items-center gap-1">
               <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7"
+                variant="outline" size="icon" className="h-7 w-7"
                 onClick={() => setCustomMinutes(Math.max(1, customMinutes - 5))}
               >
                 <Minus className="h-3 w-3" />
               </Button>
               <Input
-                type="number"
-                min={1}
-                max={180}
+                type="number" min={1} max={180}
                 value={customMinutes}
                 onChange={(e) => setCustomMinutes(parseInt(e.target.value) || 1)}
                 className="h-7 text-xs text-center w-16"
               />
               <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7"
+                variant="outline" size="icon" className="h-7 w-7"
                 onClick={() => setCustomMinutes(Math.min(180, customMinutes + 5))}
               >
                 <Plus className="h-3 w-3" />
               </Button>
               <span className="text-xs text-muted-foreground">分钟</span>
-              <Button
-                size="sm"
-                className="h-7 text-xs ml-auto"
-                onClick={handleCustomStart}
-              >
-                <Play className="h-3 w-3 mr-1" />
-                开始
+              <Button size="sm" className="h-7 text-xs ml-auto" onClick={handleCustomStart}>
+                <Play className="h-3 w-3 mr-1" />开始
               </Button>
             </div>
           </div>

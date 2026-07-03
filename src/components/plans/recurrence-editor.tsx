@@ -158,7 +158,9 @@ export function RecurrenceEditor({ value, onChange }: RecurrenceEditorProps) {
       <div className="space-y-1.5">
         <Select value={frequency} onValueChange={handleFrequencyChange}>
           <SelectTrigger className="h-8 text-sm">
-            <SelectValue />
+            <SelectValue>
+              {FREQUENCY_LABELS[frequency] || frequency}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {Object.entries(FREQUENCY_LABELS)

@@ -10,7 +10,6 @@ import { CategoryView } from '@/components/calendar/category-view'
 import { TaskEditDialog } from '@/components/plans/task-edit-dialog'
 import { TaskDetailPanel } from '@/components/schedule/task-detail-panel'
 import { TaskListSheet } from '@/components/calendar/task-list-sheet'
-import { useMediaQuery } from '@/hooks/use-media-query'
 import type { CalendarView, Task, Period } from '@/types'
 import { todayStr } from '@/lib/utils/date'
 import { STORAGE_KEYS } from '@/lib/constants'
@@ -38,7 +37,6 @@ function getInitialDate(): string {
 
 export default function CalendarPage() {
   const { user } = useAuth()
-  const isDesktop = useMediaQuery('(min-width: 1024px)')
   const [currentView, setCurrentView] = useState<CalendarView>(getInitialView)
   const [presentationMode, setPresentationMode] = useState<PresentationMode>(getInitialMode)
   const [currentDate, setCurrentDate] = useState(getInitialDate)
@@ -79,15 +77,8 @@ export default function CalendarPage() {
   }, [])
 
   const handleEditTask = useCallback((task: Task) => {
-    // Open detail panel on desktop, dialog on mobile
-    if (isDesktop) {
-      setDetailTask(task)
-    } else {
-      setEditingTask(task)
-      setNewTaskTagId(undefined)
-      setDialogOpen(true)
-    }
-  }, [isDesktop])
+    setDetailTask(task)
+  }, [])
 
   const handleOverflowClick = useCallback((date: string, period: Period, tasks: Task[]) => {
     setOverflowSheet({ open: true, date, period, tasks })
@@ -148,14 +139,12 @@ export default function CalendarPage() {
         />
       </div>
 
-      {/* Desktop: Task detail side panel */}
-      {isDesktop && (
-        <TaskDetailPanel
-          task={detailTask}
-          open={!!detailTask}
-          onClose={() => setDetailTask(null)}
-        />
-      )}
+      {/* Floating task detail */}
+      <TaskDetailPanel
+        task={detailTask}
+        open={!!detailTask}
+        onClose={() => setDetailTask(null)}
+      />
 
       {/* Overflow task list sheet */}
       <TaskListSheet
