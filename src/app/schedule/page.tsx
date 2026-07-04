@@ -216,7 +216,7 @@ export default function SchedulePage() {
             ) : (
               <>
                 {/* === TODAY VIEW === */}
-                {view === 'today' && !groupBy && (
+                {view === 'today' && groupBy === 'none' && (
                   <div className="space-y-4">
                     {todayTasks.length === 0 &&
                     overdueTasks.length === 0 &&
@@ -277,7 +277,7 @@ export default function SchedulePage() {
                 )}
 
                 {/* === WEEK VIEW (未来7天) === */}
-                {view === 'week' && !groupBy && (
+                {view === 'week' && groupBy === 'none' && (
                   <div className="space-y-4">
                     {weekDateGroups.length === 0 && overdueTasks.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground space-y-3">
@@ -336,7 +336,7 @@ export default function SchedulePage() {
                 )}
 
                 {/* === ALL VIEW === */}
-                {view === 'all' && !groupBy && (
+                {view === 'all' && groupBy === 'none' && (
                   <div className="space-y-4">
                     <div className="relative">
                       <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
