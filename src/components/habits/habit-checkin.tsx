@@ -82,6 +82,9 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
   const getLogForHabit = (habitId: string) =>
     todayLogs.find((l) => l.habit_id === habitId)
 
+  // Compute active habits EARLY — must be before any useMemo/useCallback that reads it
+  const activeHabits = habitList.filter((h) => !h.archived_at)
+
   // Stable refs for use in callbacks (avoids recreating wheel/click handlers)
   const getLogForHabitRef = useRef(getLogForHabit)
   useEffect(() => {
@@ -260,7 +263,8 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
     [today]
   )
 
-  // ---- Pre-compute wheel handler map (no ref access during render) ----
+  // ---- Pre-compute wheel handler map ----
+  // Note: activeHabits is computed early (above) to avoid TDZ errors
   const wheelHandlers = useMemo(() => {
     const map: Record<string, (e: WheelEvent) => void> = {}
     for (const habit of activeHabits) {
@@ -423,8 +427,6 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
       </Card>
     )
   }
-
-  const activeHabits = habitList.filter((h) => !h.archived_at)
 
   if (activeHabits.length === 0 && !compact) {
     return (
