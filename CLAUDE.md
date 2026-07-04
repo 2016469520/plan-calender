@@ -88,3 +88,10 @@
 | Auth Provider | src/providers/auth-provider.tsx |
 | Repo Provider | src/providers/repo-provider.tsx |
 | 环境变量 | .env.example |
+
+### Git attribution
+
+- Git commit messages and pull request descriptions must not include AI attribution.
+- Do not add `Co-Authored-By` trailers for Claude, Anthropic, OpenAI, Codex, or other AI tools.
+- Do not add `Generated with Claude Code`, `Claude-Session`, or AI session links.
+- Commit authorship must remain the configured human Git user.
