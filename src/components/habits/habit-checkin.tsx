@@ -57,10 +57,15 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
   // Save version per habit for race-condition protection
   const saveVersionRef = useRef<Record<string, number>>({})
 
-  const { data: habitList = [], isLoading } = useQuery({
+  const { data: habitList = [], isLoading, isError: habitsError, error: habitsQueryError } = useQuery({
     queryKey: ['habits'],
     queryFn: () => habits.getAll(user!.id),
     enabled: !!user,
+    // Don't retry on 4xx errors (RLS, auth) to avoid flooding
+    retry: (failureCount, error) => {
+      if (error instanceof Error && error.message.includes('PGRST')) return false
+      return failureCount < 2
+    },
   })
 
   const { data: todayLogs = [] } = useQuery({
@@ -394,6 +399,28 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
           <Skeleton key={i} className="h-16 w-full" />
         ))}
       </div>
+    )
+  }
+
+  if (habitsError) {
+    return (
+      <Card className="border-destructive/30">
+        <CardContent className="py-6 text-center space-y-2">
+          <p className="text-sm text-destructive">加载习惯数据失败</p>
+          <p className="text-xs text-muted-foreground">
+            {habitsQueryError instanceof Error
+              ? habitsQueryError.message.slice(0, 100)
+              : '请检查网络连接后刷新重试'}
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['habits'] })}
+          >
+            重试
+          </Button>
+        </CardContent>
+      </Card>
     )
   }
 

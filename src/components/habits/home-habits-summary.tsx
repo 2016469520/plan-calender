@@ -44,10 +44,14 @@ export function HomeHabitsSummary() {
 
   const today = todayStr()
 
-  const { data: habits = [] } = useQuery({
+  const { data: habits = [], isLoading, isError: habitsError } = useQuery({
     queryKey: ['habits'],
     queryFn: () => habitRepo.getAll(user!.id),
     enabled: !!user,
+    retry: (failureCount, error) => {
+      if (error instanceof Error && error.message.includes('PGRST')) return false
+      return failureCount < 2
+    },
   })
 
   const { data: todayLogs = [] } = useQuery({
@@ -302,6 +306,21 @@ export function HomeHabitsSummary() {
   useEffect(() => {
     return () => { Object.values(debounceTimers.current).forEach(clearTimeout) }
   }, [])
+
+  // Silently handle habits query error — don't break the home page
+  // The full habits page has its own error boundary for detailed errors
+  if (habitsError) {
+    return (
+      <Card className="shadow-none border-destructive/20">
+        <CardContent className="p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">今日习惯</span>
+            <span className="text-[10px] text-destructive/70">加载失败</span>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   if (activeHabits.length === 0) {
     return (
