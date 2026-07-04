@@ -524,8 +524,10 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
                     </span>
                   </Button>
                 ) : (
-                  <div className="flex items-center gap-2 shrink-0">
-                    {/* === Stable time/value control row === */}
+                  <div
+                    className="grid items-center shrink-0 gap-x-1"
+                    style={{ gridTemplateColumns: '2rem 3rem 2rem 2.5rem 1.25rem 3.5rem' }}
+                  >
                     <MinuteControl
                       habit={habit}
                       inputVal={inputVal}
@@ -544,7 +546,7 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
                     <SaveStateSlot state={saveState} />
 
                     {/* === Fixed operation area (always reserved) === */}
-                    <div className="flex items-center w-12 shrink-0 justify-end">
+                    <div className="flex items-center justify-end">
                       {log && (
                         <>
                           <Button
@@ -701,13 +703,14 @@ function MinuteControl({
     setEditText('')
   }
 
+  // Render as Fragment — children participate in parent CSS Grid columns
   return (
-    <div className="flex items-center gap-1 shrink-0">
-      {/* - button */}
+    <>
+      {/* Column 1: - button */}
       <Button
         variant="outline"
         size="icon"
-        className="h-8 w-8 shrink-0"
+        className="h-8 w-8"
         onClick={() => onAdjust(-step)}
         disabled={displayValue <= 0}
         aria-label={`减少 ${step}`}
@@ -715,8 +718,8 @@ function MinuteControl({
         <Minus className="h-3.5 w-3.5" />
       </Button>
 
-      {/* Value display / input (wheel-aware) — clicking failed state retries */}
-      <div ref={wheelRef} className="relative shrink-0">
+      {/* Column 2: Value display / input (wheel-aware) — clicking failed state retries */}
+      <div ref={wheelRef} className="relative flex items-center justify-center">
         {isEditing ? (
           <input
             ref={inputRef}
@@ -730,7 +733,7 @@ function MinuteControl({
               if (e.key === 'Escape') cancelEdit()
             }}
             className={cn(
-              'h-8 w-14 rounded-lg border-2 bg-background text-center text-sm font-medium tabular-nums outline-none',
+              'h-8 w-full rounded-lg border-2 bg-background text-center text-sm font-medium tabular-nums outline-none',
               saveState === 'error' ? 'border-destructive' : 'border-ring'
             )}
             aria-label="输入数值"
@@ -747,7 +750,7 @@ function MinuteControl({
               }
             }}
             className={cn(
-              'h-8 w-14 rounded-lg border bg-background text-center text-sm font-medium tabular-nums transition-colors cursor-text',
+              'h-8 w-full rounded-lg border bg-background text-center text-sm font-medium tabular-nums transition-colors cursor-text',
               hasDraft && 'border-amber-300 dark:border-amber-600 bg-amber-50/30 dark:bg-amber-950/10',
               saveState === 'error'
                 ? 'border-destructive hover:border-destructive/80'
@@ -761,24 +764,22 @@ function MinuteControl({
         )}
       </div>
 
-      {/* + button */}
+      {/* Column 3: + button */}
       <Button
         variant="outline"
         size="icon"
-        className="h-8 w-8 shrink-0"
+        className="h-8 w-8"
         onClick={() => onAdjust(step)}
         aria-label={`增加 ${step}`}
       >
         <Plus className="h-3.5 w-3.5" />
       </Button>
 
-      {/* Unit label */}
-      {unit && (
-        <span className="text-xs text-muted-foreground shrink-0 select-none">
-          {unit}
-        </span>
-      )}
-    </div>
+      {/* Column 4: Unit label — fixed width, always rendered for grid stability */}
+      <span className="w-10 text-xs text-muted-foreground text-center truncate select-none">
+        {unit || ''}
+      </span>
+    </>
   )
 }
 
