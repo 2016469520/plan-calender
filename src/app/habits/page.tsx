@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/providers/auth-provider'
 import { HabitCheckin } from '@/components/habits/habit-checkin'
+import { HabitCheckinErrorWrapper } from '@/components/habits/habit-checkin-error-wrapper'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -127,7 +128,9 @@ export default function HabitsPage() {
         </Button>
       </div>
 
-      <HabitCheckin />
+      <HabitCheckinErrorWrapper>
+        <HabitCheckin />
+      </HabitCheckinErrorWrapper>
 
       {/* Create dialog */}
       {isDesktop ? (
