@@ -30,7 +30,7 @@ export function OverdueSection({ tasks, tags, activeTaskId, onTaskClick }: Overd
     if (!user) return
     try {
       await taskRepo.update(user.id, task.id, { task_date: today } as Partial<Task>)
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks', user.id] })
       toast.success('已移至今天')
     } catch {
       toast.error('操作失败')
@@ -44,7 +44,7 @@ export function OverdueSection({ tasks, tags, activeTaskId, onTaskClick }: Overd
     const tomorrowStr = tomorrow.toISOString().slice(0, 10)
     try {
       await taskRepo.update(user.id, task.id, { task_date: tomorrowStr } as Partial<Task>)
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks', user.id] })
       toast.success('已移至明天')
     } catch {
       toast.error('操作失败')

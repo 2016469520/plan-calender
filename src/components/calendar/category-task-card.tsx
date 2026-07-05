@@ -18,6 +18,7 @@ export function CategoryTaskCard({ task, onClick, showMoveMenu = false }: Catego
   const isOverdue =
     task.status !== 'done' &&
     task.status !== 'cancelled' &&
+    !!task.task_date &&
     task.task_date < new Date().toISOString().slice(0, 10)
 
   const doneSubitems = task.subitems?.filter((s) => s.is_completed).length ?? 0

@@ -176,11 +176,15 @@ class IndexedDBTaskRepository implements ITaskRepository {
     }
 
     if (options.dateFrom) {
-      all = all.filter((t) => t.task_date >= options.dateFrom!)
+      all = all.filter((t) =>
+        options.includeUndated && !t.task_date ? true : t.task_date >= options.dateFrom!
+      )
     }
 
     if (options.dateTo) {
-      all = all.filter((t) => t.task_date <= options.dateTo!)
+      all = all.filter((t) =>
+        options.includeUndated && !t.task_date ? true : t.task_date <= options.dateTo!
+      )
     }
 
     if (options.overdue) {
@@ -195,7 +199,12 @@ class IndexedDBTaskRepository implements ITaskRepository {
     }
 
     // Sort by date descending then order_index
-    all.sort((a, b) => b.task_date.localeCompare(a.task_date) || a.order_index - b.order_index)
+    all.sort((a, b) => {
+      if (!a.task_date && !b.task_date) return a.order_index - b.order_index
+      if (!a.task_date) return 1
+      if (!b.task_date) return -1
+      return b.task_date.localeCompare(a.task_date) || a.order_index - b.order_index
+    })
 
     if (options.maxResults) {
       all = all.slice(0, options.maxResults)

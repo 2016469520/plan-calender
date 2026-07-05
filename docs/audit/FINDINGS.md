@@ -39,6 +39,19 @@
 - Supabase involved: no.
 - Production release involved: yes.
 
+## P1-004: Schedule Date Range Omitted Inbox Tasks
+
+- Phenomenon: schedule views compute an inbox/undated section, but the page fetched only date-ranged tasks, so tasks with `task_date = null` could disappear from the schedule context.
+- Reproduction: create or edit a task so it has no scheduled date, then open `/schedule`.
+- Root cause: schedule used `getByDateRange`; both repository implementations excluded null dates from range filters.
+- Impact: inbox tasks were harder to recover from the task-first schedule flow, especially in local demo mode.
+- Fix: added `includeUndated` to task filters, made schedule fetch date-ranged plus undated tasks, updated null-date typing and UI guards, and scoped task/tag React Query keys by user.
+- Modified files: `src/app/schedule/page.tsx`, `src/lib/repositories/*`, `src/types/index.ts`, calendar/schedule/search/stat consumers, and E2E tests.
+- Test: added repository coverage for undated range filtering and Playwright CRUD coverage that clears a task date and verifies it remains visible through the schedule inbox.
+- Status: fixed locally.
+- Supabase involved: no schema change.
+- Production release involved: yes.
+
 ## P2-001: Local Quality Scripts Were Incomplete
 
 - Phenomenon: package scripts lacked standard `typecheck`, `test`, `test:e2e`, `test:coverage`, and `check`.
@@ -56,8 +69,8 @@
 - Reproduction: inspect `e2e/*.spec.ts`.
 - Root cause: tests asserted page availability more than core data workflows.
 - Impact: task, habit, focus, countdown, review, and settings regressions could pass E2E.
-- Fix: added one demo-mode persistence E2E test; broader workflow coverage remains in roadmap.
-- Status: partially fixed; remaining coverage is documented in `ROADMAP.md`.
+- Fix: added demo-mode persistence, schedule task CRUD, undated/inbox visibility, and today/week/all plus category grouping E2E coverage.
+- Status: improved; non-schedule workflows remain in `ROADMAP.md`.
 
 ## P2-003: Lint Warnings Are Numerous
 

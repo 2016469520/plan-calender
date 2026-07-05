@@ -101,7 +101,7 @@ export function TaskEditDialog({
       form.reset({
         title: task.title,
         description: task.description || '',
-        task_date: task.task_date,
+        task_date: task.task_date || defaultDate || new Date().toISOString().slice(0, 10),
         period: task.period,
         start_time: task.start_time || '',
         end_time: task.end_time || '',

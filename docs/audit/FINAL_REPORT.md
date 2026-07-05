@@ -2,19 +2,19 @@
 
 ## A. Execution Summary
 
-- Scope: local repository audit, baseline commands, targeted P1/P2 fixes, tests, CI/script updates, security header and PWA cache hardening.
+- Scope: local repository audit, baseline commands, targeted P1/P2 fixes, tests, CI/script updates, security header and PWA cache hardening, and post-audit schedule workflow remediation.
 - Overall health: locally buildable and testable; core demo entry had a P1 bug and was fixed.
 - Production suitability: not yet confirmed because code has not been pushed and Vercel/GitHub/Supabase production checks were not completed.
-- Remaining risk: shallow feature E2E coverage, 91 lint warnings, unverified production Supabase schema, moderate Next/PostCSS audit advisory.
+- Remaining risk: non-schedule feature E2E gaps, 91 lint warnings, unverified production Supabase schema, moderate Next/PostCSS audit advisory.
 
 ## B. Issue Statistics
 
 - P0: 0 found.
-- P1: 3 found, 3 fixed locally.
+- P1: 4 found, 4 fixed locally.
 - P2: 3 found, 2 fixed or partially fixed, 1 deferred.
 - P3: 1 found, deferred.
-- Fixed: demo mode, security headers, Service Worker cache policy, scripts/CI, one E2E path.
-- Unfixed/deferred: full workflow E2E, lint warning cleanup, dependency patch strategy, production verification.
+- Fixed: demo mode, security headers, Service Worker cache policy, scripts/CI, schedule undated task visibility, schedule workflow E2E coverage.
+- Unfixed/deferred: non-schedule workflow E2E, lint warning cleanup, dependency patch strategy, production verification.
 
 ## C. Security
 
@@ -33,7 +33,7 @@
 - IndexedDB: used for local demo mode and repository tests.
 - Repository: factory abstraction exists for both data paths.
 - Migration: no new database migration was created.
-- Dual-path consistency: demo routing bug fixed; full contract matrix still needed.
+- Dual-path consistency: demo routing and schedule undated filtering bugs fixed; full contract matrix still needed.
 - Offline sync: not fully verified.
 - Data risk: no production data was read or modified.
 
@@ -41,7 +41,8 @@
 
 - Login: reproduced and verified.
 - Local demo mode: reproduced broken, fixed, and verified by Playwright.
-- Schedule/calendar/habits/focus/countdowns/reviews/settings: route-level checks exist; deep CRUD verification remains deferred.
+- Schedule: task CRUD, undated/inbox visibility, and view/category grouping are covered by Playwright.
+- Calendar/habits/focus/countdowns/reviews/settings: route-level checks exist; deep CRUD verification remains deferred.
 - PWA: cache policy inspected and hardened.
 
 ## F. UI/UX
@@ -65,8 +66,8 @@
 - ESLint: targeted post-fix files passed; baseline full lint had 91 warnings.
 - Vitest baseline: 224 passed.
 - Playwright baseline: 28 passed.
-- Playwright post-fix target: 9 passed.
-- Playwright full post-fix: 30 passed.
+- Playwright post-fix target: 11 passed.
+- Playwright full post-fix: 34 passed.
 - Build baseline: passed.
 - `npm run check`: passed.
 - Audit: `npm audit --audit-level=high` passed; moderate advisory remains.

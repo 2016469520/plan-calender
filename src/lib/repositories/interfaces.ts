@@ -47,6 +47,7 @@ export interface TaskFilterOptions {
   priority?: string[]
   dateFrom?: string
   dateTo?: string
+  includeUndated?: boolean
   overdue?: boolean
   hasRecurrence?: boolean
   maxResults?: number

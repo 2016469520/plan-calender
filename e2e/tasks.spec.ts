@@ -1,4 +1,21 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
+
+async function enterDemoMode(page: Page) {
+  await page.goto('/login')
+  await page.waitForLoadState('networkidle')
+  await page.getByTestId('enter-demo-mode').click()
+  await expect(page).toHaveURL(/\/calendar/, { timeout: 15000 })
+}
+
+async function addScheduleTask(page: Page, title: string) {
+  await page.goto('/schedule')
+  await expect(page).toHaveURL(/\/schedule/, { timeout: 15000 })
+  await page.getByTestId('quick-add-title').fill(title)
+  await page.getByTestId('quick-add-save').click()
+  const item = page.getByTestId('task-list-item').filter({ hasText: title }).first()
+  await expect(item).toBeVisible({ timeout: 10000 })
+  return item
+}
 
 test.describe('App Smoke Tests', () => {
   test('login page renders in demo/supabase mode', async ({ page }) => {
@@ -71,5 +88,59 @@ test.describe('App Smoke Tests', () => {
     await page.reload()
     await expect(page).toHaveURL(/\/schedule/, { timeout: 15000 })
     await expect(page.locator('body')).not.toContainText('[object Object]')
+  })
+
+  test('schedule supports task CRUD and keeps undated tasks visible', async ({ page }) => {
+    await enterDemoMode(page)
+    const title = `e2e schedule ${Date.now()}`
+    const updatedTitle = `${title} updated`
+
+    let item = await addScheduleTask(page, title)
+    await item.click()
+    await page.getByTestId('task-detail-title').fill(updatedTitle)
+    await expect(page.getByTestId('task-list-item').filter({ hasText: updatedTitle })).toBeVisible({
+      timeout: 10000,
+    })
+
+    await page.reload()
+    await expect(page.getByTestId('task-list-item').filter({ hasText: updatedTitle })).toBeVisible({
+      timeout: 10000,
+    })
+
+    item = page.getByTestId('task-list-item').filter({ hasText: updatedTitle }).first()
+    await item.getByTestId('task-toggle-complete').click()
+    await expect(item).toBeVisible()
+
+    await item.click()
+    await page.getByTestId('task-detail-date').fill('')
+    await page.reload()
+    await page.getByTestId('inbox-toggle').click()
+    item = page.getByTestId('task-list-item').filter({ hasText: updatedTitle }).first()
+    await expect(item).toBeVisible({ timeout: 10000 })
+
+    await item.click()
+    await page.getByTestId('task-detail-delete').click()
+    await expect(page.getByTestId('task-list-item').filter({ hasText: updatedTitle })).toHaveCount(0, {
+      timeout: 10000,
+    })
+  })
+
+  test('schedule view and category grouping combinations keep tasks accessible', async ({ page }) => {
+    await enterDemoMode(page)
+    const title = `e2e grouped ${Date.now()}`
+    await addScheduleTask(page, title)
+
+    for (const view of ['today', 'week', 'all']) {
+      await page.getByTestId(`schedule-view-${view}`).click()
+      await expect(page.getByTestId('task-list-item').filter({ hasText: title })).toBeVisible({
+        timeout: 10000,
+      })
+
+      await page.getByTestId('schedule-group-category').click()
+      await expect(page.getByTestId('task-list-item').filter({ hasText: title })).toBeVisible({
+        timeout: 10000,
+      })
+      await page.getByTestId('schedule-group-category').click()
+    }
   })
 })

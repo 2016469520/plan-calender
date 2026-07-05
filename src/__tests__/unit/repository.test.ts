@@ -279,6 +279,40 @@ describe('Repository — IndexedDB Implementation', () => {
       expect(results.length).toBeGreaterThanOrEqual(1)
       expect(results.some((t) => t.title.includes('React'))).toBe(true)
     })
+
+    it('should optionally include undated tasks in date-range filters', async () => {
+      const dated = await repos.tasks.create(TEST_USER, {
+        title: 'dated-range-task',
+        task_date: '2025-02-10',
+        period: 'morning',
+        priority: 'normal',
+        status: 'todo',
+        order_index: 0,
+      })
+      const undated = await repos.tasks.create(TEST_USER, {
+        title: 'undated-inbox-task',
+        task_date: null,
+        period: 'morning',
+        priority: 'normal',
+        status: 'todo',
+        order_index: 1,
+      })
+
+      const strictRange = await repos.tasks.filter(TEST_USER, {
+        dateFrom: '2025-02-01',
+        dateTo: '2025-02-28',
+      })
+      expect(strictRange.some((task) => task.id === dated.id)).toBe(true)
+      expect(strictRange.some((task) => task.id === undated.id)).toBe(false)
+
+      const inclusiveRange = await repos.tasks.filter(TEST_USER, {
+        dateFrom: '2025-02-01',
+        dateTo: '2025-02-28',
+        includeUndated: true,
+      })
+      expect(inclusiveRange.some((task) => task.id === dated.id)).toBe(true)
+      expect(inclusiveRange.some((task) => task.id === undated.id)).toBe(true)
+    })
   })
 
   describe('TaskSubitemRepository', () => {

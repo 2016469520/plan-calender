@@ -74,13 +74,19 @@ export default function SchedulePage() {
   }, [])
 
   const { data: allTasks = [], isLoading } = useQuery({
-    queryKey: ['tasks', 'schedule', range.start, range.end],
-    queryFn: () => taskRepo.getByDateRange(user!.id, range),
+    queryKey: ['tasks', user?.id, 'schedule', range.start, range.end],
+    queryFn: () =>
+      taskRepo.filter(user!.id, {
+        dateFrom: range.start,
+        dateTo: range.end,
+        includeUndated: true,
+        maxResults: 500,
+      }),
     enabled: !!user,
   })
 
   const { data: tags = [] } = useQuery({
-    queryKey: ['tags'],
+    queryKey: ['tags', user?.id],
     queryFn: () => tagRepo.getAll(user!.id),
     enabled: !!user,
   })

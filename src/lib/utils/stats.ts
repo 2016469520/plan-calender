@@ -232,7 +232,7 @@ export function calculateTaskStats(tasks: Task[], referenceDate?: string): TaskS
   const todo = tasks.filter((t) => t.status === 'todo').length
   const cancelled = tasks.filter((t) => t.status === 'cancelled').length
   const overdue = tasks.filter(
-    (t) => t.task_date < today && t.status !== 'done' && t.status !== 'cancelled'
+    (t) => t.task_date && t.task_date < today && t.status !== 'done' && t.status !== 'cancelled'
   ).length
 
   const activeTotal = total - cancelled

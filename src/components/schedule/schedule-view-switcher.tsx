@@ -32,6 +32,7 @@ export function ScheduleViewSwitcher({
         {TIME_VIEWS.map((v) => (
           <Button
             key={v.value}
+            data-testid={`schedule-view-${v.value}`}
             variant="ghost"
             size="sm"
             className={cn(
@@ -51,6 +52,7 @@ export function ScheduleViewSwitcher({
 
       {/* Category grouping toggle — visually separated */}
       <Button
+        data-testid="schedule-group-category"
         variant="ghost"
         size="sm"
         className={cn(

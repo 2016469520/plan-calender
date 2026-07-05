@@ -31,15 +31,15 @@ export function UpcomingTasks({
 
   const groups = useMemo((): UpcomingGroup[] => {
     const future = tasks
-      .filter((t) => t.task_date > today && t.status !== 'cancelled')
-      .sort((a, b) => a.task_date.localeCompare(b.task_date))
+      .filter((t) => t.task_date && t.task_date > today && t.status !== 'cancelled')
+      .sort((a, b) => a.task_date!.localeCompare(b.task_date!))
 
     const tomorrow = todayPlusDays(1)
     const nextWeek = todayPlusDays(7)
 
     const tomorrowTasks = future.filter((t) => t.task_date === tomorrow)
-    const weekTasks = future.filter((t) => t.task_date > tomorrow && t.task_date <= nextWeek)
-    const laterTasks = future.filter((t) => t.task_date > nextWeek)
+    const weekTasks = future.filter((t) => t.task_date! > tomorrow && t.task_date! <= nextWeek)
+    const laterTasks = future.filter((t) => t.task_date! > nextWeek)
 
     const result: UpcomingGroup[] = []
     if (tomorrowTasks.length > 0) result.push({ label: '明天', tasks: tomorrowTasks })

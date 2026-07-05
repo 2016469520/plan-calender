@@ -21,6 +21,7 @@ export function InboxSection({ tasks, tags, activeTaskId, onTaskClick }: InboxSe
   return (
     <div className="rounded-lg border border-border/50 bg-muted/20">
       <button
+        data-testid="inbox-toggle"
         onClick={() => setCollapsed(!collapsed)}
         className="w-full flex items-center justify-between p-3 text-left"
       >

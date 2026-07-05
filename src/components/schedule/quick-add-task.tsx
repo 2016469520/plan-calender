@@ -90,7 +90,7 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
   const [calendarOpen, setCalendarOpen] = useState(false)
 
   const { data: tagList = [] } = useQuery({
-    queryKey: ['tags'],
+    queryKey: ['tags', user?.id],
     queryFn: () => tagRepo.getAll(user!.id),
     enabled: !!user,
   })
@@ -120,7 +120,7 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
         status: 'todo',
         order_index: 0,
       } as Omit<Task, 'id' | 'user_id' | 'created_at' | 'updated_at'>)
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks', user.id] })
       toast.success('已添加')
       reset()
       inputRef.current?.focus()
@@ -181,6 +181,7 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
         <div className="flex items-center gap-2">
           <Plus className="h-4 w-4 text-muted-foreground shrink-0" />
           <input
+            data-testid="quick-add-title"
             ref={inputRef}
             type="text"
             value={title}
@@ -192,6 +193,7 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
           />
           {title && (
             <Button
+              data-testid="quick-add-save"
               size="sm"
               className="h-7 text-xs"
               onClick={handleSave}
@@ -218,16 +220,18 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
             {/* 1. Date with calendar picker */}
             <div>
               <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                <PopoverTrigger>
-                  <Button
-                    variant="outline"
-                    className="h-8 text-xs w-full justify-start font-normal"
-                    type="button"
-                  >
-                    <Calendar className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-                    {getDateLabel()}
-                  </Button>
-                </PopoverTrigger>
+                <PopoverTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      className="h-8 text-xs w-full justify-start font-normal"
+                      type="button"
+                    >
+                      <Calendar className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                      {getDateLabel()}
+                    </Button>
+                  }
+                />
                 <PopoverContent className="w-64 p-2" align="start">
                   <div className="space-y-2">
                     {/* Quick shortcuts */}

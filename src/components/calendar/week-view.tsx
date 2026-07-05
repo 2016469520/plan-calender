@@ -41,7 +41,7 @@ export function WeekView({ currentDate, onTaskClick, onOverflowClick }: WeekView
   const weekData = useMemo(() => getWeekRange(currentDate), [currentDate])
 
   const { data: weekTasks = [], isLoading } = useQuery({
-    queryKey: ['tasks', 'week', weekData.start, weekData.end],
+    queryKey: ['tasks', user?.id, 'week', weekData.start, weekData.end],
     queryFn: () => tasks.getByDateRange(user!.id, weekData),
     enabled: !!user,
   })
@@ -52,6 +52,7 @@ export function WeekView({ currentDate, onTaskClick, onOverflowClick }: WeekView
       map[day] = { morning: [], afternoon: [], evening: [] }
     }
     for (const task of weekTasks) {
+      if (!task.task_date) continue
       if (map[task.task_date]) {
         map[task.task_date][task.period].push(task)
       }
