@@ -51,16 +51,34 @@ self.addEventListener('fetch', (event) => {
   // Skip Supabase API calls (always go to network)
   if (url.hostname.includes('supabase')) return
 
+  // Skip auth and application API responses. These can contain user-specific
+  // data and should rely on normal HTTP caching semantics.
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/auth/') ||
+    url.pathname.includes('/auth/v1/')
+  ) {
+    return
+  }
+
+  const shouldCacheResponse = (response) => {
+    if (!response || !response.ok) return false
+    const cacheControl = response.headers.get('cache-control') || ''
+    return !/(no-store|private)/i.test(cacheControl)
+  }
+
   // For navigation requests (pages), use network-first with offline fallback
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then((response) => {
           // Cache a copy of the page for offline
-          const clone = response.clone()
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, clone)
-          })
+          if (shouldCacheResponse(response)) {
+            const clone = response.clone()
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, clone)
+            })
+          }
           return response
         })
         .catch(() => {
@@ -82,7 +100,7 @@ self.addEventListener('fetch', (event) => {
       caches.match(request).then((cached) => {
         const fetchPromise = fetch(request).then((response) => {
           // Update cache in background
-          if (response.ok) {
+          if (shouldCacheResponse(response)) {
             const clone = response.clone()
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(request, clone)
@@ -100,7 +118,7 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(request)
       .then((response) => {
-        if (response.ok) {
+        if (shouldCacheResponse(response)) {
           const clone = response.clone()
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(request, clone)

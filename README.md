@@ -263,3 +263,20 @@ plan-calender/
 ## ⚖️ License
 
 当前仓库尚未添加开源许可证。
+
+## Audit Maintenance Notes
+
+- Local demo mode is available from the login page with the "使用本地演示模式" button.
+- Demo data stays in browser IndexedDB. Cloud mode continues to use Supabase.
+- Standard quality commands:
+
+```bash
+npm run typecheck
+npm run lint
+npm run test
+npm run test:e2e
+npm run build
+npm run check
+```
+
+`npm run check` runs TypeScript, ESLint, Vitest, and the production build. Run `npm run test:e2e` separately for browser workflow coverage.

@@ -33,7 +33,7 @@ type RegisterData = z.infer<typeof registerSchema>
 
 export default function LoginPage() {
   const router = useRouter()
-  const { user, isLoading, isDemoMode, signIn, signUp } = useAuth()
+  const { user, isLoading, isDemoMode, signIn, signUp, enterDemoMode } = useAuth()
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -216,6 +216,17 @@ export default function LoginPage() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <Button
+          type="button"
+          data-testid="enter-demo-mode"
+          variant="outline"
+          className="w-full"
+          onClick={enterDemoMode}
+          disabled={submitting}
+        >
+          使用本地演示模式
+        </Button>
       </div>
     </div>
   )

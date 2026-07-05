@@ -57,4 +57,19 @@ test.describe('App Smoke Tests', () => {
     await expect(page.locator('input[type="email"]')).toBeVisible()
     await expect(page.locator('body')).toBeVisible()
   })
+
+  test('local demo mode opens the task-first app and persists after refresh', async ({ page }) => {
+    await page.goto('/login')
+    await page.waitForLoadState('networkidle')
+
+    await page.getByTestId('enter-demo-mode').click()
+    await expect(page).toHaveURL(/\/calendar/, { timeout: 15000 })
+    await expect(page.getByRole('link', { name: '日历', exact: true })).toBeVisible({ timeout: 15000 })
+
+    await page.goto('/schedule')
+    await expect(page).toHaveURL(/\/schedule/, { timeout: 15000 })
+    await page.reload()
+    await expect(page).toHaveURL(/\/schedule/, { timeout: 15000 })
+    await expect(page.locator('body')).not.toContainText('[object Object]')
+  })
 })
