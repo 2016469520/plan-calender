@@ -49,7 +49,7 @@ export function TaskListItem({ task, tags, isActive, isFocus, onClick }: TaskLis
         status: newStatus,
         completed_at: newStatus === 'done' ? new Date().toISOString() : undefined,
       } as Partial<Task>)
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks', user.id] })
       if (newStatus === 'done') {
         toast.success('已完成', { duration: 1500 })
       }
@@ -62,6 +62,8 @@ export function TaskListItem({ task, tags, isActive, isFocus, onClick }: TaskLis
 
   return (
     <div
+      data-testid="task-list-item"
+      data-task-id={task.id}
       onClick={onClick}
       className={cn(
         'group flex items-start gap-3 p-3 rounded-lg border border-transparent bg-card cursor-pointer transition-all',
@@ -73,6 +75,7 @@ export function TaskListItem({ task, tags, isActive, isFocus, onClick }: TaskLis
     >
       {/* Checkbox */}
       <button
+        data-testid="task-toggle-complete"
         onClick={handleToggle}
         disabled={toggling}
         className={cn(

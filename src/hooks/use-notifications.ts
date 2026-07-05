@@ -103,7 +103,7 @@ export function useNotifications() {
     for (const task of todaysTasks) {
       if (task.status === 'done' || task.status === 'cancelled') continue
 
-      const isOverdue = task.task_date < today
+      const isOverdue = !!task.task_date && task.task_date < today
       if (isOverdue) overdueCount++
 
       if (task.reminder_at || isOverdue) {
@@ -170,7 +170,7 @@ export function useNotifications() {
         if (notifyOverdueTask(item.task.title)) shown++
       } else if (item.type === 'task' && item.task.reminder_at) {
         if (notifyTaskReminder(item.task.title, {
-          taskDate: item.task.task_date,
+          taskDate: item.task.task_date || undefined,
           taskTime: item.task.start_time,
           period: item.task.period,
         })) shown++

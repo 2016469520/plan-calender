@@ -19,11 +19,18 @@ interface AuthState {
   isDemoMode: boolean
   signIn: (email: string, password: string) => Promise<{ error?: string }>
   signUp: (email: string, password: string) => Promise<{ error?: string }>
+  enterDemoMode: () => void
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error?: string }>
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined)
+const DEMO_USER_STORAGE_KEY = 'plan-calendar-demo-user'
+const DEMO_USER_ID = 'demo-user'
+
+function createDemoUser(email = 'demo@local.app'): User {
+  return { id: DEMO_USER_ID, email } as User
+}
 
 export function useAuth() {
   const ctx = useContext(AuthContext)
@@ -37,12 +44,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isDemoMode, setIsDemoMode] = useState(false)
 
   useEffect(() => {
+    try {
+      const stored = localStorage.getItem(DEMO_USER_STORAGE_KEY)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (parsed?.id === DEMO_USER_ID && parsed?.email) {
+          setIsDemoMode(true)
+          setUser(parsed as User)
+          setIsLoading(false)
+          return
+        }
+      }
+    } catch { /* ignore parse errors */ }
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     if (!supabaseUrl) {
       setIsDemoMode(true)
       // Restore demo user from localStorage for session persistence
       try {
-        const stored = localStorage.getItem('plan-calendar-demo-user')
+        const stored = localStorage.getItem(DEMO_USER_STORAGE_KEY)
         if (stored) {
           const parsed = JSON.parse(stored)
           if (parsed?.id && parsed?.email) {
@@ -73,10 +93,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(async (email: string, password: string) => {
     if (isDemoMode) {
       // Demo mode: accept any credentials
-      const demoUser = { id: 'demo-user', email } as User
+      const demoUser = createDemoUser(email)
       setUser(demoUser)
       // Persist demo session so page refreshes don't log out
-      try { localStorage.setItem('plan-calendar-demo-user', JSON.stringify(demoUser)) } catch { /* ignore */ }
+      try { localStorage.setItem(DEMO_USER_STORAGE_KEY, JSON.stringify(demoUser)) } catch { /* ignore */ }
       return {}
     }
 
@@ -88,9 +108,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = useCallback(async (email: string, password: string) => {
     if (isDemoMode) {
-      const demoUser = { id: 'demo-user', email } as User
+      const demoUser = createDemoUser(email)
       setUser(demoUser)
-      try { localStorage.setItem('plan-calendar-demo-user', JSON.stringify(demoUser)) } catch { /* ignore */ }
+      try { localStorage.setItem(DEMO_USER_STORAGE_KEY, JSON.stringify(demoUser)) } catch { /* ignore */ }
       return {}
     }
 
@@ -106,10 +126,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return {}
   }, [isDemoMode])
 
+  const enterDemoMode = useCallback(() => {
+    const demoUser = createDemoUser()
+    setIsDemoMode(true)
+    setUser(demoUser)
+    try { localStorage.setItem(DEMO_USER_STORAGE_KEY, JSON.stringify(demoUser)) } catch { /* ignore */ }
+  }, [])
+
   const signOut = useCallback(async () => {
     if (isDemoMode) {
       setUser(null)
-      try { localStorage.removeItem('plan-calendar-demo-user') } catch { /* ignore */ }
+      setIsDemoMode(false)
+      try { localStorage.removeItem(DEMO_USER_STORAGE_KEY) } catch { /* ignore */ }
       return
     }
 
@@ -133,7 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, isDemoMode, signIn, signUp, signOut, resetPassword }}
+      value={{ user, isLoading, isDemoMode, signIn, signUp, enterDemoMode, signOut, resetPassword }}
     >
       {children}
     </AuthContext.Provider>

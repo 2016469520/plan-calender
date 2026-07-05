@@ -49,7 +49,7 @@ export function MonthView({ currentDate, onDateClick, onViewChange, onTaskClick 
   }, [currentDate])
 
   const { data: monthTasks = [], isLoading } = useQuery({
-    queryKey: ['tasks', 'month', range.start, range.end],
+    queryKey: ['tasks', user?.id, 'month', range.start, range.end],
     queryFn: () => tasks.getByDateRange(user!.id, range),
     enabled: !!user,
   })
@@ -63,6 +63,7 @@ export function MonthView({ currentDate, onDateClick, onViewChange, onTaskClick 
   const tasksByDate = useMemo(() => {
     const map: Record<string, Task[]> = {}
     for (const task of monthTasks) {
+      if (!task.task_date) continue
       if (!map[task.task_date]) map[task.task_date] = []
       map[task.task_date].push(task)
     }

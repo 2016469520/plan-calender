@@ -31,19 +31,13 @@ export function OverdueProcessor({ className }: OverdueProcessorProps) {
   const today = todayStr()
 
   const { data = [], isLoading } = useQuery({
-    queryKey: ['tasks', 'overdue'],
-    queryFn: async () => {
-      // Get all non-done, non-cancelled tasks past today
-      const allTasks = await tasks.getByDate(user!.id, today)
-      return allTasks.filter(
-        (t) => t.task_date < today && t.status !== 'done' && t.status !== 'cancelled'
-      )
-    },
+    queryKey: ['tasks', user?.id, 'overdue', today],
+    queryFn: () => tasks.filter(user!.id, { overdue: true, maxResults: 200 }),
     enabled: !!user,
   })
 
   const overdueTasks = useMemo(
-    () => data.sort((a, b) => a.task_date.localeCompare(b.task_date)),
+    () => data.filter((t) => !!t.task_date).sort((a, b) => a.task_date!.localeCompare(b.task_date!)),
     [data]
   )
 
@@ -51,7 +45,7 @@ export function OverdueProcessor({ className }: OverdueProcessorProps) {
     mutationFn: ({ id, updates }: { id: string; updates: Partial<Task> }) =>
       tasks.update(user!.id, id, updates),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks', user!.id] })
     },
     onError: () => toast.error('操作失败'),
   })

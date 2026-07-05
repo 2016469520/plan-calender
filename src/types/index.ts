@@ -33,7 +33,7 @@ export interface Task {
   user_id: string
   title: string
   description?: string
-  task_date: string // ISO date (YYYY-MM-DD), no time
+  task_date: string | null // ISO date (YYYY-MM-DD), no time; null for inbox tasks
   period: Period
   start_time?: string // HH:mm
   end_time?: string // HH:mm

@@ -25,7 +25,7 @@ export function ScheduleHeader({ today, tasks }: ScheduleHeaderProps) {
     const done = active.filter((t) => t.status === 'done').length
     const total = active.length
     const overdue = active.filter(
-      (t) => t.task_date < today && t.status !== 'done'
+      (t) => t.task_date && t.task_date < today && t.status !== 'done'
     ).length
     // Next upcoming task (closest time today)
     const upcoming = active

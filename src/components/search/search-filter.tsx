@@ -45,13 +45,13 @@ export function SearchFilter({ onSelectTask, compact = false }: SearchFilterProp
   const [filterOptions, setFilterOptions] = useState<Omit<TaskFilterOptions, 'search'>>({})
 
   const { data: tagList = [] } = useQuery({
-    queryKey: ['tags'],
+    queryKey: ['tags', user?.id],
     queryFn: () => tags.getAll(user!.id),
     enabled: !!user,
   })
 
   const { data: results = [], isLoading } = useQuery({
-    queryKey: ['tasks', 'filter', searchText, filterOptions],
+    queryKey: ['tasks', user?.id, 'filter', searchText, filterOptions],
     queryFn: () =>
       tasks.filter(user!.id, {
         search: searchText || undefined,
@@ -70,7 +70,7 @@ export function SearchFilter({ onSelectTask, compact = false }: SearchFilterProp
   const hasActiveFilters = searchText || Object.keys(filterOptions).length > 0
 
   const overdueTasks = results.filter(
-    (t) => t.task_date < todayStr() && t.status !== 'done' && t.status !== 'cancelled'
+    (t) => t.task_date && t.task_date < todayStr() && t.status !== 'done' && t.status !== 'cancelled'
   )
 
   if (!user) return null
@@ -329,7 +329,8 @@ export function SearchFilter({ onSelectTask, compact = false }: SearchFilterProp
               key={task.id}
               className={cn(
                 'cursor-pointer hover:shadow-sm transition-all',
-                task.task_date < todayStr() &&
+                task.task_date &&
+                  task.task_date < todayStr() &&
                   task.status !== 'done' &&
                   task.status !== 'cancelled' &&
                   'border-destructive/40'
@@ -357,7 +358,7 @@ export function SearchFilter({ onSelectTask, compact = false }: SearchFilterProp
                   <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                     <span className="flex items-center gap-0.5">
                       <Calendar className="h-3 w-3" />
-                      {formatDisplayDate(task.task_date)}
+                      {task.task_date ? formatDisplayDate(task.task_date) : '未安排日期'}
                     </span>
                     <span>{PERIOD_LABELS[task.period]}</span>
                     {task.status !== 'done' && task.status !== 'cancelled' && (
@@ -373,7 +374,8 @@ export function SearchFilter({ onSelectTask, compact = false }: SearchFilterProp
                   )}
                 </div>
 
-                {task.task_date < todayStr() &&
+                {task.task_date &&
+                  task.task_date < todayStr() &&
                   task.status !== 'done' &&
                   task.status !== 'cancelled' && (
                     <Badge variant="destructive" className="text-[10px] h-4 shrink-0">

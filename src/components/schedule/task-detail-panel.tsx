@@ -64,7 +64,7 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { data: tagList = [] } = useQuery({
-    queryKey: ['tags'],
+    queryKey: ['tags', user?.id],
     queryFn: () => tagRepo.getAll(user?.id || ''),
     enabled: !!user,
   })
@@ -86,7 +86,7 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
       startTransition(() => {
         setTitle(task.title)
         setDescription(task.description || '')
-        setTaskDate(task.task_date)
+        setTaskDate(task.task_date || '')
         setPeriod(task.period)
         setTagId(task.tag_id || '')
         setDifficulty(task.difficulty || 'medium')
@@ -107,7 +107,7 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
           update.completed_at = new Date().toISOString()
         }
         await taskRepo.update(user.id, task.id, update)
-        queryClient.invalidateQueries({ queryKey: ['tasks'] })
+        queryClient.invalidateQueries({ queryKey: ['tasks', user.id] })
       } catch {
         toast.error('保存失败')
       } finally {
@@ -129,7 +129,7 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
     if (!user || !task) return
     try {
       await taskRepo.softDelete(user.id, task.id)
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks', user.id] })
       toast.success('已删除')
       onClose()
     } catch {
@@ -149,6 +149,7 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
       {/* Title */}
       <div>
         <Input
+          data-testid="task-detail-title"
           value={title}
           onChange={(e) => {
             setTitle(e.target.value)
@@ -237,11 +238,12 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
       <div className="flex items-center gap-2">
         <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
         <Input
+          data-testid="task-detail-date"
           type="date"
           value={taskDate}
           onChange={(e) => {
             setTaskDate(e.target.value)
-            saveField('task_date', e.target.value)
+            saveField('task_date', e.target.value || null)
           }}
           className="h-8 text-xs flex-1"
         />
@@ -346,6 +348,7 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
       {/* Footer */}
       <div className="flex gap-2 pt-2 border-t">
         <Button
+          data-testid="task-detail-delete"
           variant="outline"
           size="sm"
           className="flex-1 text-destructive hover:bg-destructive/10"

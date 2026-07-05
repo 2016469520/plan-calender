@@ -26,11 +26,11 @@ function isSupabaseConfigured(): boolean {
 }
 
 export function RepoProvider({ children }: { children: ReactNode }) {
-  const { isDemoMode } = useAuth()
+  const { user, isDemoMode } = useAuth()
 
   const repos = useMemo((): RepositoryFactory => {
     // In demo mode (no Supabase env), always use IndexedDB
-    if (isDemoMode) {
+    if (isDemoMode || user?.id === 'demo-user') {
       return createIndexedDBRepositoryFactory()
     }
 
@@ -41,7 +41,7 @@ export function RepoProvider({ children }: { children: ReactNode }) {
 
     // Fallback to IndexedDB (should not normally reach here)
     return createIndexedDBRepositoryFactory()
-  }, [isDemoMode])
+  }, [isDemoMode, user?.id])
 
   return <RepoContext.Provider value={repos}>{children}</RepoContext.Provider>
 }
