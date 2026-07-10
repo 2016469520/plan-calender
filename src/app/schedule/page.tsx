@@ -174,6 +174,7 @@ export default function SchedulePage() {
       case 'week':
         return [...overdueTasks, ...weekTasks]
       case 'all':
+      default:
         return allTasks.filter((t) => t.status !== 'cancelled')
     }
   }, [view, todayTasks, overdueTasks, weekTasks, allTasks])
@@ -205,8 +206,11 @@ export default function SchedulePage() {
                 view={view}
                 onViewChange={(v) => {
                   setView(v)
-                  // Reset groupBy when switching to 'all' with search
-                  if (v === 'all') setSearchQuery('')
+                  // Reset search and groupBy when switching to 'all'
+                  if (v === 'all') {
+                    setSearchQuery('')
+                    setGroupBy('none')
+                  }
                 }}
                 groupBy={groupBy}
                 onGroupByChange={setGroupBy}

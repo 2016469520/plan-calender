@@ -25,7 +25,7 @@ export default function TodayPage() {
   const [currentDate] = useState(todayStr())
 
   const { data: todayTasks = [] } = useQuery({
-    queryKey: ['tasks', 'today', currentDate],
+    queryKey: ['tasks', user?.id, 'today', currentDate],
     queryFn: () => taskRepo.getByDate(user!.id, currentDate),
     enabled: !!user,
   })

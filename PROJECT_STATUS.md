@@ -1,18 +1,50 @@
 # PROJECT_STATUS.md — 项目状态
 
-## 当前阶段：习惯分钟滚轮连续输入修复 (2026-07-04)
+## 当前阶段：代码审查修复 & 专注功能简化 (2026-07-10)
 
-## 验证状态：2026-07-04（最新）
+## 验证状态：2026-07-10（最新）
 
 | 检查项 | 结果 |
 |--------|------|
-| npm install | ✅ 通过 |
-| ESLint | ✅ 0 errors |
 | TypeScript (tsc --noEmit) | ✅ 通过 |
-| Vitest (224 tests) | ✅ 全部通过 |
-| Next.js build | ✅ 通过 (14 routes) |
+| Vitest (225 tests) | ✅ 全部通过 |
 
-## 🔧 本次修复 (2026-07-04 第六版)：滚轮连续输入流畅性
+## 🔧 本次变更 (2026-07-10)
+
+### 代码审查修复（10 项发现全部修复）
+1. **React Query 缓存作用域**：7 个组件的 queryKey 添加 `user?.id` 前缀，防止多用户缓存泄漏
+2. **Supabase includeUndated 查询修复**：用 SQL `.or()` 替代 JS 后过滤，避免 LIMIT 截断导致数据丢失
+3. **CSV 导出 null 修复**：`task.task_date \|\| ''` 防止导出 "null" 字符串
+4. **导入 null 覆盖修复**：`task_date: item.task_date \|\| today` → `?? undefined`，保留 null 语义
+5. **schedule 页 default 分支**：switch 添加 default case
+6. **schedule 页 reset 修复**：切换 all 视图时 `setGroupBy('none')`
+7. **Service Worker 缓存**：cache-control 正则添加 `no-cache`
+8. **DEMO_USER_ID 导出**：auth-provider 导出常量，消除硬编码
+
+### 专注功能简化 — 移除「不关联日程」
+- **移除关联日程 Select**：专注计时器不再支持绑定具体任务
+- **保留专注分类**：基于标签的分类选择仍然可用
+- **移除文件**：`focus-timer.tsx` 删除 linkedTaskId state、todayTasks 查询、关联日程下拉
+- **清理常量**：`display-labels.ts` 和 `constants.ts` 移除 `linkedTask`/`focusNone` 占位文本
+
+### 修改文件（本次会话）
+- `src/components/focus/focus-timer.tsx` — 移除关联日程功能
+- `src/lib/display-labels.ts` — 移除 linkedTask 占位文本
+- `src/lib/constants.ts` — 移除 focusNone 标签
+- `src/components/calendar/day-view.tsx` — queryKey 作用域
+- `src/components/calendar/category-view.tsx` — queryKey 作用域
+- `src/app/today/page.tsx` — queryKey 作用域
+- `src/app/insights/page.tsx` — queryKey 作用域
+- `src/app/inbox/page.tsx` — queryKey 作用域
+- `src/hooks/use-notifications.ts` — queryKey 作用域
+- `src/components/focus/focus-timer.tsx` — queryKey 作用域（旧变更）
+- `src/components/plans/import-export-dialog.tsx` — null 覆盖修复
+- `src/lib/utils/import-export.ts` — CSV null 修复
+- `src/lib/repositories/supabase-impl.ts` — includeUndated SQL 修复
+- `src/app/schedule/page.tsx` — switch default + reset 修复
+- `public/sw.js` — cache-control 正则修复
+- `src/providers/auth-provider.tsx` — DEMO_USER_ID 导出 + 去重
+- `src/providers/repo-provider.tsx` — 使用导出常量
 
 ### 真实问题根因
 1. **draft 与 persisted 未分离**：`createWheelHandler` 每次滚轮事件都从 TanStack Query 缓存读取 `currentValue`（`getLogForHabit(habit.id)`），但 debounce 机制导致 `saveValue`（含 `invalidateLogs`）只在 400ms 后触发。快速滚动期间 query 缓存从不更新，每次滚轮读取相同的 `currentValue`，永远只能 +1

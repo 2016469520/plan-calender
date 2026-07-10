@@ -363,12 +363,18 @@ class SupabaseTaskRepository implements ITaskRepository {
         query = query.in('priority', options.priority)
       }
 
-      if (options.dateFrom && !options.includeUndated) {
-        query = query.gte('task_date', options.dateFrom)
-      }
-
-      if (options.dateTo && !options.includeUndated) {
-        query = query.lte('task_date', options.dateTo)
+      if (options.includeUndated && (options.dateFrom || options.dateTo)) {
+        const conditions: string[] = ['task_date.is.null']
+        if (options.dateFrom) conditions.push(`task_date.gte.${options.dateFrom}`)
+        if (options.dateTo) conditions.push(`task_date.lte.${options.dateTo}`)
+        query = query.or(conditions.join(','))
+      } else {
+        if (options.dateFrom) {
+          query = query.gte('task_date', options.dateFrom)
+        }
+        if (options.dateTo) {
+          query = query.lte('task_date', options.dateTo)
+        }
       }
 
       if (options.overdue) {
@@ -391,16 +397,7 @@ class SupabaseTaskRepository implements ITaskRepository {
 
       const { data, error } = await query
       if (error) throw error
-      let tasks = (data || []).map((t) => cleanTask(t))
-      if (options.includeUndated && (options.dateFrom || options.dateTo)) {
-        tasks = tasks.filter((task) => {
-          if (!task.task_date) return true
-          if (options.dateFrom && task.task_date < options.dateFrom) return false
-          if (options.dateTo && task.task_date > options.dateTo) return false
-          return true
-        })
-      }
-      return tasks
+      return (data || []).map((t) => cleanTask(t))
     } catch (e) {
       handleError('filter', e)
     }

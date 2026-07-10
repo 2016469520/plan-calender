@@ -71,7 +71,7 @@ export function useNotifications() {
   const today = todayStr()
 
   const { data: todaysTasks = [] } = useQuery({
-    queryKey: ['tasks', 'today'],
+    queryKey: ['tasks', user?.id, 'today'],
     queryFn: () => tasks.getByDate(user!.id, today),
     enabled: !!user,
   })

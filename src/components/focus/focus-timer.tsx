@@ -49,27 +49,16 @@ const PRESET_DURATIONS = [
 
 export function HomeFocusTimer() {
   const { user } = useAuth()
-  const { tasks: taskRepo, tags: tagRepo } = useRepos()
+  const { tags: tagRepo } = useRepos()
   const focus = useFocus()
 
   const [customMinutes, setCustomMinutes] = useState(25)
   const [localTimerMode, setLocalTimerMode] = useState<'countdown' | 'stopwatch'>('countdown')
   const durationAreaRef = useRef<HTMLDivElement>(null)
-  // Focus category (tag-based) — separate from linked task
+  // Focus category (tag-based)
   const [focusTagId, setFocusTagId] = useState<string>('')
-  // Linked task — optional, associates session with a specific task
-  const [linkedTaskId, setLinkedTaskId] = useState<string>('')
   const [collapsed, setCollapsed] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
-
-  const { data: todayTasks = [] } = useQuery({
-    queryKey: ['tasks', 'today-focus'],
-    queryFn: async () => {
-      const today = new Date().toISOString().slice(0, 10)
-      return taskRepo.getByDate(user!.id, today)
-    },
-    enabled: !!user,
-  })
 
   const { data: tagList = [] } = useQuery({
     queryKey: ['tags'],
@@ -77,19 +66,16 @@ export function HomeFocusTimer() {
     enabled: !!user,
   })
 
-  const activeTasks = todayTasks.filter((t) => t.status !== 'done' && t.status !== 'cancelled')
-
   const handleStart = useCallback(
     (minutes: number, mode: 'focus' | 'short_break' | 'long_break' = 'focus') => {
       focus.start({
         planned_minutes: minutes,
         timer_mode: localTimerMode,
-        task_id: linkedTaskId || undefined,
         title: focusTagId ? `分类：${getTagDisplayName(tagList, focusTagId)}` : undefined,
         mode,
       })
     },
-    [focus, linkedTaskId, focusTagId, tagList, localTimerMode]
+    [focus, focusTagId, tagList, localTimerMode]
   )
 
   const handleCustomStart = () => {
@@ -108,10 +94,6 @@ export function HomeFocusTimer() {
   const focusCategoryLabel = focusTagId
     ? getTagDisplayName(tagList, focusTagId)
     : '选择专注分类'
-
-  const linkedTaskLabel = linkedTaskId
-    ? (todayTasks.find((t) => t.id === linkedTaskId)?.title || '未知任务')
-    : '不关联日程'
 
   // Active focus state
   if (focus.isRunning || focus.isPaused) {
@@ -262,23 +244,6 @@ export function HomeFocusTimer() {
                       <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
                       {t.name}
                     </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Linked task (optional) */}
-            <Select value={linkedTaskId || 'none'} onValueChange={(v) => setLinkedTaskId(v && v !== 'none' ? v : '')}>
-              <SelectTrigger className="h-7 text-xs">
-                <SelectValue placeholder="不关联日程">
-                  {linkedTaskId ? linkedTaskLabel : '不关联日程'}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">不关联日程</SelectItem>
-                {activeTasks.slice(0, 10).map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.title}
                   </SelectItem>
                 ))}
               </SelectContent>

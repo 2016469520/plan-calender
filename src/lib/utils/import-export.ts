@@ -194,7 +194,7 @@ export function exportTasksToCsv(
   const rows = filtered.map((task) => [
     escapeCsvField(task.title),
     escapeCsvField(task.description || ''),
-    task.task_date,
+    task.task_date || '',
     periodLabels[task.period] || task.period,
     task.start_time || '',
     task.end_time || '',

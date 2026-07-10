@@ -1,5 +1,23 @@
 # DECISIONS.md — 技术决策记录
 
+## 决策 71：移除专注计时器的关联日程功能 (2026-07-10)
+- **决策**: 从 `focus-timer.tsx` 中删除「关联日程」Select 下拉及相关逻辑
+- **原因**:
+  - 专注分类（标签）已足够满足统计归类需求
+  - 关联具体日程增加了操作步骤但使用频率极低
+  - 简化 UI 降低认知负担
+  - `use-focus` hook 和 `FocusSession.task_id` 字段保留不变（通用数据模型）
+- **影响**:
+  - 移除 `linkedTaskId` state、`todayTasks` 查询、`activeTasks` 派生数据
+  - 移除 `linkedTaskLabel` 计算值
+  - 专注启动不再传递 `task_id`
+  - `display-labels.ts` 移除 `linkedTask` 占位文本
+  - `constants.ts` 移除 `focusNone` 标签
+- **回退**: 决策 22（专注时长累计到任务）仍然有效 — hook 层 `completeSession` 中的 task_id 逻辑保留，未来如需恢复只需恢复 UI 层
+- **日期**: 2026-07-10
+
+---
+
 ## 决策 70：缓存 per-habit wheel handler 防止 listener 反复重建 (2026-07-04)
 - **决策**: 使用 `wheelHandlersRef`（useRef）缓存每个 habit 的 wheel handler 函数引用，同一渲染周期复用同一引用
 - **原因**:

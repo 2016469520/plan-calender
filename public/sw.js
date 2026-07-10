@@ -64,7 +64,7 @@ self.addEventListener('fetch', (event) => {
   const shouldCacheResponse = (response) => {
     if (!response || !response.ok) return false
     const cacheControl = response.headers.get('cache-control') || ''
-    return !/(no-store|private)/i.test(cacheControl)
+    return !/(no-store|no-cache|private)/i.test(cacheControl)
   }
 
   // For navigation requests (pages), use network-first with offline fallback

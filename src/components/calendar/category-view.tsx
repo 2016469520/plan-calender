@@ -49,7 +49,7 @@ export function CategoryView({
   const range = useMemo(() => getMonthRange(todayStr()), [])
 
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
-    queryKey: ['tasks', 'month', range.start, range.end],
+    queryKey: ['tasks', user?.id, 'month', range.start, range.end],
     queryFn: () => taskRepo.getByDateRange(user!.id, range),
     enabled: !!user,
   })

@@ -120,7 +120,7 @@ export function ImportExportDialog({ open, onOpenChange }: ImportExportDialogPro
         await tasks.create(user!.id, {
           title: item.title,
           description: item.description,
-          task_date: item.task_date || today,
+          task_date: item.task_date ?? undefined,
           period: item.period || 'morning',
           start_time: item.start_time,
           end_time: item.end_time,

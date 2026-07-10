@@ -26,7 +26,7 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | undefined>(undefined)
 const DEMO_USER_STORAGE_KEY = 'plan-calendar-demo-user'
-const DEMO_USER_ID = 'demo-user'
+export const DEMO_USER_ID = 'demo-user'
 
 function createDemoUser(email = 'demo@local.app'): User {
   return { id: DEMO_USER_ID, email } as User
@@ -60,16 +60,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     if (!supabaseUrl) {
       setIsDemoMode(true)
-      // Restore demo user from localStorage for session persistence
-      try {
-        const stored = localStorage.getItem(DEMO_USER_STORAGE_KEY)
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          if (parsed?.id && parsed?.email) {
-            setUser(parsed as User)
-          }
-        }
-      } catch { /* ignore parse errors */ }
       setIsLoading(false)
       return
     }

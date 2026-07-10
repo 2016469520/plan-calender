@@ -11,7 +11,7 @@ export default function InboxPage() {
   const { tasks } = useRepos()
 
   const { data: inboxTasks = [] } = useQuery({
-    queryKey: ['tasks', 'inbox'],
+    queryKey: ['tasks', user?.id, 'inbox'],
     queryFn: () => tasks.getByDate(user!.id, 'inbox'),
     enabled: !!user,
   })

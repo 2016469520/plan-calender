@@ -105,7 +105,6 @@ export const SELECT_PLACEHOLDER = {
   difficulty: '选择难度',
   status: '选择状态',
   focusCategory: '选择专注分类',
-  linkedTask: '不关联日程',
   noTag: '未分类',
   tagDeleted: '标签已删除',
   calendarView: '选择视图',

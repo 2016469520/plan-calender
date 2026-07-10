@@ -16,7 +16,7 @@ export default function InsightsPage() {
   const range = getMonthRange(todayStr())
 
   const { data: monthTasks = [], isLoading: tasksLoading } = useQuery({
-    queryKey: ['tasks', 'month', range.start, range.end],
+    queryKey: ['tasks', user?.id, 'month', range.start, range.end],
     queryFn: () => tasks.getByDateRange(user!.id, range),
     enabled: !!user,
   })

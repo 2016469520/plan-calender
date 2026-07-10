@@ -103,7 +103,7 @@ export function DayView({ currentDate, onDateChange }: DayViewProps) {
   const { handleReorder, handleMove, isMoving } = useTaskDnd()
 
   const { data: dayTasks = [] } = useQuery({
-    queryKey: ['tasks', 'day', currentDate],
+    queryKey: ['tasks', user?.id, 'day', currentDate],
     queryFn: () => tasks.getByDate(user!.id, currentDate),
     enabled: !!user,
   })

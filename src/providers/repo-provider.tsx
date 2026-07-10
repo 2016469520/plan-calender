@@ -4,7 +4,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import type { RepositoryFactory } from '@/lib/repositories/interfaces'
 import { createIndexedDBRepositoryFactory } from '@/lib/repositories/indexeddb-impl'
 import { createSupabaseRepositoryFactory } from '@/lib/repositories/supabase-impl'
-import { useAuth } from './auth-provider'
+import { useAuth, DEMO_USER_ID } from './auth-provider'
 
 const RepoContext = createContext<RepositoryFactory | null>(null)
 
@@ -30,7 +30,7 @@ export function RepoProvider({ children }: { children: ReactNode }) {
 
   const repos = useMemo((): RepositoryFactory => {
     // In demo mode (no Supabase env), always use IndexedDB
-    if (isDemoMode || user?.id === 'demo-user') {
+    if (isDemoMode || user?.id === DEMO_USER_ID) {
       return createIndexedDBRepositoryFactory()
     }
 

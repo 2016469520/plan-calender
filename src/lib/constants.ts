@@ -77,7 +77,6 @@ export const URGENCY_COLORS = {
 
 export const SELECT_LABELS = {
   tagNone: '未分类',
-  focusNone: '不关联日程',
   noOption: '请选择',
 } as const
 
