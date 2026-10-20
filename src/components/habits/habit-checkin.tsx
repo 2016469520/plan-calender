@@ -16,9 +16,9 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { todayStr } from '@/lib/utils/date'
+import { useToday } from '@/hooks/use-today'
 import type { Habit, HabitLog, MeasurementType } from '@/types'
-import { CheckCircle2, Circle, Flame, Target, Pencil, Trash2, Plus, Minus, Loader2, Check, X, AlertCircle } from 'lucide-react'
+import { CheckCircle2, Circle, Flame, Target, Pencil, Trash2, Plus, Minus, Loader2, Check, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -32,7 +32,7 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
   const { user } = useAuth()
   const { habits, habitLogs } = useRepos()
   const queryClient = useQueryClient()
-  const today = todayStr()
+  const today = useToday()
 
   const [editLog, setEditLog] = useState<HabitLog | null>(null)
   const [deleteLog, setDeleteLog] = useState<HabitLog | null>(null)
@@ -48,7 +48,7 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
   // independent of the query cache. Display shows draft ?? persisted.
   const draftValuesRef = useRef<Record<string, number>>({})
   // Bump this counter to trigger re-renders when draft changes
-  const [draftVersion, setDraftVersion] = useState(0)
+  const [, setDraftVersion] = useState(0)
 
   // Debounce timers
   const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
@@ -100,15 +100,6 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
       const key = `${habitId}-${today}`
       const draft = draftValuesRef.current[key]
       return draft !== undefined ? draft : persistedValue
-    },
-    [today]
-  )
-
-  const setDraftValue = useCallback(
-    (habitId: string, value: number) => {
-      const key = `${habitId}-${today}`
-      draftValuesRef.current[key] = value
-      setDraftVersion((v) => v + 1)
     },
     [today]
   )

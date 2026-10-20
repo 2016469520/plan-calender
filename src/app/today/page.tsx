@@ -7,8 +7,8 @@ import { useQuery } from '@tanstack/react-query'
 import { DayView } from '@/components/calendar/day-view'
 import { DailyReviewForm } from '@/components/reviews/daily-review-form'
 import { HabitCheckin } from '@/components/habits/habit-checkin'
-import { todayStr, format, formatWeekday } from '@/lib/utils/date'
-import { useState } from 'react'
+import { format, formatWeekday } from '@/lib/utils/date'
+import { useToday } from '@/hooks/use-today'
 import Link from 'next/link'
 import { History, Sun, Moon, Sunrise } from 'lucide-react'
 
@@ -22,7 +22,7 @@ function getGreeting(): { text: string; icon: typeof Sun; period: 'morning' | 'a
 export default function TodayPage() {
   const { user } = useAuth()
   const { tasks: taskRepo } = useRepos()
-  const [currentDate] = useState(todayStr())
+  const currentDate = useToday()
 
   const { data: todayTasks = [] } = useQuery({
     queryKey: ['tasks', user?.id, 'today', currentDate],
@@ -33,7 +33,6 @@ export default function TodayPage() {
   const greeting = useMemo(() => getGreeting(), [])
 
   const taskStats = useMemo(() => {
-    const total = todayTasks.length
     const done = todayTasks.filter((t) => t.status === 'done').length
     const active = todayTasks.filter((t) => t.status !== 'cancelled').length
     const rate = active > 0 ? Math.round((done / active) * 100) : 0

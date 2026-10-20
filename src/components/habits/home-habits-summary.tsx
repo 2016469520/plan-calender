@@ -14,9 +14,9 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { todayStr } from '@/lib/utils/date'
+import { useToday } from '@/hooks/use-today'
 import type { Habit, HabitLog, MeasurementType } from '@/types'
-import { CheckSquare, ChevronRight, Plus, Minus, Check, Pencil, Trash2, Loader2, X, AlertCircle } from 'lucide-react'
+import { CheckSquare, ChevronRight, Plus, Minus, Check, Pencil, Trash2, Loader2, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -36,15 +36,15 @@ export function HomeHabitsSummary() {
 
   // === Draft/persist separation ===
   const draftValuesRef = useRef<Record<string, number>>({})
-  const [draftVersion, setDraftVersion] = useState(0)
+  const [, setDraftVersion] = useState(0)
 
   const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
   const wheelThrottle = useRef<Record<string, number>>({})
   const saveVersionRef = useRef<Record<string, number>>({})
 
-  const today = todayStr()
+  const today = useToday()
 
-  const { data: habits = [], isLoading, isError: habitsError } = useQuery({
+  const { data: habits = [], isError: habitsError } = useQuery({
     queryKey: ['habits'],
     queryFn: () => habitRepo.getAll(user!.id),
     enabled: !!user,
@@ -88,15 +88,6 @@ export function HomeHabitsSummary() {
       const key = `${habitId}-${today}`
       const draft = draftValuesRef.current[key]
       return draft !== undefined ? draft : persistedValue
-    },
-    [today]
-  )
-
-  const setDraftValue = useCallback(
-    (habitId: string, value: number) => {
-      const key = `${habitId}-${today}`
-      draftValuesRef.current[key] = value
-      setDraftVersion((v) => v + 1)
     },
     [today]
   )

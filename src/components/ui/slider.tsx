@@ -30,6 +30,9 @@ function Slider({
         "relative flex w-full touch-none items-center select-none",
         className
       )}
+      min={min}
+      max={max}
+      step={step}
       value={_value}
       onValueChange={(v) => onValueChange?.(v as number[])}
       {...props}

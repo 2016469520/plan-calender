@@ -2,13 +2,14 @@
 
 import { useRouter } from 'next/navigation'
 import { DailyReviewForm } from '@/components/reviews/daily-review-form'
-import { todayStr, formatDisplayDate, formatWeekday } from '@/lib/utils/date'
+import { formatDisplayDate, formatWeekday } from '@/lib/utils/date'
+import { useToday } from '@/hooks/use-today'
 import { Button } from '@/components/ui/button'
 import { History } from 'lucide-react'
 
 export default function ReviewTodayPage() {
   const router = useRouter()
-  const today = todayStr()
+  const today = useToday()
 
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-6">
