@@ -1,14 +1,13 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useAuth } from '@/providers/auth-provider'
 import { useRepos } from '@/providers/repo-provider'
 import { useQuery } from '@tanstack/react-query'
 import { HomeFocusTimer } from '@/components/focus/focus-timer'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { todayStr } from '@/lib/utils/date'
-import { cn } from '@/lib/utils'
+import { todayStr, toDateStr } from '@/lib/utils/date'
 import { Timer, Flame, TrendingUp, Target, Clock, Calendar } from 'lucide-react'
 
 export default function FocusPage() {
@@ -21,7 +20,7 @@ export default function FocusPage() {
       const end = todayStr()
       const d = new Date()
       d.setDate(d.getDate() - 30)
-      const start = d.toISOString().slice(0, 10)
+      const start = toDateStr(d)
       return fsRepo.getByDateRange(user!.id, { start, end })
     },
     enabled: !!user,
@@ -29,7 +28,10 @@ export default function FocusPage() {
 
   const stats = useMemo(() => {
     const today = todayStr()
-    const todaySessions = sessions.filter((s) => s.created_at?.startsWith(today) && s.status === 'completed')
+    /** completed_at / created_at 是 UTC ISO 时间戳，按本地日期归组 */
+    const localDay = (iso?: string | null): string =>
+      iso ? toDateStr(new Date(iso)) : ''
+    const todaySessions = sessions.filter((s) => localDay(s.created_at) === today && s.status === 'completed')
     const completedSessions = sessions.filter((s) => s.status === 'completed')
 
     const todayMinutes = todaySessions.reduce((sum, s) => sum + Math.floor(s.actual_seconds / 60), 0)
@@ -44,20 +46,22 @@ export default function FocusPage() {
     // Weekly stats (last 7 days)
     const weekAgo = new Date()
     weekAgo.setDate(weekAgo.getDate() - 7)
-    const weekStr = weekAgo.toISOString().slice(0, 10)
-    const weekCompleted = completedSessions.filter((s) => s.completed_at && s.completed_at.slice(0, 10) >= weekStr)
+    const weekStr = toDateStr(weekAgo)
+    const weekCompleted = completedSessions.filter((s) => localDay(s.completed_at) >= weekStr)
     const weekMinutes = weekCompleted.reduce((sum, s) => sum + Math.floor(s.actual_seconds / 60), 0)
 
     // Monthly stats (last 30 days)
-    const monthCompleted = completedSessions.filter((s) => s.completed_at && s.completed_at.slice(0, 10) >= weekAgo.toISOString().slice(0, 10))
+    const monthAgo = new Date()
+    monthAgo.setDate(monthAgo.getDate() - 30)
+    const monthCompleted = completedSessions.filter((s) => localDay(s.completed_at) >= toDateStr(monthAgo))
     const monthMinutes = monthCompleted.reduce((sum, s) => sum + Math.floor(s.actual_seconds / 60), 0)
 
     // Streak
     let streak = 0
     const checkDate = new Date()
     while (true) {
-      const dateStr = checkDate.toISOString().slice(0, 10)
-      const hasSession = completedSessions.some((s) => s.completed_at?.startsWith(dateStr))
+      const dateStr = toDateStr(checkDate)
+      const hasSession = completedSessions.some((s) => localDay(s.completed_at) === dateStr)
       if (hasSession) {
         streak++
         checkDate.setDate(checkDate.getDate() - 1)
@@ -85,9 +89,9 @@ export default function FocusPage() {
     for (let i = 6; i >= 0; i--) {
       const d = new Date()
       d.setDate(d.getDate() - i)
-      const dateStr = d.toISOString().slice(0, 10)
+      const dateStr = toDateStr(d)
       const daySessions = sessions.filter(
-        (s) => s.status === 'completed' && s.completed_at?.startsWith(dateStr)
+        (s) => s.status === 'completed' && s.completed_at && toDateStr(new Date(s.completed_at)) === dateStr
       )
       const mins = daySessions.reduce((sum, s) => sum + Math.floor(s.actual_seconds / 60), 0)
       days.push({ date: dateStr, minutes: mins })

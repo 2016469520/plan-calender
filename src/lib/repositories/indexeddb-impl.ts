@@ -32,7 +32,7 @@ import type {
   FocusSession,
   DateRange,
 } from '@/types'
-import { nowISO } from '@/lib/utils/date'
+import { nowISO, todayStr } from '@/lib/utils/date'
 
 // ---------- Helpers ----------
 
@@ -175,6 +175,10 @@ class IndexedDBTaskRepository implements ITaskRepository {
       all = all.filter((t) => options.priority!.includes(t.priority))
     }
 
+    if (options.undatedOnly) {
+      all = all.filter((t) => !t.task_date)
+    }
+
     if (options.dateFrom) {
       all = all.filter((t) =>
         options.includeUndated && !t.task_date ? true : t.task_date >= options.dateFrom!
@@ -188,7 +192,7 @@ class IndexedDBTaskRepository implements ITaskRepository {
     }
 
     if (options.overdue) {
-      const today = new Date().toISOString().slice(0, 10)
+      const today = todayStr()
       all = all.filter(
         (t) => t.task_date < today && t.status !== 'done' && t.status !== 'cancelled'
       )
@@ -647,7 +651,7 @@ class IndexedDBCountdownRepository implements ICountdownRepository {
 
   async getUpcoming(userId: string, limit = 4): Promise<Countdown[]> {
     const all = await this.list(userId)
-    const now = new Date().toISOString().slice(0, 10)
+    const now = todayStr()
     return all
       .filter((c) => !c.archived_at)
       .sort((a, b) => {

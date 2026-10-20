@@ -6,11 +6,10 @@ import { useRepos } from '@/providers/repo-provider'
 import { useAuth } from '@/providers/auth-provider'
 import { useQueryClient } from '@tanstack/react-query'
 import type { Task, Tag } from '@/types'
-import { todayStr } from '@/lib/utils/date'
+import { todayStr, tomorrowStr } from '@/lib/utils/date'
 import { TaskListItem } from './task-list-item'
 import { AlertCircle, ChevronDown, ChevronRight, ArrowRight, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
 
 interface OverdueSectionProps {
   tasks: Task[]
@@ -39,11 +38,9 @@ export function OverdueSection({ tasks, tags, activeTaskId, onTaskClick }: Overd
 
   const handleMoveToTomorrow = async (task: Task) => {
     if (!user) return
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const tomorrowStr = tomorrow.toISOString().slice(0, 10)
+    const target = tomorrowStr(today)
     try {
-      await taskRepo.update(user.id, task.id, { task_date: tomorrowStr } as Partial<Task>)
+      await taskRepo.update(user.id, task.id, { task_date: target } as Partial<Task>)
       queryClient.invalidateQueries({ queryKey: ['tasks', user.id] })
       toast.success('已移至明天')
     } catch {

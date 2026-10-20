@@ -4,7 +4,7 @@
 // ============================================================
 
 import type { Countdown } from '@/types'
-import { todayStr } from '@/lib/utils/date'
+import { todayStr, toDateStr } from '@/lib/utils/date'
 
 /**
  * Calculate days remaining for a countdown.
@@ -51,7 +51,7 @@ export function getNextYearlyDate(targetDate: string): string {
     target.setFullYear(todayDate.getFullYear() + 1)
   }
 
-  return target.toISOString().slice(0, 10)
+  return toDateStr(target)
 }
 
 /**

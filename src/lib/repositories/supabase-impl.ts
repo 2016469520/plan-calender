@@ -4,6 +4,7 @@
 // ============================================================
 
 import { createClient } from '@/lib/supabase/client'
+import { todayStr } from '@/lib/utils/date'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type {
   ITaskRepository,
@@ -363,6 +364,10 @@ class SupabaseTaskRepository implements ITaskRepository {
         query = query.in('priority', options.priority)
       }
 
+      if (options.undatedOnly) {
+        query = query.is('task_date', null)
+      }
+
       if (options.includeUndated && (options.dateFrom || options.dateTo)) {
         const conditions: string[] = ['task_date.is.null']
         if (options.dateFrom) conditions.push(`task_date.gte.${options.dateFrom}`)
@@ -378,7 +383,7 @@ class SupabaseTaskRepository implements ITaskRepository {
       }
 
       if (options.overdue) {
-        const today = new Date().toISOString().slice(0, 10)
+        const today = todayStr()
         query = query.lt('task_date', today)
           .not('status', 'in', '("done","cancelled")')
       }

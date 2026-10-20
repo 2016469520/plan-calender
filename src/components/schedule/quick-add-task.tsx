@@ -4,7 +4,8 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRepos } from '@/providers/repo-provider'
 import { useAuth } from '@/providers/auth-provider'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
-import { todayStr } from '@/lib/utils/date'
+import { todayStr, tomorrowStr, thisWeekendStr, nextWeekStr } from '@/lib/utils/date'
+import { defaultPeriodByTime } from '@/lib/utils/period'
 import { getPeriodLabel, getDifficultyLabel, getTagDisplayName } from '@/lib/display-labels'
 import type { Period, Difficulty, Task } from '@/types'
 import {
@@ -31,30 +32,6 @@ interface QuickAddTaskProps {
   className?: string
 }
 
-function tomorrowStr(): string {
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  return d.toISOString().slice(0, 10)
-}
-
-function thisWeekendStr(): string {
-  const d = new Date()
-  const day = d.getDay()
-  // Saturday = 6, if today is Sat/Sun, use next Sat
-  const daysUntilSat = day === 6 ? 7 : (6 - day)
-  d.setDate(d.getDate() + daysUntilSat)
-  return d.toISOString().slice(0, 10)
-}
-
-function nextWeekStr(): string {
-  const d = new Date()
-  const day = d.getDay()
-  // Days until next Monday
-  const daysUntilMon = day === 1 ? 7 : (8 - day) % 7 || 7
-  d.setDate(d.getDate() + daysUntilMon)
-  return d.toISOString().slice(0, 10)
-}
-
 function formatDateChinese(dateStr: string): string {
   if (!dateStr) return ''
   const d = new Date(dateStr + 'T00:00:00')
@@ -64,14 +41,6 @@ function formatDateChinese(dateStr: string): string {
   const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
   const weekday = weekdays[d.getDay()]
   return `${year}年${month}月${day}日 ${weekday}`
-}
-
-/** Fallback period based on current time */
-function defaultPeriodByTime(): Period {
-  const h = new Date().getHours()
-  if (h >= 6 && h < 12) return 'morning'
-  if (h >= 12 && h < 18) return 'afternoon'
-  return 'evening'
 }
 
 export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddTaskProps) {

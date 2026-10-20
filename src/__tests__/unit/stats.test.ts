@@ -2,12 +2,12 @@ import { describe, it, expect } from 'vitest'
 import {
   calculateStreak,
   calculateTaskStats,
-  calculateHabitStats,
   calculateTagStats,
   generateHabitHeatmap,
 } from '@/lib/utils/stats'
-import type { Habit, HabitLog, Task, DailyReview } from '@/types'
+import type { HabitLog, Task, DailyReview } from '@/types'
 import { calculateReviewStats } from '@/lib/utils/stats'
+import { toDateStr } from '@/lib/utils/date'
 
 describe('stats utilities', () => {
   describe('calculateStreak', () => {
@@ -18,9 +18,9 @@ describe('stats utilities', () => {
     })
 
     it('calculates current daily streak', () => {
-      const today = new Date().toISOString().slice(0, 10)
-      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
-      const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10)
+      const today = toDateStr()
+      const yesterday = toDateStr(new Date(Date.now() - 86400000))
+      const twoDaysAgo = toDateStr(new Date(Date.now() - 2 * 86400000))
 
       const logs = [
         { log_date: today, is_completed: true },
@@ -34,9 +34,9 @@ describe('stats utilities', () => {
     })
 
     it('resets current streak when there is a gap', () => {
-      const today = new Date().toISOString().slice(0, 10)
-      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
-      const fourDaysAgo = new Date(Date.now() - 4 * 86400000).toISOString().slice(0, 10)
+      const today = toDateStr()
+      const yesterday = toDateStr(new Date(Date.now() - 86400000))
+      const fourDaysAgo = toDateStr(new Date(Date.now() - 4 * 86400000))
 
       const logs = [
         { log_date: today, is_completed: true },
@@ -50,8 +50,8 @@ describe('stats utilities', () => {
     })
 
     it('current streak is 0 if most recent is more than 1 day ago', () => {
-      const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10)
-      const threeDaysAgo = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10)
+      const twoDaysAgo = toDateStr(new Date(Date.now() - 2 * 86400000))
+      const threeDaysAgo = toDateStr(new Date(Date.now() - 3 * 86400000))
 
       const logs = [
         { log_date: twoDaysAgo, is_completed: true },
@@ -63,12 +63,12 @@ describe('stats utilities', () => {
     })
 
     it('finds longest streak even when current is broken', () => {
-      const today = new Date().toISOString().slice(0, 10)
-      const fiveDaysAgo = new Date(Date.now() - 5 * 86400000).toISOString().slice(0, 10)
-      const sixDaysAgo = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10)
-      const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
-      const eightDaysAgo = new Date(Date.now() - 8 * 86400000).toISOString().slice(0, 10)
-      const nineDaysAgo = new Date(Date.now() - 9 * 86400000).toISOString().slice(0, 10)
+      const today = toDateStr()
+      const fiveDaysAgo = toDateStr(new Date(Date.now() - 5 * 86400000))
+      const sixDaysAgo = toDateStr(new Date(Date.now() - 6 * 86400000))
+      const sevenDaysAgo = toDateStr(new Date(Date.now() - 7 * 86400000))
+      const eightDaysAgo = toDateStr(new Date(Date.now() - 8 * 86400000))
+      const nineDaysAgo = toDateStr(new Date(Date.now() - 9 * 86400000))
 
       const logs = [
         { log_date: today, is_completed: true },
@@ -199,7 +199,7 @@ describe('stats utilities', () => {
     })
 
     it('marks completed days', () => {
-      const today = new Date().toISOString().slice(0, 10)
+      const today = toDateStr()
       const logs: HabitLog[] = [
         { id: '1', user_id: 'u1', habit_id: 'h1', log_date: today, value: 2, is_completed: true, created_at: '', updated_at: '' },
       ]
@@ -211,7 +211,7 @@ describe('stats utilities', () => {
     })
 
     it('scales levels based on target value', () => {
-      const today = new Date().toISOString().slice(0, 10)
+      const today = toDateStr()
       const logs: HabitLog[] = [
         { id: '1', user_id: 'u1', habit_id: 'h1', log_date: today, value: 5, is_completed: true, created_at: '', updated_at: '' },
       ]

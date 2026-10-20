@@ -20,7 +20,8 @@ import { HomeCountdowns } from '@/components/countdowns/home-countdowns'
 import { HomeHabitsSummary } from '@/components/habits/home-habits-summary'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useMediaQuery } from '@/hooks/use-media-query'
-import { todayStr, addDays, format, parseISO } from '@/lib/utils/date'
+import { useToday } from '@/hooks/use-today'
+import { addDays, format, parseISO, toDateStr } from '@/lib/utils/date'
 import { groupTasksByTag } from '@/lib/utils/task-grouping'
 import type { Task, Period } from '@/types'
 import { FolderOpen, Search, TagIcon } from 'lucide-react'
@@ -59,7 +60,7 @@ export default function SchedulePage() {
   const [groupBy, setGroupBy] = useState<'none' | 'category'>('none')
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const today = todayStr()
+  const today = useToday()
 
   // Load today + broader range for overdue/upcoming
   const range = useMemo(() => {
@@ -68,8 +69,8 @@ export default function SchedulePage() {
     const end = new Date()
     end.setDate(end.getDate() + 60) // 60 days forward
     return {
-      start: start.toISOString().slice(0, 10),
-      end: end.toISOString().slice(0, 10),
+      start: toDateStr(start),
+      end: toDateStr(end),
     }
   }, [])
 

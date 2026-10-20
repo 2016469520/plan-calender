@@ -28,7 +28,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer'
-import { PERIOD_LABELS } from '@/lib/constants'
+import { todayStr } from '@/lib/utils/date'
 import type { Task, Period } from '@/types'
 import { useRepos } from '@/providers/repo-provider'
 import { useAuth } from '@/providers/auth-provider'
@@ -86,7 +86,7 @@ export function TaskEditDialog({
     defaultValues: {
       title: '',
       description: '',
-      task_date: defaultDate || new Date().toISOString().slice(0, 10),
+      task_date: defaultDate || todayStr(),
       period: defaultPeriod || 'morning',
       priority: 'normal',
       status: 'todo',
@@ -101,7 +101,7 @@ export function TaskEditDialog({
       form.reset({
         title: task.title,
         description: task.description || '',
-        task_date: task.task_date || defaultDate || new Date().toISOString().slice(0, 10),
+        task_date: task.task_date || defaultDate || todayStr(),
         period: task.period,
         start_time: task.start_time || '',
         end_time: task.end_time || '',
@@ -115,7 +115,7 @@ export function TaskEditDialog({
       form.reset({
         title: '',
         description: '',
-        task_date: defaultDate || new Date().toISOString().slice(0, 10),
+        task_date: defaultDate || todayStr(),
         period: defaultPeriod || 'morning',
         priority: 'normal',
         status: 'todo',

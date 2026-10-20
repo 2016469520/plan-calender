@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useAuth } from '@/providers/auth-provider'
 import { useRepos } from '@/providers/repo-provider'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { todayStr, formatDate } from '@/lib/utils/date'
+import { todayStr, tomorrowStr } from '@/lib/utils/date'
 import { PERIOD_LABELS, PRIORITY_COLORS } from '@/lib/constants'
 import { toast } from 'sonner'
 import {
@@ -59,10 +59,10 @@ export function OverdueProcessor({ className }: OverdueProcessorProps) {
   }
 
   const handleRescheduleTomorrow = async (task: Task) => {
-    const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+    const target = tomorrowStr(today)
     await updateMutation.mutateAsync({
       id: task.id,
-      updates: { task_date: tomorrow },
+      updates: { task_date: target },
     })
     toast.success(`「${task.title}」已移至明天`)
   }

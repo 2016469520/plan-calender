@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { formatDisplayDate, formatWeekday } from '@/lib/utils/date'
+import { formatDisplayDate, formatWeekday, todayStr } from '@/lib/utils/date'
 import { PERIOD_LABELS, PRIORITY_LABELS } from '@/lib/constants'
 import { MoveToCategoryMenu } from './move-to-category-menu'
 import type { Task } from '@/types'
@@ -19,7 +19,7 @@ export function CategoryTaskCard({ task, onClick, showMoveMenu = false }: Catego
     task.status !== 'done' &&
     task.status !== 'cancelled' &&
     !!task.task_date &&
-    task.task_date < new Date().toISOString().slice(0, 10)
+    task.task_date < todayStr()
 
   const doneSubitems = task.subitems?.filter((s) => s.is_completed).length ?? 0
   const totalSubitems = task.subitems?.length ?? 0

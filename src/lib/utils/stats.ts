@@ -4,7 +4,7 @@
 // ============================================================
 
 import type { Task, Habit, HabitLog, DailyReview, Period } from '@/types'
-import { todayStr, parseISO } from '@/lib/utils/date'
+import { todayStr, parseISO, toDateStr } from '@/lib/utils/date'
 
 // ---------- Streak Calculations ----------
 
@@ -128,7 +128,7 @@ export function getLastNDates(n: number, endDate?: string): string[] {
   for (let i = n - 1; i >= 0; i--) {
     const date = new Date(d)
     date.setDate(date.getDate() - i)
-    dates.push(date.toISOString().slice(0, 10))
+    dates.push(toDateStr(date))
   }
   return dates
 }
@@ -155,7 +155,7 @@ export function calculateHabitStats(
   // This week's range (Mon-Sun)
   const weekStart = new Date(d)
   weekStart.setDate(d.getDate() - d.getDay() + (d.getDay() === 0 ? -6 : 1))
-  const weekStartStr = weekStart.toISOString().slice(0, 10)
+  const weekStartStr = toDateStr(weekStart)
 
   // This month's range
   const monthStartStr = `${today.slice(0, 7)}-01`

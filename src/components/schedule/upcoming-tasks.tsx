@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import type { Task, Tag } from '@/types'
 import { TaskListItem } from './task-list-item'
-import { todayStr, formatDisplayDate, formatWeekday } from '@/lib/utils/date'
+import { todayStr, toDateStr } from '@/lib/utils/date'
 import { ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -82,5 +82,5 @@ export function UpcomingTasks({
 function todayPlusDays(n: number): string {
   const d = new Date()
   d.setDate(d.getDate() + n)
-  return d.toISOString().slice(0, 10)
+  return toDateStr(d)
 }

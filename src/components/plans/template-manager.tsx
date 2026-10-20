@@ -5,7 +5,7 @@ import { useAuth } from '@/providers/auth-provider'
 import { useRepos } from '@/providers/repo-provider'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -15,7 +15,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/dialog'
 import {
   Drawer,
@@ -26,13 +25,13 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { PERIOD_LABELS, PRIORITY_LABELS } from '@/lib/constants'
+import { todayStr } from '@/lib/utils/date'
 import { toast } from 'sonner'
 import {
   Plus,
   Trash2,
   FileText,
   Play,
-  Copy,
 } from 'lucide-react'
 import type { TaskTemplate, Task, Period, Priority } from '@/types'
 
@@ -48,7 +47,6 @@ export function TemplateManager({ onApply }: TemplateManagerProps) {
   const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState('')
   const [newDesc, setNewDesc] = useState('')
-  const [selectedTemplate, setSelectedTemplate] = useState<TaskTemplate | null>(null)
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ['taskTemplates'],
@@ -95,7 +93,7 @@ export function TemplateManager({ onApply }: TemplateManagerProps) {
         await tasks.create(user!.id, {
           title: taskData.title || '未命名事项',
           description: taskData.description,
-          task_date: new Date().toISOString().slice(0, 10),
+          task_date: todayStr(),
           period: taskData.period || 'morning',
           priority: taskData.priority || 'normal',
           status: 'todo',
@@ -108,24 +106,6 @@ export function TemplateManager({ onApply }: TemplateManagerProps) {
       } catch {
         toast.error('创建失败')
       }
-    }
-  }
-
-  const handleSaveAsTemplate = async (task: Partial<Task>) => {
-    if (!task.title) {
-      toast.error('无法保存空模板')
-      return
-    }
-    try {
-      await taskTemplates.create(user!.id, {
-        name: task.title,
-        description: task.description,
-        template_data: [task],
-      })
-      queryClient.invalidateQueries({ queryKey: ['taskTemplates'] })
-      toast.success('已保存为模板')
-    } catch {
-      toast.error('保存失败')
     }
   }
 

@@ -1,10 +1,11 @@
-import { describe, it, expect } from 'vitest'
+﻿import { describe, it, expect } from 'vitest'
 import {
   calculateReviewStreak,
   calculateMonthlyReviewSummary,
   filterReviews,
 } from '@/lib/utils/review-stats'
 import type { DailyReview } from '@/types'
+import { toDateStr } from '@/lib/utils/date'
 
 function makeReview(overrides: Partial<DailyReview> = {}): DailyReview {
   return {
@@ -26,9 +27,9 @@ describe('review stats', () => {
     })
 
     it('calculates current streak ending today', () => {
-      const today = new Date().toISOString().slice(0, 10)
-      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
-      const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10)
+      const today = toDateStr()
+      const yesterday = toDateStr(new Date(Date.now() - 86400000))
+      const twoDaysAgo = toDateStr(new Date(Date.now() - 2 * 86400000))
 
       const reviews = [
         makeReview({ review_date: today }),
@@ -42,7 +43,7 @@ describe('review stats', () => {
     })
 
     it('current streak is 0 when most recent is more than 1 day ago', () => {
-      const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10)
+      const twoDaysAgo = toDateStr(new Date(Date.now() - 2 * 86400000))
 
       const reviews = [makeReview({ review_date: twoDaysAgo })]
 
@@ -51,10 +52,10 @@ describe('review stats', () => {
     })
 
     it('finds longest streak even when current is broken', () => {
-      const today = new Date().toISOString().slice(0, 10)
-      const fiveDaysAgo = new Date(Date.now() - 5 * 86400000).toISOString().slice(0, 10)
-      const sixDaysAgo = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10)
-      const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
+      const today = toDateStr()
+      const fiveDaysAgo = toDateStr(new Date(Date.now() - 5 * 86400000))
+      const sixDaysAgo = toDateStr(new Date(Date.now() - 6 * 86400000))
+      const sevenDaysAgo = toDateStr(new Date(Date.now() - 7 * 86400000))
 
       const reviews = [
         makeReview({ review_date: today }),
@@ -70,8 +71,8 @@ describe('review stats', () => {
     })
 
     it('handles duplicate dates (only count unique days)', () => {
-      const today = new Date().toISOString().slice(0, 10)
-      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+      const today = toDateStr()
+      const yesterday = toDateStr(new Date(Date.now() - 86400000))
 
       // Two reviews on the same date (should not happen with upsert, but be safe)
       const reviews = [
