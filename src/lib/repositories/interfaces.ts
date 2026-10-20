@@ -48,6 +48,8 @@ export interface TaskFilterOptions {
   dateFrom?: string
   dateTo?: string
   includeUndated?: boolean
+  /** 仅返回没有日期的任务（收集箱） */
+  undatedOnly?: boolean
   overdue?: boolean
   hasRecurrence?: boolean
   maxResults?: number

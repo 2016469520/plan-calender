@@ -12,11 +12,9 @@ import {
   Repeat,
   Bell,
   ListChecks,
-  MoreHorizontal,
   Check,
   Loader2,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { useState } from 'react'
 
@@ -156,12 +154,14 @@ export function TaskListItem({ task, tags, isActive, isFocus, onClick }: TaskLis
         </div>
       </div>
 
-      {/* Right: period badge */}
-      <div className="shrink-0 text-right">
-        <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-          {PERIOD_LABELS[task.period]}
-        </span>
-      </div>
+      {/* Right: period badge（无日期的事项不显示时段） */}
+      {task.task_date && (
+        <div className="shrink-0 text-right">
+          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+            {PERIOD_LABELS[task.period]}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
