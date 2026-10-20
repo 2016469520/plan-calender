@@ -1,5 +1,46 @@
 # PROJECT_STATUS.md — 项目状态
 
+## 当前阶段：可用性复查 + 时区缺陷修复 (2026-10-20)
+
+## 验证状态：2026-10-20（最新）
+
+| 检查项 | 结果 |
+|--------|------|
+| TypeScript (tsc --noEmit) | ✅ 通过 |
+| ESLint | ✅ 0 error / 15 warning（均为 hook 依赖与编译器提示） |
+| Vitest (232 tests) | ✅ 全部通过 |
+| next build | ✅ 通过（14 条路由全部静态预渲染） |
+| 浏览器回归（Chrome + Playwright） | ✅ 全路由无 console/page error，桌面与移动端均正常 |
+
+## 🔧 本次变更 (2026-10-20)
+
+### 新发现并修复的缺陷
+1. **本地日期时区偏移（严重）**：全站用 `new Date().toISOString().slice(0, 10)` 取"今天"，在 UTC+8 的 00:00–08:00 会得到前一天
+   - 影响：快速添加「明天」落到今天、编辑弹窗默认日期落到昨天并被判为延期、「移至明天」不生效、专注与统计按天归组错位、月度统计把相邻月份算进来
+   - 修复：`date.ts` 新增 `toDateStr()` / `tomorrowStr()` / `thisWeekendStr()` / `nextWeekStr()` / `getCalendarMonthRange()`，并替换 schedule、focus、insights、任务编辑、模板、延期处理、两个 Repository 实现等 14 处调用
+2. **收集箱页面永久为空**：页面调用 `getByDate(userId, 'inbox')`，实际查询 `task_date === 'inbox'`，永不命中
+   - 修复：`TaskFilterOptions` 增加 `undatedOnly`（IndexedDB + Supabase 双实现），收集箱改为查询无日期事项，并补齐"快速记录"和"安排到今天/明天"
+3. **Slider 范围失效**：`ui/slider.tsx` 解构了 `min/max/step` 但没有传给 `SliderPrimitive.Root`，专注时长滑块实际是 0–100 步长 1
+   - 修复：透传三个属性；专注页滑块恢复 1–240、步长 5（浏览器实测 input `min=1 max=240 step=5`）
+
+### 体验改进
+4. **统计页从占位改为真实图表**：新增最近 7 天完成趋势、时段分布、标签分布、评价评分趋势（复用已有 `calculateTaskStats` / `calculateTagStats` / `calculateReviewStats`）
+5. **跨天自动刷新**：新增 `useToday()` 钩子，替换日程/今日/统计/专注/习惯/每日总结中的 `todayStr()`，页面常驻整夜后次日自动切到新的一天
+6. **无日期事项不再显示时段徽标**（收集箱里"晚上"标签会让人误以为已排期）
+7. **清理未使用导入与死代码**：ESLint warning 从 91 降到 15，删除未被调用的 `setDraftValue`、`handleSaveAsTemplate`、分类视图的 4 个死 props 等
+
+### 修改文件（本次会话）
+- `src/lib/utils/date.ts` — 新增本地日期辅助函数
+- `src/app/schedule/page.tsx`、`src/app/focus/page.tsx`、`src/app/insights/page.tsx`、`src/app/today/page.tsx`、`src/app/reviews/today/page.tsx`、`src/app/inbox/page.tsx` — 时区修复 / 钩子 / 收集箱重写 / 统计图表
+- `src/lib/repositories/{interfaces,indexeddb-impl,supabase-impl}.ts` — `undatedOnly` 过滤 + 本地 today
+- `src/components/schedule/{quick-add-task,overdue-section,upcoming-tasks,task-list-item,task-detail-panel}.tsx`
+- `src/components/plans/{task-edit-dialog,template-manager,overdue-processor,import-export-dialog,recurrence-actions,recurrence-editor,subtask-manager}.tsx`
+- `src/components/habits/{habit-checkin,home-habits-summary}.tsx`
+- `src/components/ui/slider.tsx` — min/max/step 透传
+- `src/hooks/use-today.ts`、`src/lib/utils/period.ts` — 新增
+- `src/__tests__/unit/date-tz.test.ts` — 新增时区回归测试（7 组场景）
+- `src/components/calendar/*`、`src/components/reviews/*`、`src/lib/constants.ts`、`src/lib/utils/{stats,countdown,offline-queue}.ts` — 时区修复与清理
+
 ## 当前阶段：代码审查修复 & 专注功能简化 (2026-07-10)
 
 ## 验证状态：2026-07-10（最新）

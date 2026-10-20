@@ -512,3 +512,24 @@
   - 全局 CSS 规则 `appearance: textfield` 已隐藏所有 number input spinner
   - `inputMode="decimal"` 在手机端弹出数字键盘
   - `tabular-nums` 确保等宽数字不会因数字变化而改变宽度
+
+## 决策 63：日期字符串一律按本地时区生成 (2026-10-20)
+- **决策**: 所有"本地日期"统一使用 `toDateStr()` / `todayStr()` / `tomorrowStr()`（`src/lib/utils/date.ts`），禁止 `new Date().toISOString().slice(0, 10)`
+- **原因**:
+  - `toISOString()` 返回 UTC。在 UTC+8（北京时间）的 00:00–08:00 之间，UTC 日期比本地日期早一天
+  - 受影响行为：快速添加的「明天」变成今天、编辑弹窗默认日期落到昨天、延期项被误判、统计与专注按天归组错位
+  - `fromDateStr` 之类的 `new Date('yyyy-MM-dd')` 按 UTC 解析，与本地格式化混用会引入同样的偏移
+- **约定**:
+  - 日期（`task_date`、`log_date`、`review_date`、`start_date`）是**本地日历日期**，用 `format(date, 'yyyy-MM-dd')` 生成
+  - 时间戳（`created_at`、`completed_at`、`updated_at`）是 UTC ISO 字符串；需要按天归组时先 `toDateStr(new Date(iso))`
+  - 月度统计使用 `getCalendarMonthRange()`（1 号→月末），不要用 `getMonthRange()`（会扩展到整周，把相邻月份算进来）
+- **验证**: `src/__tests__/unit/date-tz.test.ts` 覆盖 00:30、23:30、月末、年末、闰年与周末/下周快捷日期
+
+## 决策 64：跨天自动刷新用 useToday 而非强制 reload (2026-10-20)
+- **决策**: 新增 `src/hooks/use-today.ts`，在日程、今日、统计、专注、习惯、每日总结等页面替代直接调用 `todayStr()`
+- **原因**:
+  - 页面常驻整夜时，`todayStr()` 只在渲染时求值，次日仍显示昨天的数据
+  - 定时器 + `visibilitychange` + `focus` 三处触发，跨天后依赖 `today` 的 React Query 自动重新取数
+  - 相比 `router.refresh()` 或 `location.reload()`，不会丢失用户正在编辑的内容
+- **代价**: 每 30 秒一次极轻量的日期比较（仅在日期变化时才 setState）
+
