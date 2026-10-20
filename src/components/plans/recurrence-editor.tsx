@@ -11,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { RefreshCw, Calendar, Hash, X } from 'lucide-react'
 import type { RecurrenceRule } from '@/types'

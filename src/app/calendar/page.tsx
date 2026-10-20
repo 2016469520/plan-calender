@@ -122,9 +122,6 @@ export default function CalendarPage() {
             <CategoryView
               onEditTask={handleEditTask}
               onNewTask={handleNewTask}
-              newTaskDialogOpen={dialogOpen}
-              setNewTaskDialogOpen={setDialogOpen}
-              defaultDate={currentDate}
             />
           )}
         </div>

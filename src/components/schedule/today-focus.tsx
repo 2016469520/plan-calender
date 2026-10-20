@@ -28,8 +28,6 @@ export function TodayFocus({ tasks, tags, activeTaskId, onTaskClick }: TodayFocu
 
   if (focusTasks.length === 0) return null
 
-  const focusIds = new Set(focusTasks.map((t) => t.id))
-
   return (
     <div className="rounded-lg border-2 border-amber-200/60 dark:border-amber-800/30 bg-gradient-to-r from-amber-50/40 to-transparent dark:from-amber-950/10 p-3">
       <div className="flex items-center gap-2 mb-2">

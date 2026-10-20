@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createIndexedDBRepositoryFactory } from '@/lib/repositories/indexeddb-impl'
 import { closeDB } from '@/lib/db/indexeddb'
 import type { RepositoryFactory } from '@/lib/repositories/interfaces'
-import type { Task, Tag, Habit, HabitLog, DailyReview } from '@/types'
+import type { Task, Tag, Habit } from '@/types'
 
 const TEST_USER = 'test-user-repo-001'
 

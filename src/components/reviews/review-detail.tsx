@@ -51,7 +51,6 @@ export function ReviewDetail({
   review,
   open,
   onOpenChange,
-  onEdit,
   onPrevious,
   onNext,
   hasPrevious,

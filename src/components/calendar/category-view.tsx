@@ -7,44 +7,31 @@ import { useQuery } from '@tanstack/react-query'
 import { groupTasksByTag } from '@/lib/utils/task-grouping'
 import { TIME_BUCKET_LABELS, TIME_BUCKET_ORDER } from '@/lib/utils/task-grouping'
 import { CategoryTaskCard } from './category-task-card'
-import { TaskEditDialog } from '@/components/plans/task-edit-dialog'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getMonthRange, todayStr } from '@/lib/utils/date'
-import type { Task, Tag } from '@/types'
+import type { Task } from '@/types'
 import {
   ChevronDown,
   ChevronRight,
   Plus,
-  TagIcon,
   FolderOpen,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 interface CategoryViewProps {
   onEditTask: (task: Task) => void
   onNewTask: (defaultTagId?: string) => void
-  newTaskDialogOpen: boolean
-  setNewTaskDialogOpen: (open: boolean) => void
-  defaultDate: string
 }
 
-export function CategoryView({
-  onEditTask,
-  onNewTask,
-  newTaskDialogOpen,
-  setNewTaskDialogOpen,
-  defaultDate,
-}: CategoryViewProps) {
+export function CategoryView({ onEditTask, onNewTask }: CategoryViewProps) {
   const { user } = useAuth()
   const { tasks: taskRepo, tags: tagRepo } = useRepos()
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set())
   const [collapsedDone, setCollapsedDone] = useState<Set<string>>(new Set())
   const [hideEmpty, setHideEmpty] = useState(true)
   const [hideDoneTasks, setHideDoneTasks] = useState(false)
-  const [newTaskTagId, setNewTaskTagId] = useState<string | undefined>()
 
   const range = useMemo(() => getMonthRange(todayStr()), [])
 
@@ -86,7 +73,6 @@ export function CategoryView({
 
   const handleNewInCategory = useCallback(
     (tagId?: string | null) => {
-      setNewTaskTagId(tagId ?? undefined)
       onNewTask(tagId ?? undefined)
     },
     [onNewTask]

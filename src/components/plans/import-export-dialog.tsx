@@ -12,7 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from '@/components/ui/dialog'
 import {
   Drawer,
@@ -37,7 +36,6 @@ import {
   FileSpreadsheet,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
   Loader2,
 } from 'lucide-react'
 import type { Task } from '@/types'

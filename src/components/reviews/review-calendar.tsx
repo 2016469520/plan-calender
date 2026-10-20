@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { todayStr, format, parseISO } from '@/lib/utils/date'
+import { todayStr, format } from '@/lib/utils/date'
 import {
   startOfMonth,
   endOfMonth,
@@ -12,12 +12,11 @@ import {
   eachDayOfInterval,
   addMonths,
   subMonths,
-  isSameDay,
   isSameMonth,
   isToday,
 } from 'date-fns'
 import type { DailyReview } from '@/types'
-import { Star, Smile, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Smile, ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface ReviewCalendarProps {
   currentMonth: Date

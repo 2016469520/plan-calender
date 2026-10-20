@@ -34,7 +34,7 @@ function getDb(): Promise<IDBPDatabase> {
   if (dbPromise) return dbPromise
 
   dbPromise = openDB(DB_NAME, DB_VERSION + 1, {
-    upgrade(db, oldVersion, _newVersion, transaction) {
+    upgrade(db) {
       // Add offline_mutations store if it doesn't exist
       if (!db.objectStoreNames.contains(QUEUE_STORE)) {
         const store = db.createObjectStore(QUEUE_STORE, { keyPath: 'id' })

@@ -26,7 +26,6 @@ import {
 import { useRepos } from '@/providers/repo-provider'
 import { useAuth } from '@/providers/auth-provider'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
-import { todayStr, formatDisplayDate } from '@/lib/utils/date'
 import { calcUrgency } from '@/lib/utils/urgency'
 import {
   getPeriodLabel,
@@ -38,7 +37,6 @@ import {
 } from '@/lib/display-labels'
 import type { Task, Period, Difficulty, TaskStatus } from '@/types'
 import {
-  X,
   Trash2,
   Calendar,
   Clock,
@@ -60,7 +58,7 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
   const { tasks: taskRepo, tags: tagRepo } = useRepos()
   const queryClient = useQueryClient()
   const isDesktop = useMediaQuery('(min-width: 768px)')
-  const [saving, setSaving] = useState<string | null>(null)
+  const [, setSaving] = useState<string | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { data: tagList = [] } = useQuery({

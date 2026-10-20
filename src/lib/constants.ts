@@ -1,4 +1,4 @@
-import type { Tag, Period, CalendarView, WeekStartDay } from '@/types'
+import type { Tag, Period } from '@/types'
 import {
   PERIOD_LABELS as _PERIOD_LABELS,
   STATUS_LABELS as _STATUS_LABELS,

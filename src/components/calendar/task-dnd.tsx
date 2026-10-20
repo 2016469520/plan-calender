@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useCallback, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import {
   DndContext,
-  DragOverlay,
   closestCenter,
   PointerSensor,
   TouchSensor,
@@ -20,7 +19,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { cn } from '@/lib/utils'
-import { GripVertical, MoveHorizontal } from 'lucide-react'
+import { GripVertical } from 'lucide-react'
 import type { Task, Period } from '@/types'
 
 // ---------- Sortable Task Item ----------

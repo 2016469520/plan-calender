@@ -36,7 +36,7 @@ export function WeekView({ currentDate, onTaskClick, onOverflowClick }: WeekView
   const { user } = useAuth()
   const { tasks } = useRepos()
   const [activeDragTask, setActiveDragTask] = useState<Task | null>(null)
-  const { handleMove, handleReorder, isMoving } = useTaskDnd()
+  const { handleMove, handleReorder } = useTaskDnd()
 
   const weekData = useMemo(() => getWeekRange(currentDate), [currentDate])
 

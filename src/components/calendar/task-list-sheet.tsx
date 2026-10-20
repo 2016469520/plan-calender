@@ -1,10 +1,9 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Button } from '@/components/ui/button'
 import { useRepos } from '@/providers/repo-provider'
 import { useAuth } from '@/providers/auth-provider'
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
+import { useQueryClient, useMutation } from '@tanstack/react-query'
 import { PERIOD_LABELS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { nowISO } from '@/lib/utils/date'
@@ -24,7 +23,6 @@ import {
 } from '@/components/ui/drawer'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { CheckCircle2, Circle, Clock } from 'lucide-react'
-import { toast } from 'sonner'
 
 interface TaskListSheetProps {
   open: boolean

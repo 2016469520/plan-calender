@@ -16,7 +16,6 @@ import { filterReviews, type ReviewFilterOptions } from '@/lib/utils/review-stat
 import { formatDisplayDate, formatWeekday } from '@/lib/utils/date'
 import type { DailyReview } from '@/types'
 import { Star, Smile, Zap, TrendingUp, ChevronRight, Filter, X } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 20
 
