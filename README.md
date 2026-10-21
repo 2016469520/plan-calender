@@ -4,13 +4,31 @@
 
 **适用场景**：日常计划安排、学习任务管理、习惯养成追踪、每日复盘总结。
 
-**主要特点**：界面响应式（手机 + 桌面）、支持云端同步、可安装为 PWA、数据可导入导出。
+**主要特点**：本地优先（无需联网、无需账号）、Windows 免安装 exe、安卓 apk、界面响应式、数据可完整备份导入导出。
 
-## 🚀 立即使用
+## 📦 桌面版与安卓版（推荐，完全本地）
+
+不依赖任何服务器，数据保存在本机的应用数据库里，**不需要科学上网、不需要注册账号**。
+
+| 平台 | 文件 | 说明 |
+|---|---|---|
+| Windows | `PlanCalendar-0.1.0-portable.exe` | 便携版，双击即用，不写注册表、不需要管理员权限 |
+| Android | `我的计划日历-Android.apk` | 安装包，7.0（API 24）及以上；首次安装需允许「安装未知来源应用」 |
+
+### 使用说明
+
+1. **Windows**：双击 exe 直接打开，首次启动会创建本机数据目录；关闭窗口即退出。
+2. **Android**：把 apk 传到手机后点击安装（微信/QQ 传文件时选择「用其他应用打开」→ 安装包）。
+3. 数据默认存在本机；**换手机或重装前请先备份**：设置 → 数据 → 完整备份 → 导出 JSON。
+   在新设备上用「从备份恢复」导入即可。
+
+> 桌面版和安卓版的数据互不相通（各自独立存储），通过上面的备份文件在设备之间搬运。
+
+## 🚀 网页版（需要云端同步时再用）
 
 **[👉 打开我的计划日历](https://my-plan-calendar.vercel.app)**
 
-> 无需下载代码，无需安装 Node.js，无需配置 Supabase。打开网页即可使用。
+> 网页版仍保留 Supabase 云端模式；如果只是自己用，建议直接用上面的 exe / apk，不用折腾网络。
 
 ---
 
@@ -178,6 +196,31 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
 5. 重启 `npm run dev`
 
 > **注意**：不要将 `.env.local` 中的密钥提交到 Git 仓库。
+
+### 打包桌面版（Windows exe）
+
+```bash
+npm run build:static     # 静态导出到 out/（注入 NEXT_PUBLIC_LOCAL_ONLY=1）
+npm run dist:win         # electron-builder 打便携版 exe，产物在 dist/
+```
+
+- 桌面壳代码在 `electron/`：`main.cjs` 负责窗口与 `app://` 协议，`serve.cjs` 是纯函数化的静态文件解析（有单元测试）。
+- 用 `app://local` 自定义协议加载前端，保证 IndexedDB 有稳定来源，重启后数据还在。
+- 想边改边看：`npm run dev` 起前端，另开一个终端 `npm run desktop:dev` 用 Electron 打开 localhost。
+
+### 打包安卓版（apk）
+
+需要 JDK 21 + Android SDK（platform 36 / build-tools 36）：
+
+```bash
+npm run android:apk      # 静态导出 → cap sync → gradlew assembleDebug
+# 产物：android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+- 安卓壳用 Capacitor，`capacitor.config.ts` 指向 `out/`，WebView 来源是 `https://localhost`。
+- `android/local.properties` 由本机生成（已在 .gitignore 里），里面写 `sdk.dir=...`。
+- 若项目路径含中文，`android/gradle.properties` 里的 `android.overridePathCheck=true` 已放行（AGP 默认会拒绝）。
+- 正式发布前建议用 `assembleRelease` 并配置自己的签名密钥；当前是 debug 签名，适合自己安装使用。
 
 ### 常用命令
 

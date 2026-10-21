@@ -1,5 +1,57 @@
 # PROJECT_STATUS.md — 项目状态
 
+## 当前阶段：本地优先打包（Windows exe + Android apk）(2026-10-21)
+
+## 验证状态：2026-10-21（最新）
+
+| 检查项 | 结果 |
+|--------|------|
+| TypeScript (tsc --noEmit) | ✅ 通过 |
+| ESLint | ✅ 0 error / 15 warning（hook 依赖与编译器提示） |
+| Vitest (244 tests) | ✅ 全部通过（新增备份 5 项、Electron 静态解析 7 项） |
+| next build（网页版） | ✅ 通过 |
+| next build（静态导出） | ✅ 通过，out/ 199 个文件 4MB |
+| 静态产物浏览器回归 | ✅ 15/15（无登录页、全路由、刷新持久化、客户端跳转、0 HTTP 错误） |
+| 备份/恢复浏览器回归 | ✅ 9/9（导出 → 恢复 → 补写 → 拒绝无效文件） |
+| 便携 exe 产物 | ✅ 96MB，asar 4.07MB 与 out/ 逐文件哈希一致 |
+| 安卓 apk 产物 | ✅ 5.3MB，assets 与 out/ 逐文件哈希一致，含自定义图标 |
+
+> 说明：本机环境无法常驻 GUI 窗口（Electron 与记事本同样无法驻留），
+> 因此 exe/apk 的「双击运行」需在真实桌面/手机上验证；
+> 其内部前端资源、`app://` 解析逻辑、图标、配置均已通过哈希比对与单元测试校验。
+
+## 🔧 本次变更 (2026-10-21)
+
+### 定位：从「云端优先」转为「本地优先」
+1. **新增 `src/lib/runtime.ts`**：`IS_LOCAL_ONLY` 构建开关。打包版注入 `NEXT_PUBLIC_LOCAL_ONLY=1` 后：
+   - 启动即以本机身份进入应用，不出现登录页，不连接任何服务器
+   - 隐藏退出登录、云端账户等入口；设置页显示数据保存在本机并引导备份
+   - 不注册 Service Worker、不显示「离线模式」横幅（本地版本来就不依赖网络）
+2. **静态导出**：`next.config.ts` 在 `BUILD_STATIC=1` 时输出 `output: 'export'` + `trailingSlash`，并跳过 `headers()`（静态托管不支持）
+
+### 桌面端（Electron）
+3. `electron/main.cjs`：`app://local` 自定义协议（standard + secure，保证 IndexedDB 持久化）、窗口尺寸记忆、单实例、外部链接走系统浏览器、中文菜单
+4. `electron/serve.cjs`：纯函数静态解析（含目录穿越防护、`__next.x.__PAGE__.txt` 预取折叠），有单元测试
+5. `electron-builder.yml`：Windows 便携版，排除 `node_modules`（前端已静态化，asar 从 166MB 降到 4MB）
+
+### 安卓端（Capacitor）
+6. `capacitor.config.ts` + `android/` 原生工程；WebView 来源 `https://localhost`，IndexedDB 稳定持久化
+7. 自定义启动图标（各密度 `ic_launcher` / 圆角 / 自适应前景）
+8. `android/gradle.properties` 增加 `android.overridePathCheck=true`（项目路径含中文时 AGP 默认拒绝构建）
+
+### 数据可迁移性（本地优先的关键）
+9. 新增 `src/lib/sync/backup.ts`：全量导出/恢复（事项、标签、习惯、打卡、评价、倒数日、模板、专注、偏好），恢复时重建 `tag_id`→新标签、`habit_id`→新习惯的引用，评价按日期 upsert 幂等
+10. 设置 → 数据 → 「完整备份」面板：导出 JSON、选择文件恢复、恢复前预览条数
+
+### 工程卫生
+11. `.gitignore` 覆盖 `dist/`、`android/` 构建产物、`local.properties`
+12. `eslint.config.mjs` 忽略 `dist/`、`android/`、`resources/`、`electron/`，避免把打包产物当源码检查
+
+### 修改文件（本次会话）
+- 新增：`src/lib/runtime.ts`、`src/lib/sync/backup.ts`、`src/components/plans/backup-panel.tsx`、`electron/main.cjs`、`electron/serve.cjs`、`electron-builder.yml`、`capacitor.config.ts`、`android/`、`resources/icon.ico`
+- 新增测试：`src/__tests__/unit/backup.test.ts`、`src/__tests__/unit/electron-serve.test.ts`
+- 调整：`next.config.ts`、`package.json`（脚本/main 字段）、`src/providers/auth-provider.tsx`、`src/app/login/page.tsx`、`src/app/settings/page.tsx`、`src/components/pwa/pwa-provider.tsx`、`src/app/insights/page.tsx`、`.gitignore`、`eslint.config.mjs`
+
 ## 当前阶段：可用性复查 + 时区缺陷修复 (2026-10-20)
 
 ## 验证状态：2026-10-20（最新）

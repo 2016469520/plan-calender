@@ -533,3 +533,35 @@
   - 相比 `router.refresh()` 或 `location.reload()`，不会丢失用户正在编辑的内容
 - **代价**: 每 30 秒一次极轻量的日期比较（仅在日期变化时才 setState）
 
+## 决策 65：本地优先作为默认形态，云端降级为可选 (2026-10-21)
+- **决策**: 打包版用构建变量 `NEXT_PUBLIC_LOCAL_ONLY=1` 强制走本地模式（IndexedDB），网页版保留 Supabase 云端路径
+- **原因**:
+  - Supabase 在国内网络不可直连，登录/同步失败会让整个应用不可用
+  - 个人计划数据量小、单机使用即可闭环，云端只是"跨设备"的便利
+  - 一份代码两种形态：`src/lib/runtime.ts` 的 `IS_LOCAL_ONLY` 是唯一开关，不维护分支
+- **取舍**:
+  - 本地版启动即用，不出现登录页；设置里隐藏退出登录与云端账户
+  - 代价：桌面与安卓数据各自独立，跨设备靠「完整备份」JSON 搬运
+  - 不再注册 Service Worker（本地版无需离线缓存），也不再提示"离线模式"
+
+## 决策 66：用 app:// 自定义协议而不是 file:// 或本地端口 (2026-10-21)
+- **决策**: Electron 主进程注册 `app://local`（standard + secure + supportFetchAPI），用它加载 `out/`
+- **原因**:
+  - `file://` 在 Chromium 里来源不稳定，IndexedDB 持久化不可靠
+  - 本地 HTTP 服务器需要固定端口；端口被占用就得换端口，等于换了来源，IndexedDB 数据会"丢失"
+  - 自定义标准协议来源固定为 `app://local`，数据永远落在同一来源下
+- **配套**:
+  - 静态解析抽到 `electron/serve.cjs`（纯函数、可单测），处理目录式路由与 `__next.*.__PAGE__.txt` 预取折叠
+  - 打包时排除 `node_modules`：前端完全静态化，asar 从 166MB 降到 4MB
+
+## 决策 67：安卓壳用 Capacitor，而不是重新实现原生页面 (2026-10-21)
+- **决策**: Capacitor + 静态导出，WebView 来源 `https://localhost`
+- **原因**:
+  - 与桌面端共用同一份 `out/`，无需维护第二套 UI
+  - `https://localhost` 是稳定来源，IndexedDB 持久化与网页版行为一致
+  - 构建只需 JDK 21 + Android SDK，不进 Android Studio 也能出包
+- **注意**:
+  - AGP 在 Windows 上默认拒绝含中文的项目路径，`android/gradle.properties` 里加了 `android.overridePathCheck=true`
+  - 当前产出为 debug 签名，自己安装够用；对外分发应改用 `assembleRelease` + 自有签名
+
+
