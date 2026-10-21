@@ -174,29 +174,44 @@ function defaultWidgetPosition(state) {
   }
 }
 
+/**
+ * 校验保存的位置是否还有一块在某个显示器里。
+ * 外接屏拔掉后坐标会落到屏幕外，此时回退到默认位置，避免"浮窗明明存在却看不到"。
+ */
+function isPositionVisible(bounds) {
+  if (typeof bounds.x !== 'number' || typeof bounds.y !== 'number') return false
+  return screen.getAllDisplays().some((display) => {
+    const area = display.workArea
+    const overlapX = Math.min(bounds.x + 80, area.x + area.width) - Math.max(bounds.x, area.x)
+    const overlapY = Math.min(bounds.y + 60, area.y + area.height) - Math.max(bounds.y, area.y)
+    return overlapX > 0 && overlapY > 0
+  })
+}
+
 function createWidgetWindow() {
   const state = loadState()
   const saved = state.widget
-  const hasPosition = typeof saved.x === 'number' && typeof saved.y === 'number'
   const fallback = defaultWidgetPosition(state)
+  const useSaved = isPositionVisible(saved)
 
   const win = new BrowserWindow({
     width: saved.width || WIDGET_WIDTH,
     height: saved.height || WIDGET_HEIGHT,
-    x: hasPosition ? saved.x : fallback.x,
-    y: hasPosition ? saved.y : fallback.y,
+    x: useSaved ? saved.x : fallback.x,
+    y: useSaved ? saved.y : fallback.y,
     minWidth: 280,
     minHeight: 260,
     maxWidth: 640,
     maxHeight: 900,
     frame: false,
-    transparent: true,
     resizable: true,
     maximizable: false,
     fullscreenable: false,
     alwaysOnTop: saved.pinned !== false,
     skipTaskbar: true,
     show: false,
+    hasShadow: true,
+    backgroundColor: '#ffffff',
     title: `${APP_TITLE} 浮窗`,
     webPreferences: {
       contextIsolation: true,
@@ -212,9 +227,18 @@ function createWidgetWindow() {
     win.setAlwaysOnTop(true, 'floating')
   }
 
-  win.once('ready-to-show', () => {
-    if (loadState().widget.visible !== false) win.show()
-  })
+  const shouldShow = loadState().widget.visible !== false
+
+  // 无边框窗口在部分显卡上 ready-to-show 不触发，这里用 did-finish-load + 兜底定时器
+  const reveal = () => {
+    if (!win.isDestroyed() && !win.isVisible() && loadState().widget.visible !== false) {
+      win.showInactive()
+    }
+  }
+  win.webContents.once('did-finish-load', () => setTimeout(reveal, 60))
+  setTimeout(reveal, 2500)
+  if (shouldShow) win.once('ready-to-show', () => win.showInactive())
+
   win.on('resize', () => persistBounds('widget', win))
   win.on('move', () => persistBounds('widget', win))
 
@@ -224,6 +248,7 @@ function createWidgetWindow() {
     event.preventDefault()
     win.hide()
     saveState({ widget: { ...loadState().widget, visible: false } })
+    app.emit('widget-visibility-changed')
   })
 
   attachNavigationGuards(win)
@@ -232,12 +257,25 @@ function createWidgetWindow() {
 }
 
 function ensureWidgetVisible() {
-  if (!widgetWindow) {
+  if (!widgetWindow || widgetWindow.isDestroyed()) {
     widgetWindow = createWidgetWindow()
     return
   }
-  widgetWindow.show()
+  // 位置可能在屏幕外或尺寸被压得很小，重新校验并矫正
+  const bounds = widgetWindow.getBounds()
+  if (!isPositionVisible(bounds)) {
+    const state = loadState()
+    const fallback = defaultWidgetPosition(state)
+    widgetWindow.setBounds({ ...bounds, x: fallback.x, y: fallback.y })
+  }
+  if (!widgetWindow.isAlwaysOnTop()) {
+    const pinned = loadState().widget.pinned !== false
+    if (pinned) widgetWindow.setAlwaysOnTop(true, 'floating')
+  }
+  if (widgetWindow.isMinimized()) widgetWindow.restore()
+  widgetWindow.showInactive()
   saveState({ widget: { ...loadState().widget, visible: true } })
+  app.emit('widget-visibility-changed')
 }
 
 function toggleWidgetVisible() {
@@ -365,12 +403,25 @@ function registerIpc() {
 
   ipcMain.handle('widget:toggle', () => toggleWidgetVisible())
 
+  // 主界面里的「显示浮窗」按钮：不管当前状态，直接确保它出现
+  ipcMain.handle('widget:show', () => {
+    ensureWidgetVisible()
+    return true
+  })
+
+  ipcMain.handle('widget:is-visible', () => {
+    return !!widgetWindow && !widgetWindow.isDestroyed() && widgetWindow.isVisible()
+  })
+
   ipcMain.handle('main:show', () => {
     showMainWindow()
   })
 
   ipcMain.handle('widget:toggle-pin', () => {
-    if (!widgetWindow) return false
+    if (!widgetWindow || widgetWindow.isDestroyed()) {
+      ensureWidgetVisible()
+      return true
+    }
     const next = !widgetWindow.isAlwaysOnTop()
     widgetWindow.setAlwaysOnTop(next, 'floating')
     saveState({ widget: { ...loadState().widget, pinned: next } })
@@ -379,7 +430,7 @@ function registerIpc() {
   })
 
   ipcMain.handle('widget:is-pinned', () => {
-    if (!widgetWindow) return loadState().widget.pinned !== false
+    if (!widgetWindow || widgetWindow.isDestroyed()) return loadState().widget.pinned !== false
     return widgetWindow.isAlwaysOnTop()
   })
 

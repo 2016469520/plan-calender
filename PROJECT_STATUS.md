@@ -1,5 +1,43 @@
 # PROJECT_STATUS.md — 项目状态
 
+## 当前阶段：浮窗可找回 + 浮窗内新建/编辑 (2026-10-21)
+
+## 验证状态：2026-10-21（最新）
+
+| 检查项 | 结果 |
+|--------|------|
+| TypeScript (tsc --noEmit) | ✅ 通过 |
+| ESLint | ✅ 0 error / 15 warning |
+| Vitest (258 tests) | ✅ 全部通过 |
+| 静态导出 | ✅ 通过 |
+| 浮窗新建/编辑回归 | ✅ 12/12（加号提交、详细表单、编辑、完成、删除、主窗口同步） |
+| 专注/浮窗回归 | ✅ 13/13 + 8/8 |
+| 便携 exe | ✅ 96.3MB，asar 与 out/ 逐文件哈希一致，含新 preload |
+| 安卓 apk | ✅ 5.7MB，assets 与 out/ 逐文件哈希一致 |
+
+## 🔧 本次变更 (2026-10-21)
+
+### 现场排查（依据用户机器上的 window-state.json）
+`{"widget":{"visible":true,"pinned":false,"x":1707,"y":32,"width":351,"height":339}}`
+→ 浮窗确实创建过、也被缩放过，但**顶针被关掉后落到了其它窗口后面**，而主界面没有任何入口可以重新唤出它。
+
+### 修复
+1. **主界面加「桌面浮窗」开关**：侧边栏底部（显示中 / 已隐藏 状态标签）+ 设置 → 外观 卡片；只在 Electron 里出现（用 `useSyncExternalStore` 读取 bridge，避免水合不一致）
+2. **浮窗永不"消失"**：`ensureWidgetVisible()` 会校验坐标是否还在某个显示器内，跑出屏幕就拉回默认位置；重新显示时恢复置顶
+3. **首次显示更可靠**：无边框窗口在部分显卡上 `ready-to-show` 不触发，改为 `did-finish-load` + 2.5s 兜底定时器 + `showInactive()`
+4. **去掉 `transparent: true`**：透明无边框窗口在 Windows 上偶发不可见/黑块，改为不透明窗口并让页面铺满，圆角交给 Win11
+5. **浮窗加号可提交**：`+` 从装饰图标改成真正的提交按钮（`type="submit"`）
+6. **浮窗支持完整新建**：右侧「新建」打开表单面板，可选时段 / 标签 / 起止时间
+7. **浮窗支持编辑**：点击任意事项打开同一套表单，可改标题/时段/标签/时间，并新增「标记完成」「删除」
+8. **浮窗铺满窗口**：去掉 6px 内边距与渐变外框，避免无边框窗口四角露出背景色
+
+### 新增 IPC
+`widget:show`（无条件唤起）、`widget:is-visible`（查询可见性），preload 增加 `showWidget` / `isWidgetVisible`
+
+### 修改文件（本次会话）
+- 新增：`src/components/widget/widget-task-form.tsx`、`src/components/layout/desktop-widget-control.tsx`
+- 调整：`src/app/widget/page.tsx`（重建/编辑面板）、`src/components/layout/desktop-sidebar.tsx`、`src/app/settings/page.tsx`、`src/lib/desktop-bridge.ts`、`electron/main.cjs`、`electron/preload.cjs`、`package.json`（0.3.1）、README
+
 ## 当前阶段：专注重做 + 浮窗改版 + 二次元视觉 (2026-10-21)
 
 ## 验证状态：2026-10-21（最新）

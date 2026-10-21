@@ -9,11 +9,15 @@ export interface DesktopBridge {
   isDesktop: boolean
   /** 隐藏浮窗（只留主窗口） */
   hideWidget: () => Promise<void>
-  /** 显示/隐藏浮窗 */
+  /** 显示/隐藏浮窗，返回显示后的状态 */
   toggleWidget: () => Promise<boolean>
+  /** 无条件唤起浮窗（会矫正到屏幕内） */
+  showWidget: () => Promise<boolean>
+  /** 浮窗当前是否可见 */
+  isWidgetVisible: () => Promise<boolean>
   /** 打开并聚焦主窗口 */
   openMain: () => Promise<void>
-  /** 切换浮窗置顶 */
+  /** 切换浮窗置顶，返回切换后的状态 */
   togglePin: () => Promise<boolean>
   /** 查询浮窗是否置顶 */
   isPinned: () => Promise<boolean>
@@ -34,6 +38,8 @@ export function getDesktopBridge(): DesktopBridge | null {
     isDesktop: true,
     hideWidget: () => bridge.hideWidget(),
     toggleWidget: () => bridge.toggleWidget(),
+    showWidget: () => bridge.showWidget(),
+    isWidgetVisible: () => bridge.isWidgetVisible(),
     openMain: () => bridge.openMain(),
     togglePin: () => bridge.togglePin(),
     isPinned: () => bridge.isPinned(),

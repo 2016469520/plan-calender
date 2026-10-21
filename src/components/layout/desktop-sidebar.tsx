@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { mainNavItems, secondaryNavItems, type NavItem } from './nav-data'
+import { DesktopWidgetControl } from './desktop-widget-control'
 import { APP_NAME } from '@/lib/constants'
 import { CalendarDays } from 'lucide-react'
 
@@ -50,6 +51,7 @@ export function DesktopSidebar() {
 
       {/* Secondary navigation */}
       <div className="p-3 border-t space-y-1">
+        <DesktopWidgetControl />
         {secondaryNavItems.map((item) => (
           <NavLink
             key={item.href}

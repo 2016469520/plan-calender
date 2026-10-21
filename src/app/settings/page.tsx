@@ -17,6 +17,7 @@ import { useRouter } from 'next/navigation'
 import { IS_LOCAL_ONLY, LOCAL_STORAGE_LABEL } from '@/lib/runtime'
 import { TagManager } from '@/components/common/tag-manager'
 import { BackupPanel } from '@/components/plans/backup-panel'
+import { DesktopWidgetControl } from '@/components/layout/desktop-widget-control'
 import { ReminderList } from '@/components/reminders/reminder-list'
 import { TemplateManager } from '@/components/plans/template-manager'
 import { OverdueProcessor } from '@/components/plans/overdue-processor'
@@ -238,6 +239,9 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* 桌面浮窗开关（仅 Electron 打包版显示） */}
+            <DesktopWidgetControl variant="card" />
           </div>
         )}
 

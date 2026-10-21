@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('timegrid', {
   isDesktop: true,
   hideWidget: () => ipcRenderer.invoke('widget:hide'),
   toggleWidget: () => ipcRenderer.invoke('widget:toggle'),
+  showWidget: () => ipcRenderer.invoke('widget:show'),
+  isWidgetVisible: () => ipcRenderer.invoke('widget:is-visible'),
   openMain: () => ipcRenderer.invoke('main:show'),
   togglePin: () => ipcRenderer.invoke('widget:toggle-pin'),
   isPinned: () => ipcRenderer.invoke('widget:is-pinned'),

@@ -12,6 +12,7 @@ import { getDesktopBridge } from '@/lib/desktop-bridge'
 import { notifyDataChanged } from '@/lib/widget-sync'
 import { PERIOD_LABELS } from '@/lib/constants'
 import { HomeFocusTimer } from '@/components/focus/focus-timer'
+import { WidgetTaskForm, type WidgetTaskDraft } from '@/components/widget/widget-task-form'
 import { cn } from '@/lib/utils'
 import {
   Check,
@@ -28,7 +29,6 @@ import type { Period, Task } from '@/types'
 
 const PERIOD_ORDER: Period[] = ['morning', 'afternoon', 'evening']
 
-/** 小小的今日完成度圆环 */
 function MiniProgress({ rate, size = 26 }: { rate: number; size?: number }) {
   const stroke = 3
   const radius = (size - stroke) / 2
@@ -41,7 +41,7 @@ function MiniProgress({ rate, size = 26 }: { rate: number; size?: number }) {
           <stop offset="100%" stopColor="#22d3ee" />
         </linearGradient>
       </defs>
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" strokeWidth={stroke} className="text-muted/50" />
+      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" strokeWidth={stroke} className="text-violet-200 dark:text-violet-500/30" />
       <circle
         cx={size / 2}
         cy={size / 2}
@@ -70,6 +70,8 @@ export default function WidgetPage() {
   const [saving, setSaving] = useState(false)
   const [pinned, setPinned] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [form, setForm] = useState<{ mode: 'create' | 'edit'; task?: Task } | null>(null)
+  const [savingForm, setSavingForm] = useState(false)
 
   useCrossWindowSync()
 
@@ -131,7 +133,7 @@ export default function WidgetPage() {
         } as Partial<Task>)
         refresh()
       } catch {
-        /* 失败就等下一次刷新纠正 */
+        /* 等下一次刷新纠正 */
       } finally {
         setBusyId(null)
       }
@@ -139,7 +141,8 @@ export default function WidgetPage() {
     [user, busyId, taskRepo, refresh]
   )
 
-  const handleAdd = useCallback(async () => {
+  /** 快速添加：只填标题，时段按当前时间推断 */
+  const handleQuickAdd = useCallback(async () => {
     const title = draft.trim()
     if (!title || !user || saving) return
     setSaving(true)
@@ -161,7 +164,49 @@ export default function WidgetPage() {
     }
   }, [draft, user, saving, taskRepo, today, refresh])
 
+  const handleSaveForm = useCallback(
+    async (values: WidgetTaskDraft) => {
+      if (!user || savingForm) return
+      setSavingForm(true)
+      try {
+        const payload = {
+          title: values.title,
+          period: values.period,
+          tag_id: values.tag_id || undefined,
+          start_time: values.start_time || undefined,
+          end_time: values.end_time || undefined,
+        }
+        if (form?.mode === 'edit' && form.task) {
+          await taskRepo.update(user.id, form.task.id, payload as Partial<Task>)
+        } else {
+          await taskRepo.create(user.id, {
+            ...payload,
+            task_date: today,
+            priority: 'normal',
+            status: 'todo',
+            order_index: 0,
+          } as Omit<Task, 'id' | 'user_id' | 'created_at' | 'updated_at'>)
+        }
+        refresh()
+        setForm(null)
+      } catch {
+        /* 失败时保留表单内容 */
+      } finally {
+        setSavingForm(false)
+      }
+    },
+    [user, savingForm, form, taskRepo, today, refresh]
+  )
+
+  const handleDeleteForm = useCallback(async () => {
+    if (!user || !form?.task) return
+    await taskRepo.softDelete(user.id, form.task.id).catch(() => null)
+    refresh()
+    setForm(null)
+  }, [user, form, taskRepo, refresh])
+
   const tagColor = useCallback((tagId?: string) => tags.find((t) => t.id === tagId)?.color, [tags])
+  const tagName = useCallback((tagId?: string) => tags.find((t) => t.id === tagId)?.name, [tags])
 
   if (!user) {
     return (
@@ -172,9 +217,8 @@ export default function WidgetPage() {
   }
 
   return (
-    <div className="h-screen w-screen p-1.5">
-      <div className="acg-frame h-full w-full acg-shadow">
-        <div className="acg-surface flex h-full w-full flex-col overflow-hidden rounded-[inherit] bg-card">
+    <div className="h-screen w-screen bg-card">
+      <div className="acg-surface flex h-full w-full flex-col overflow-hidden bg-card ring-1 ring-inset ring-violet-300/50 dark:ring-violet-500/30">
           {/* 标题栏（可拖拽） */}
           <header className="app-drag flex items-center gap-2 border-b border-violet-200/40 bg-background/40 px-3 py-2 select-none dark:border-violet-500/20">
             <span className="relative flex h-2 w-2 shrink-0">
@@ -275,25 +319,43 @@ export default function WidgetPage() {
                 </span>
               </div>
 
-              {/* 快速添加 */}
-              <div className="px-3 pb-2">
+              {/* 快速添加 + 详细新建 */}
+              <div className="flex items-center gap-1 px-3 pb-2">
                 <form
                   onSubmit={(e) => {
                     e.preventDefault()
-                    handleAdd()
+                    handleQuickAdd()
                   }}
-                  className="flex items-center gap-1 rounded-lg border border-violet-200/70 bg-background/60 px-2 py-1 transition-shadow focus-within:border-violet-400 focus-within:ring-1 focus-within:ring-violet-300/50 dark:border-violet-500/25"
+                  className="flex min-w-0 flex-1 items-center gap-1 rounded-lg border border-violet-200/70 bg-background/60 px-1 py-1 transition-shadow focus-within:border-violet-400 focus-within:ring-1 focus-within:ring-violet-300/50 dark:border-violet-500/25"
                 >
-                  <Plus className="h-3.5 w-3.5 shrink-0 text-violet-400" />
+                  <button
+                    type="submit"
+                    data-testid="widget-quick-add"
+                    aria-label="添加事项"
+                    disabled={!draft.trim() || saving}
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-violet-500 transition-colors hover:bg-violet-100 disabled:opacity-40 dark:hover:bg-violet-950/50"
+                  >
+                    {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                  </button>
                   <input
                     data-testid="widget-add-input"
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
-                    placeholder="加一件今天的事…"
+                    placeholder="加一件今天的事，回车即可"
                     className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground/70"
                   />
-                  {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
                 </form>
+                <button
+                  type="button"
+                  data-testid="widget-add-detail"
+                  onClick={() => setForm({ mode: 'create' })}
+                  title="新建事项（可选时段、标签、时间）"
+                  aria-label="新建事项"
+                  className="flex h-7 shrink-0 items-center gap-0.5 rounded-lg border border-violet-200/70 px-1.5 text-[11px] text-violet-600 transition-colors hover:bg-violet-50 dark:border-violet-500/25 dark:text-violet-300 dark:hover:bg-violet-950/40"
+                >
+                  <Plus className="h-3 w-3" />
+                  新建
+                </button>
               </div>
 
               {/* 今日清单 */}
@@ -308,9 +370,7 @@ export default function WidgetPage() {
                   <div className="flex h-full flex-col items-center justify-center gap-1.5 px-4 text-center">
                     <Sparkles className="h-7 w-7 text-violet-300 acg-float dark:text-violet-500/60" />
                     <p className="text-xs text-muted-foreground">今天还是空白页</p>
-                    <p className="text-[11px] text-muted-foreground/70">
-                      写下一件小事，就从它开始
-                    </p>
+                    <p className="text-[11px] text-muted-foreground/70">写下一件小事，就从它开始</p>
                   </div>
                 ) : (
                   grouped.map((group) => (
@@ -349,28 +409,35 @@ export default function WidgetPage() {
                             >
                               {isDone && <Check className="h-2.5 w-2.5" />}
                             </button>
-                            <div className="min-w-0 flex-1">
-                              <div
+                            {/* 点标题进编辑 */}
+                            <button
+                              type="button"
+                              data-testid="widget-task-row"
+                              onClick={() => setForm({ mode: 'edit', task })}
+                              title="点击编辑"
+                              className="min-w-0 flex-1 text-left"
+                            >
+                              <span
                                 className={cn(
-                                  'truncate text-xs leading-5',
+                                  'block truncate text-xs leading-5',
                                   isDone && 'text-muted-foreground line-through'
                                 )}
-                                title={task.title}
                               >
                                 {task.title}
-                              </div>
-                            </div>
-                            {color && (
-                              <span
-                                className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full"
-                                style={{ backgroundColor: color }}
-                              />
-                            )}
-                            {task.start_time && (
-                              <span className="mt-0.5 shrink-0 text-[10px] tabular-nums text-muted-foreground">
-                                {task.start_time}
                               </span>
-                            )}
+                              {(tagName(task.tag_id) || task.start_time) && (
+                                <span className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+                                  {color && (
+                                    <span
+                                      className="h-1.5 w-1.5 rounded-full"
+                                      style={{ backgroundColor: color }}
+                                    />
+                                  )}
+                                  {tagName(task.tag_id)}
+                                  {task.start_time && <span className="tabular-nums">{task.start_time}</span>}
+                                </span>
+                              )}
+                            </button>
                           </div>
                         )
                       })}
@@ -398,7 +465,40 @@ export default function WidgetPage() {
               打开主窗口
             </button>
           </footer>
-        </div>
+
+          {/* 新建 / 编辑面板 */}
+          {form && (
+            <WidgetTaskForm
+              mode={form.mode}
+              tags={tags}
+              saving={savingForm}
+              isDone={form.task?.status === 'done'}
+              initial={
+                form.task
+                  ? {
+                      title: form.task.title,
+                      period: form.task.period,
+                      tag_id: form.task.tag_id ?? '',
+                      start_time: form.task.start_time ?? '',
+                      end_time: form.task.end_time ?? '',
+                    }
+                  : undefined
+              }
+              onCancel={() => setForm(null)}
+              onSave={handleSaveForm}
+              onDelete={form.mode === 'edit' ? handleDeleteForm : undefined}
+              onToggleDone={
+                form.mode === 'edit' && form.task
+                  ? () => {
+                      const task = form.task
+                      if (!task) return
+                      handleToggle(task)
+                      setForm(null)
+                    }
+                  : undefined
+              }
+            />
+          )}
       </div>
     </div>
   )
