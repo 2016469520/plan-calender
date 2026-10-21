@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // 外观设置的持久化：读取、校验、迁移、导入导出
 //
 // 原则：任何一步校验失败都回退到安全默认值，绝不把坏配置应用到界面。
@@ -6,6 +6,7 @@
 // ============================================================
 
 import type {
+  AtmosphereSettings,
   AppearanceState,
   MotionLevel,
   ThemeId,
@@ -21,15 +22,34 @@ import {
   THEME_IDS,
   getTheme,
 } from './themes'
+import { CHARACTERS, SCENES } from './atmosphere'
 
 export const STORAGE_KEY = 'timegrid:appearance:v1'
-export const APPEARANCE_VERSION = 1
+/** 2：新增 atmosphere（沉浸氛围）；旧配置缺该字段时自动补默认值 */
+export const APPEARANCE_VERSION = 2
 
 const MOTION_VALUES = MOTION_OPTIONS.map((m) => m.value)
 const FONT_VALUES = ['theme', 'system', 'rounded', 'mono', 'serif']
 
 export function defaultPersonalization(id: ThemeId): ThemePersonalization {
   return { ...getTheme(id).defaults, radius: { ...getTheme(id).defaults.radius } }
+}
+
+export function defaultAtmosphere(): AtmosphereSettings {
+  return {
+    enabled: true,
+    animations: true,
+    sceneByTheme: {},
+    rotateScenes: false,
+    characterEnabled: true,
+    characterByTheme: {},
+    quoteEnabled: true,
+    customQuotes: {},
+    bgOpacity: 100,
+    bgBlur: 0,
+    celebration: true,
+    welcome: true,
+  }
 }
 
 export function defaultState(): AppearanceState {
@@ -40,6 +60,7 @@ export function defaultState(): AppearanceState {
     followSystem: false,
     perTheme: {},
     presets: [],
+    atmosphere: defaultAtmosphere(),
   }
 }
 
@@ -116,6 +137,63 @@ function sanitizePresets(raw: unknown): UserPreset[] {
   return out
 }
 
+/** 校验氛围设置；缺失字段一律补默认值（兼容 v1 旧配置） */
+export function sanitizeAtmosphere(raw: unknown): AtmosphereSettings {
+  const base = defaultAtmosphere()
+  if (!raw || typeof raw !== 'object') return base
+  const input = raw as Record<string, unknown>
+
+  const sceneByTheme: Partial<Record<ThemeId, string>> = {}
+  const sceneInput = (input.sceneByTheme ?? {}) as Record<string, unknown>
+  for (const id of THEME_IDS) {
+    const value = sceneInput[id]
+    if (typeof value === 'string' && SCENES.some((s) => s.id === value && s.themeId === id)) {
+      sceneByTheme[id] = value
+    }
+  }
+
+  const characterByTheme: Partial<Record<ThemeId, string>> = {}
+  const charInput = (input.characterByTheme ?? {}) as Record<string, unknown>
+  for (const id of THEME_IDS) {
+    const value = charInput[id]
+    if (
+      typeof value === 'string' &&
+      CHARACTERS.some((c) => c.id === value && c.themeId === id)
+    ) {
+      characterByTheme[id] = value
+    }
+  }
+
+  const customQuotes: Partial<Record<ThemeId, string[]>> = {}
+  const quotesInput = (input.customQuotes ?? {}) as Record<string, unknown>
+  for (const id of THEME_IDS) {
+    const list = quotesInput[id]
+    if (Array.isArray(list)) {
+      const cleaned = list
+        .filter((q): q is string => typeof q === 'string')
+        .map((q) => q.trim().slice(0, 120))
+        .filter(Boolean)
+        .slice(0, 20)
+      if (cleaned.length) customQuotes[id] = cleaned
+    }
+  }
+
+  return {
+    enabled: input.enabled !== false,
+    animations: input.animations !== false,
+    sceneByTheme,
+    rotateScenes: input.rotateScenes === true,
+    characterEnabled: input.characterEnabled !== false,
+    characterByTheme,
+    quoteEnabled: input.quoteEnabled !== false,
+    customQuotes,
+    bgOpacity: clamp(input.bgOpacity, 0, 100, base.bgOpacity),
+    bgBlur: clamp(input.bgBlur, 0, 20, base.bgBlur),
+    celebration: input.celebration !== false,
+    welcome: input.welcome !== false,
+  }
+}
+
 /** 校验整体状态（也用于导入 JSON） */
 export function sanitizeState(raw: unknown): AppearanceState {
   const fallback = defaultState()
@@ -142,6 +220,7 @@ export function sanitizeState(raw: unknown): AppearanceState {
     followSystem: input.followSystem === true,
     perTheme,
     presets: sanitizePresets(input.presets),
+    atmosphere: sanitizeAtmosphere(input.atmosphere),
   }
 }
 

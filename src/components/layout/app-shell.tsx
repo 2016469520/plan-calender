@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, type ReactNode } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
@@ -7,6 +7,10 @@ import { MobileNav } from './mobile-nav'
 import { useAuth } from '@/providers/auth-provider'
 import { useInitializeDefaultTags } from '@/hooks/use-default-tags'
 import { useCrossWindowSync } from '@/hooks/use-cross-window-sync'
+import { SceneBackdrop } from '@/components/atmosphere/scene-backdrop'
+import { CharacterCompanion } from '@/components/atmosphere/character-companion'
+import { CelebrationLayer } from '@/components/atmosphere/celebration'
+import { WelcomeOverlay } from '@/components/atmosphere/welcome-overlay'
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth()
@@ -44,19 +48,29 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="h-screen flex overflow-hidden">
-      {/* Desktop sidebar */}
-      <DesktopSidebar />
+    <>
+      {/* 沉浸氛围：场景背景在最底层，内容整体抬到 z-10 */}
+      <SceneBackdrop />
 
-      {/* Main content area */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <div className="flex-1 overflow-y-auto pb-16 lg:pb-0">
-          {children}
-        </div>
-      </main>
+      <div className="relative z-10 h-screen flex overflow-hidden">
+        {/* Desktop sidebar */}
+        <DesktopSidebar />
 
-      {/* Mobile bottom navigation */}
-      <MobileNav />
-    </div>
+        {/* Main content area */}
+        <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto pb-16 lg:pb-0">
+            {children}
+          </div>
+        </main>
+
+        {/* Mobile bottom navigation */}
+        <MobileNav />
+      </div>
+
+      {/* 角色陪伴与庆祝层（固定定位，不占据布局） */}
+      <CharacterCompanion />
+      <CelebrationLayer />
+      <WelcomeOverlay />
+    </>
   )
 }

@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // 重复事项的行为实现
 //
 // 数据模型：一个重复事项就是一个"系列"。首个事项是根（root），
@@ -14,6 +14,7 @@ import type { RepositoryFactory } from '@/lib/repositories/interfaces'
 import type { RecurrenceRule, Task } from '@/types'
 import { getRecurrenceDates } from '@/lib/utils/recurrence'
 import { addDays, parseISO, toDateStr } from '@/lib/utils/date'
+import { atmosphereEvents } from '@/lib/atmosphere/bus'
 
 /** 往后找多久；一年足够覆盖所有常见规则（含"每月 31 号"这类空洞） */
 const LOOKAHEAD_DAYS = 366
@@ -131,12 +132,20 @@ export async function setTaskCompletion(
     completed_at: done ? new Date().toISOString() : undefined,
   } as Partial<Task>)
 
-  if (!done) return { spawned: null }
+  if (!done) {
+    atmosphereEvents.idle()
+    return { spawned: null }
+  }
+
+  // 真实完成事件 → 角色开心 + 轻量庆祝（由氛围层自行决定是否展示）
+  atmosphereEvents.happy()
+  atmosphereEvents.celebrate()
 
   try {
     return { spawned: await spawnNextOccurrence(repos, userId, task) }
   } catch {
-    // 生成失败不影响"已完成"这个主操作
+    // 生成失败不影响"已完成"这个主操作，但要让角色提示一下
+    atmosphereEvents.error()
     return { spawned: null }
   }
 }

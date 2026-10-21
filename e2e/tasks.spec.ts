@@ -1,6 +1,14 @@
 import { test, expect, type Page } from '@playwright/test'
 
 async function enterDemoMode(page: Page) {
+  // 每日开场页会盖住首页（真实用户按一次就没了），自动化里直接标记为今天已看过
+  await page.addInitScript(() => {
+    const d = new Date()
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+      d.getDate()
+    ).padStart(2, '0')}`
+    window.localStorage.setItem('timegrid:atmosphere:welcomed', key)
+  })
   await page.goto('/login')
   await page.waitForLoadState('networkidle')
   await page.getByTestId('enter-demo-mode').click()

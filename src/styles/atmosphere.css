@@ -1,0 +1,475 @@
+﻿/* ============================================================
+   沉浸氛围层
+   ------------------------------------------------------------
+   - 背景固定在视口，pointer-events: none，绝不拦截操作
+   - 一层主题感知的遮罩保证正文可读（深色主题遮罩更轻）
+   - 粒子只用 transform/opacity 动画，数量在 20 个以内
+   - [data-motion='off'] 时动画全部停止（themes.css 已统一处理）
+   ============================================================ */
+
+.atmo-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* 背景层自身不参与命中测试 */
+  contain: strict;
+}
+
+.atmo-art {
+  position: absolute;
+  inset: -2%;
+  /* 略微放大避免模糊后出现边缘透明带 */
+  transition: filter 400ms var(--ease-standard);
+}
+
+.atmo-art > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* 主题感知的遮罩：保证文字对比度，同时保留画面 */
+.atmo-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--background) 62%, transparent) 0%,
+      color-mix(in srgb, var(--background) 78%, transparent) 55%,
+      color-mix(in srgb, var(--background) 88%, transparent) 100%
+    ),
+    radial-gradient(
+      120% 90% at 50% 0%,
+      color-mix(in srgb, var(--background) 30%, transparent),
+      transparent 72%
+    );
+}
+
+[data-mode='dark'] .atmo-scrim {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--background) 40%, transparent) 0%,
+      color-mix(in srgb, var(--background) 64%, transparent) 55%,
+      color-mix(in srgb, var(--background) 82%, transparent) 100%
+    ),
+    radial-gradient(
+      120% 90% at 50% 0%,
+      color-mix(in srgb, var(--background) 24%, transparent),
+      transparent 72%
+    );
+}
+
+/* ---------------- 粒子 ---------------- */
+
+.atmo-particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.atmo-particle {
+  position: absolute;
+  display: block;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+/* 樱花：从上往下飘，左右摆 */
+.atmo-particle-anime {
+  top: -6%;
+  border-radius: 60% 40% 55% 45% / 55% 60% 40% 45%;
+  background: color-mix(in srgb, var(--period-afternoon) 30%, #ffffff 70%);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--primary) 20%, transparent);
+  animation-name: atmo-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+/* 星点：原地闪烁 */
+.atmo-particle-cyber {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 85%, #ffffff);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--primary) 55%, transparent);
+  animation-name: atmo-twinkle;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+/* 光斑：缓慢漂移 + 呼吸 */
+.atmo-particle-fluent {
+  border-radius: 999px;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--primary) 26%, transparent) 0%,
+    transparent 70%
+  );
+  animation-name: atmo-drift;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+/* 像素粒子：直角方块向上升 */
+.atmo-particle-pixel {
+  border-radius: 0;
+  background: color-mix(in srgb, var(--primary) 70%, transparent);
+  animation-name: atmo-rise;
+  animation-timing-function: steps(8, end);
+  animation-iteration-count: infinite;
+}
+
+/* 暗格：极慢的冷光团 */
+.atmo-particle-bento {
+  border-radius: 999px;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--primary) 18%, transparent) 0%,
+    transparent 68%
+  );
+  animation-name: atmo-drift;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+/* 留白：一层几乎看不见的呼吸光 */
+.atmo-particle-minimal {
+  border-radius: 999px;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--foreground) 6%, transparent) 0%,
+    transparent 70%
+  );
+  animation-name: atmo-twinkle;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-duration: 30s;
+}
+
+/* 霓虹扫描线 */
+.atmo-scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 38vh;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, var(--primary) 7%, transparent) 60%,
+    color-mix(in srgb, var(--primary) 12%, transparent),
+    transparent
+  );
+  animation: atmo-scan 9s linear infinite;
+  will-change: transform;
+}
+
+@keyframes atmo-fall {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.85;
+  }
+  90% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate3d(var(--drift, 40px), 108vh, 0) rotate(320deg);
+    opacity: 0;
+  }
+}
+
+@keyframes atmo-twinkle {
+  0%,
+  100% {
+    opacity: 0.12;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes atmo-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translate3d(18px, -26px, 0) scale(1.12);
+    opacity: 0.6;
+  }
+}
+
+@keyframes atmo-rise {
+  0% {
+    transform: translate3d(0, 20vh, 0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  85% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate3d(var(--drift, 8px), -100vh, 0);
+    opacity: 0;
+  }
+}
+
+@keyframes atmo-scan {
+  0% {
+    transform: translate3d(0, -40vh, 0);
+  }
+  100% {
+    transform: translate3d(0, 120vh, 0);
+  }
+}
+
+/* ---------------- 角色 ---------------- */
+
+.atmo-character {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 240px;
+}
+
+.atmo-character-figure {
+  width: 116px;
+  height: 136px;
+  cursor: pointer;
+  filter: drop-shadow(0 10px 24px color-mix(in srgb, var(--foreground) 18%, transparent));
+  transition: transform var(--motion-base) var(--ease-standard);
+  animation: atmo-idle-bob 5.5s ease-in-out infinite;
+}
+
+.atmo-character-figure:hover {
+  transform: translateY(-3px);
+}
+
+.atmo-character-figure[data-reacting='true'] {
+  animation: atmo-hop 520ms var(--ease-standard) 1;
+}
+
+@keyframes atmo-idle-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes atmo-hop {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  35% {
+    transform: translateY(-10px) scale(1.04);
+  }
+  70% {
+    transform: translateY(0) scale(0.98);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 对话气泡 */
+.atmo-bubble {
+  position: relative;
+  max-width: 220px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background-color: color-mix(in srgb, var(--card) 92%, transparent);
+  backdrop-filter: blur(10px);
+  padding: 8px 10px;
+  color: var(--foreground);
+  box-shadow: var(--shadow-float);
+}
+
+.atmo-bubble::after {
+  content: '';
+  position: absolute;
+  left: 18px;
+  bottom: -6px;
+  width: 10px;
+  height: 10px;
+  rotate: 45deg;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background-color: color-mix(in srgb, var(--card) 92%, transparent);
+}
+
+/* ---------------- 每日一句 ---------------- */
+
+.atmo-quote {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background-color: color-mix(in srgb, var(--card) 78%, transparent);
+  backdrop-filter: blur(8px);
+  padding: 10px 12px;
+}
+
+/* ---------------- 开场页 ---------------- */
+
+.atmo-welcome {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background-color: color-mix(in srgb, var(--background) 55%, transparent);
+  backdrop-filter: blur(14px);
+  animation: atmo-fade-in 320ms var(--ease-standard);
+}
+
+.atmo-welcome-card {
+  position: relative;
+  width: min(880px, 100%);
+  overflow: hidden;
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--border-strong);
+  background-color: var(--card);
+  box-shadow: var(--shadow-pop);
+  animation: atmo-rise-in 420ms var(--ease-standard);
+}
+
+.atmo-welcome-art {
+  position: absolute;
+  inset: 0;
+  opacity: 0.92;
+  pointer-events: none;
+}
+
+.atmo-welcome-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--card) 22%, transparent) 0%,
+    color-mix(in srgb, var(--card) 68%, transparent) 55%,
+    color-mix(in srgb, var(--card) 94%, transparent) 100%
+  );
+  pointer-events: none;
+}
+
+@keyframes atmo-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes atmo-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ---------------- 庆祝 ---------------- */
+
+.atmo-celebration {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.atmo-confetti {
+  position: absolute;
+  width: 7px;
+  height: 11px;
+  border-radius: 1px;
+  opacity: 0;
+  animation: atmo-confetti 900ms var(--ease-standard) forwards;
+}
+
+@keyframes atmo-confetti {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--cx, 40px), var(--cy, 120px), 0) rotate(var(--cr, 220deg));
+    opacity: 0;
+  }
+}
+
+/* 桌面：角色挪到侧栏右侧，避免压住侧栏底部的浮窗开关 */
+@media (min-width: 1024px) {
+  .atmo-character {
+    left: 244px;
+    bottom: 18px;
+  }
+}
+
+/* 小屏：角色缩小，避免挡操作 */
+@media (max-width: 767px) {
+  .atmo-character {
+    left: 8px;
+    bottom: 76px;
+    max-width: 160px;
+  }
+  .atmo-character-figure {
+    width: 84px;
+    height: 100px;
+  }
+  .atmo-bubble {
+    max-width: 160px;
+    font-size: 11px;
+  }
+}
+
+/* 低性能/减少动态：连粒子层也一起停掉 */
+[data-motion='off'] .atmo-particles,
+[data-motion='off'] .atmo-scanline {
+  display: none;
+}
+
+[data-motion='low'] .atmo-particle {
+  animation-duration: 40s !important;
+}
+
+/* ---------------- 设置页缩略图 ---------------- */
+/* 缩略图/头像这类小尺寸媒体不该跟着"胶囊主题"变成椭圆，
+   这里给一个上限，保证媒体块始终是圆角矩形。 */
+.atmo-thumb {
+  border-radius: min(var(--radius-md), 14px);
+  overflow: hidden;
+}
+/* ---------------- 数据密集页：让背景"透一点" ---------------- */
+/* 月视图格子默认不透明，会把整页背景盖死。开启氛围时让格子保留 12%
+   的透明度，背景只做极淡的底纹，不影响任何数据可读性。 */
+[data-atmo='on'] .cal-cell {
+  background-color: color-mix(in srgb, var(--card) 88%, transparent);
+}

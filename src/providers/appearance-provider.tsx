@@ -22,7 +22,9 @@ import {
 } from 'react'
 import { applyToDocument } from '@/lib/theme/apply'
 import {
+  defaultAtmosphere,
   defaultPersonalization,
+  defaultState,
   exportState,
   importState,
   personalizationFor,
@@ -39,6 +41,7 @@ import { useMediaQuery } from '@/hooks/use-media-query'
 import { getTheme, resolveMode } from '@/lib/theme/themes'
 import type {
   AppearanceState,
+  AtmosphereSettings,
   ThemeDefinition,
   ThemeId,
   ThemeMode,
@@ -59,6 +62,10 @@ interface AppearanceContextValue {
   setMode: (mode: ThemeMode) => void
   setFollowSystem: (value: boolean) => void
   patchPersonalization: (patch: Partial<ThemePersonalization>) => void
+  /** 沉浸氛围设置 */
+  patchAtmosphere: (patch: Partial<AtmosphereSettings>) => void
+  /** 当前主题的场景列表（供设置页渲染缩略图） */
+  resetAtmosphere: () => void
   resetCurrentTheme: () => void
   resetAll: () => void
   savePreset: (name: string) => UserPreset | null
@@ -121,7 +128,20 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
     applyToDocument(root, theme, personalization, mode, reducedMotion)
     root.classList.toggle('dark', mode === 'dark')
     root.style.colorScheme = mode
-  }, [theme, personalization, mode, reducedMotion])
+    // 让 CSS 知道当前是否开着沉浸氛围（日历格子会轻微透出背景）
+    root.dataset.atmo = state.atmosphere.enabled ? 'on' : 'off'
+  }, [theme, personalization, mode, reducedMotion, state.atmosphere.enabled])
+
+  const patchAtmosphere = useCallback((patch: Partial<AtmosphereSettings>) => {
+    updateAppearance((prev) => ({
+      ...prev,
+      atmosphere: { ...prev.atmosphere, ...patch },
+    }))
+  }, [])
+
+  const resetAtmosphere = useCallback(() => {
+    updateAppearance((prev) => ({ ...prev, atmosphere: defaultAtmosphere() }))
+  }, [])
 
   const patchPersonalization = useCallback((patch: Partial<ThemePersonalization>) => {
     updateAppearance((prev) => {
@@ -158,15 +178,9 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const resetAll = useCallback(() => {
-    updateAppearance(() => ({
-      ...defaultPersonalization('fluent'),
-      version: 1,
-      themeId: 'fluent' as ThemeId,
-      mode: 'light' as ThemeMode,
-      followSystem: false,
-      perTheme: {},
-      presets: [],
-    }))
+    // 只重置外观与氛围，业务数据完全不动
+    const fresh = defaultState()
+    updateAppearance(() => fresh)
   }, [])
 
   const savePreset = useCallback((name: string): UserPreset | null => {
@@ -240,6 +254,8 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
       setMode,
       setFollowSystem,
       patchPersonalization,
+      patchAtmosphere,
+      resetAtmosphere,
       resetCurrentTheme,
       resetAll,
       savePreset,
@@ -260,6 +276,8 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
       setMode,
       setFollowSystem,
       patchPersonalization,
+      patchAtmosphere,
+      resetAtmosphere,
       resetCurrentTheme,
       resetAll,
       savePreset,

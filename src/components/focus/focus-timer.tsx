@@ -38,6 +38,7 @@ import {
 import { cn } from '@/lib/utils'
 import { getTagDisplayName } from '@/lib/display-labels'
 import { toast } from 'sonner'
+import { atmosphereEvents } from '@/lib/atmosphere/bus'
 import {
   FOCUS_PRESETS,
   adjustMinutes,
@@ -134,6 +135,8 @@ export function HomeFocusTimer({ variant = 'card' }: FocusTimerProps) {
 
   const handleStart = useCallback(
     (planned: number, nextMode: 'countdown' | 'stopwatch') => {
+      // 角色进入"专注中"状态（真实会话开始，不是演出来的）
+      atmosphereEvents.working()
       focus.start({
         planned_minutes: planned,
         timer_mode: nextMode,

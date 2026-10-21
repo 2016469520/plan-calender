@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useRef, useState, type ComponentType, type ReactNode } from 'react'
 import {
@@ -40,6 +40,7 @@ import {
 } from '@/lib/theme/themes'
 import type { ThemeId } from '@/lib/theme/types'
 import { ThemeCard } from './theme-card'
+import { AtmospherePanel } from './atmosphere-panel'
 
 /** 常用强调色预设 */
 const ACCENT_PRESETS = [
@@ -619,6 +620,9 @@ export function AppearancePanel() {
           </ul>
         )}
       </Panel>
+
+      {/* 沉浸氛围 */}
+      <AtmospherePanel />
 
       {/* 恢复 + 导入导出 */}
       <Panel

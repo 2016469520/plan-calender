@@ -15,8 +15,8 @@
 | 检查 | 命令 | 结果 |
 |---|---|---|
 | 类型检查 | `npx tsc --noEmit` | ✅ 0 error |
-| 静态检查 | `npx eslint` | ✅ 0 error / 14 warning（均为既有 hooks 依赖提示） |
-| 单元测试 | `npx vitest run` | ✅ 20 文件 / 292 项（新增 18 项主题系统测试） |
+| 静态检查 | `npx eslint` | ✅ 0 error / 16 warning（均为既有 hooks 依赖提示） |
+| 单元测试 | `npx vitest run` | ✅ 22 文件 / 317 项（主题 18 项 + 氛围 20 项 + 像素美术契约 5 项） |
 | 端到端 | `npx playwright test`（生产构建） | ✅ 34/34 |
 | 桌面分支渲染 | `smoke/desktop-render-check.mjs`（注入 bridge） | ✅ 4 路由无白屏 |
 | 主题专项 | `smoke/theme-verify.mjs` | ✅ 36/36 |
@@ -27,6 +27,10 @@
 | 导入导出 / 预设 | `smoke/theme-io-check.mjs` | ✅ 7/7（导出合法 JSON、导入恢复、坏文件不改状态） |
 | 状态保持 / 无闪烁 | `smoke/theme-state-check.mjs` | ✅ 5/5（切换不丢输入、阻断 JS 后首帧即目标主题） |
 | 带数据截图 | `smoke/theme-shots-seeded.mjs` | ✅ 6 主题，正文对比度 5.12–9.46:1 |
+| 氛围层 | `smoke/atmosphere-shots.mjs` | ✅ 6 主题：背景层按主题出现，角色只在樱色/霓虹/像素出现 |
+| 角色真实反馈 | `smoke/atmosphere-behavior-check.mjs` | ✅ 7/7（完成→开心+台词+庆祝，4.2s 回落，关闭氛围后背景与角色全部隐藏） |
+| 场景画廊 | `smoke/scene-gallery.mjs` | ✅ 18 张场景各自在真实界面下截图 |
+| 氛围设置面板 | `smoke/atmosphere-panel-shot.mjs` | ✅ 面板渲染 + 3 张场景缩略图 + 选中态 |
 
 ## 验收矩阵
 
@@ -112,3 +116,29 @@ node radius-check.mjs          # 圆角滑杆链路
 node theme-sweep.mjs           # 6 主题 × 6 页面 + 移动端
 node theme-shots-seeded.mjs    # 带数据截图 + 对比度
 ```
+
+## 沉浸氛围层（第二轮验收）
+
+| 项 | 状态 | 证据 |
+|---|---|---|
+| 六套主题各有独立视觉素材 | ✅ | 18 张原创 SVG 场景（每主题 3 张），`smoke/shots/scenes/*.png` |
+| 二次元主题拥有原创角色 | ✅ | 「小葵」6 种表情，`art/characters-anime.tsx` |
+| 二次元角色支持真实状态反馈 | ✅ | `atmosphere-behavior-check`：勾选完成 → `data-mood=happy` + 台词 + 彩带；4.2s 回落 `idle` |
+| 科幻主题场景视觉系统 | ✅ | 轨道空间站 / 霓虹雨夜 / 深空星域 + NOVA 全息 AI 5 态 |
+| 复古主题像素角色与场景 | ✅ | PIX 5 态（含举剑/问号/汗滴）+ 像素小镇/森林/夜空 |
+| 其他主题的艺术背景 | ✅ | 云母极光/沙丘/晨光几何；留白黑白山脊/雾湖/天际线（纯灰阶）；暗格网格/洋流/颗粒 |
+| 各主题匹配短句库 | ✅ | 每主题 8 条（共 48 条），留白主题含 5 条公有领域古籍并标注作者出处 |
+| 背景可切换与关闭 | ✅ | 设置页场景缩略图切换；总开关关闭后 `.atmo-backdrop` 不渲染（脚本断言 backdrop=0 char=0） |
+| 装饰/动画可单独关闭 | ✅ | 氛围动画、完成庆祝、每日开场页、角色显示四个独立开关 |
+| 自定义设置持久化 | ✅ | 与主题同一份 localStorage（version 2），`sanitizeAtmosphere` 逐项校验，旧版配置自动补默认值 |
+| 素材来源与许可记录 | ✅ | `docs/ATMOSPHERE_ASSETS.md`：全部为原创 SVG，无第三方素材 |
+| 关键页面不受影响 | ✅ | 背景 `pointer-events: none` + 内容层 `z-10`；6 主题 × 6 页面扫查 0 运行时错误 |
+| 六套主题真实运行截图 | ✅ | `smoke/shots/atmosphere/*`、`smoke/shots/scenes/*` |
+| 离线可用 | ✅ | 所有美术内联为 SVG 组件，无网络请求、无外部字体 |
+| 原有功能与性能 | ✅ | 317 单测 / 34 e2e 全过；粒子 ≤18 个元素、只用 transform/opacity，`data-motion=off` 时直接不渲染 |
+
+氛围层设计要点：
+
+1. **只在首页开场**：每日开场页只出现在 `/schedule` 与 `/today`，避免在设置页/日历页打断操作。
+2. **数据密集页让路**：月视图格子在开启氛围时保留 12% 透明度（`[data-atmo='on'] .cal-cell`），背景只做极淡底纹，不影响读数。
+3. **情绪不造假**：角色只响应真实事件（任务完成、专注会话开始、保存失败），不做假进度条。

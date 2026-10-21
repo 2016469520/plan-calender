@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -118,7 +118,7 @@ export function MonthView({ currentDate, onDateClick, onViewChange, onTaskClick 
                 onViewChange('day')
               }}
               className={cn(
-                'relative flex flex-col gap-1 bg-card p-1.5 text-left min-h-[84px]',
+                'cal-cell relative flex flex-col gap-1 bg-card p-1.5 text-left min-h-[84px]',
                 'ui-transition hover:bg-accent',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
                 !isCurrentMonth && 'text-muted-foreground/60',

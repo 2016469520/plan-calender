@@ -78,6 +78,34 @@ export interface UserPreset {
   createdAt: string
 }
 
+/** 沉浸氛围：场景、角色、短句、动画 */
+export interface AtmosphereSettings {
+  /** 总开关：关掉后只剩基础 UI */
+  enabled: boolean
+  /** 氛围动画（樱花/星点/扫描线/像素粒子） */
+  animations: boolean
+  /** 每套主题各自选中的场景；没有则用该主题默认场景 */
+  sceneByTheme: Partial<Record<ThemeId, string>>
+  /** 每天首次打开时轮换一张（同一天稳定） */
+  rotateScenes: boolean
+  /** 是否显示角色 */
+  characterEnabled: boolean
+  /** 每套主题各自选中的角色 */
+  characterByTheme: Partial<Record<ThemeId, string>>
+  /** 是否显示每日一句 */
+  quoteEnabled: boolean
+  /** 用户自定义短句（按主题分开） */
+  customQuotes: Partial<Record<ThemeId, string[]>>
+  /** 背景可见度 0-100 */
+  bgOpacity: number
+  /** 背景模糊 0-20px */
+  bgBlur: number
+  /** 完成任务时是否放轻量庆祝效果 */
+  celebration: boolean
+  /** 是否显示每日开场页 */
+  welcome: boolean
+}
+
 /** 持久化的整体外观状态 */
 export interface AppearanceState {
   version: number
@@ -88,4 +116,5 @@ export interface AppearanceState {
   /** 每套主题各自的个性化覆盖 */
   perTheme: Partial<Record<ThemeId, ThemePersonalization>>
   presets: UserPreset[]
+  atmosphere: AtmosphereSettings
 }
