@@ -1,5 +1,42 @@
 # PROJECT_STATUS.md — 项目状态
 
+## 当前阶段：更名「时格」+ 桌面常驻浮窗 (2026-10-21)
+
+## 验证状态：2026-10-21（最新）
+
+| 检查项 | 结果 |
+|--------|------|
+| TypeScript (tsc --noEmit) | ✅ 通过 |
+| ESLint | ✅ 0 error / 15 warning |
+| Vitest (247 tests) | ✅ 全部通过（新增桌面桥 3 项） |
+| 静态导出 | ✅ 通过，新增 `/widget` 路由，out/ 210 个文件 |
+| 浮窗浏览器回归 | ✅ 8/8（渲染、无侧边栏、新增、勾选、双向跨窗口同步） |
+| 便携 exe | ✅ 96.3MB，asar 与 out/ 逐文件哈希一致，含 preload 与浮窗页面 |
+| 安卓 apk | ✅ 5.7MB，assets 与 out/ 逐文件哈希一致 |
+
+## 🔧 本次变更 (2026-10-21)
+
+### 更名
+- 产品名由「我的计划日历」改为 **「时格」**（TimeGrid）：把一天切成上午/下午/晚上三个格子来安排
+- 同步更新：`APP_NAME`/`APP_DESCRIPTION`、PWA manifest、Electron 窗口标题与托盘提示、`productName` 与产物名（`TimeGrid-*`）、Capacitor appName、安卓 `strings.xml` 应用名、README
+- **`appId` / `applicationId` 保持不变**（`app.local.plancalendar`）：改了会被安卓当成新应用，旧数据无法升级
+- IndexedDB 数据库名未变，已装旧版的数据仍在
+
+### 桌面浮窗（Electron）
+1. `src/app/widget/page.tsx`：340×460 的今日清单，含进度条、快速添加、按时段分组、勾选完成、置顶/打开主窗口/关闭按钮
+2. `electron/main.cjs`：
+   - 第二个无边框窗口（`frame: false` + `transparent`）加载 `/widget/`，`alwaysOnTop` 默认开启，`skipTaskbar` 不占任务栏
+   - 浮窗与主窗口的位置、尺寸、可见性、置顶状态分别持久化到 `window-state.json`
+   - **关系变成托盘常驻**：关闭主窗口 = 收起，关闭浮窗 = 隐藏，应用仍在托盘；退出走托盘菜单或主菜单「文件 → 退出」
+   - 托盘图标（`electron/assets/app.ico`）菜单：打开时格 / 显示或隐藏浮窗 / 浮窗置顶 / 退出
+3. `electron/preload.cjs`：`contextBridge` 只暴露 6 个方法（隐藏浮窗、切换浮窗、开主窗口、切置顶、查置顶、退出），渲染进程无 Node 权限
+4. 跨窗口同步：`src/lib/widget-sync.ts` 用 BroadcastChannel 广播；IndexedDB 仓储层在任务写入后发通知，`useCrossWindowSync` 收到后只失效相关查询
+5. `AppShell` 对 `/widget` 路径跳过侧边栏、底部导航与登录跳转；`globals.css` 增加拖拽区（`-webkit-app-region`）与浮窗透明背景规则
+
+### 修改文件（本次会话）
+- 新增：`src/app/widget/page.tsx`、`src/lib/desktop-bridge.ts`、`src/lib/widget-sync.ts`、`src/hooks/use-cross-window-sync.ts`、`electron/preload.cjs`、`electron/assets/app.ico`、`src/__tests__/unit/desktop-bridge.test.ts`
+- 调整：`electron/main.cjs`（浮窗 + 托盘）、`src/components/layout/app-shell.tsx`、`src/lib/repositories/indexeddb-impl.ts`、`src/lib/constants.ts`、`src/app/globals.css`、`public/manifest.json`、`electron-builder.yml`、`capacitor.config.ts`、`android/app/src/main/res/values/strings.xml`、`package.json`（0.2.0）、README
+
 ## 当前阶段：本地优先打包（Windows exe + Android apk）(2026-10-21)
 
 ## 验证状态：2026-10-21（最新）
