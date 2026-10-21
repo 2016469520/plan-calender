@@ -620,6 +620,19 @@
   - 透明窗口还要配合页面 `background: transparent`，在卡片圆角与窗口圆角不一致时会露出白边
 - **代价**: 失去窗口外的投影柔化，但换来了"一定能看见"
 
+## 决策 75：桌面专属分支必须有"注入 bridge"的测试 (2026-10-21)
+- **决策**: 所有依赖 `window.timegrid` 的界面，都要在 `smoke/desktop-render-check.mjs` 里通过 `addInitScript` 注入假 bridge 后逐路由验证
+- **原因**:
+  - 0.3.1 因为 `getDesktopBridge()` 每次返回新对象，被 `useSyncExternalStore` 判定快照一直在变，触发无限重渲染（React #185），打包版直接白屏
+  - 浏览器里没有 bridge，快照恒为 `null`（`Object.is(null, null)` 成立），所以常规浏览器回归全绿，完全没覆盖这条路径
+  - 这类"只在 Electron 里出现"的 bug 无法靠人工复读代码发现，必须让桌面分支在无头环境真跑一遍
+- **配套**:
+  - `getDesktopBridge()` 缓存实例，保证快照引用稳定
+  - 单元测试锁死"重复调用返回同一引用"
+  - 根级 `global-error.tsx` 兜底，避免下次再出现纯白窗口
+  - 主进程 `crash.log` 记录主进程/渲染进程异常，便于事后定位
+
+
 
 
 

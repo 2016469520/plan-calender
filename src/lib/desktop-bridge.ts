@@ -29,12 +29,22 @@ interface BridgeWindow {
   timegrid?: Omit<DesktopBridge, 'isDesktop'>
 }
 
+/**
+ * bridge 包装对象只创建一次。
+ *
+ * 这个对象会被 useSyncExternalStore 当作快照读取，React 用 Object.is 比较前后两次快照；
+ * 如果每次调用都返回新对象，就会被判定成"一直在变"，进而无限重渲染（React #185 白屏）。
+ */
+let cachedBridge: DesktopBridge | null = null
+
 export function getDesktopBridge(): DesktopBridge | null {
   if (typeof window === 'undefined') return null
+  if (cachedBridge) return cachedBridge
+
   const bridge = (window as unknown as BridgeWindow).timegrid
   if (!bridge) return null
 
-  return {
+  cachedBridge = {
     isDesktop: true,
     hideWidget: () => bridge.hideWidget(),
     toggleWidget: () => bridge.toggleWidget(),
@@ -45,6 +55,8 @@ export function getDesktopBridge(): DesktopBridge | null {
     isPinned: () => bridge.isPinned(),
     quit: () => bridge.quit(),
   }
+
+  return cachedBridge
 }
 
 export function isDesktopApp(): boolean {

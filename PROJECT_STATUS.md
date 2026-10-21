@@ -1,5 +1,31 @@
 # PROJECT_STATUS.md — 项目状态
 
+## 当前阶段：紧急修复 0.3.1 白屏（React #185）(2026-10-21)
+
+## 验证状态：2026-10-21（最新）
+
+| 检查项 | 结果 |
+|--------|------|
+| TypeScript (tsc --noEmit) | ✅ 通过 |
+| ESLint | ✅ 0 error / 15 warning |
+| Vitest (261 tests) | ✅ 全部通过（新增桌面桥快照稳定性 3 项） |
+| 注入桌面 bridge 的全路由渲染 | ✅ /schedule /settings /widget /focus 均正常，无 #185 |
+| 便携 exe | ✅ 96.3MB，asar 与 out/ 逐文件哈希一致 |
+| 安卓 apk | ✅ 5.7MB，assets 与 out/ 逐文件哈希一致 |
+
+## 🔥 事故记录：0.3.1 打开就白屏
+
+- **现象**：双击 exe 后窗口打开但什么都没有（用户描述"软件崩了，打不开"）
+- **根因**：`DesktopWidgetControl` 用 `useSyncExternalStore` 读取桌面 bridge，而 `getDesktopBridge()` 每次调用都返回**新对象**。
+  React 用 `Object.is` 比较快照，判定"一直在变"，触发无限重渲染 → `Minified React error #185`（Maximum update depth exceeded）→ 整棵树卸载 → 白屏
+- **为什么测试没抓到**：浏览器里没有 `window.timegrid`，快照恒为 `null`，`Object.is(null, null)` 成立，所以网页版和之前所有浏览器回归都正常。这是"只在打包装里才出现"的分支
+- **修复**：
+  1. `getDesktopBridge()` 缓存包装对象，保证引用稳定
+  2. 新增回归测试 `desktop-bridge-stability.test.ts`（重复调用必须返回同一引用）
+  3. 新增 `smoke/desktop-render-check.mjs`：**注入假 bridge**，让桌面分支在无头浏览器里真正跑起来，逐路由检查是否白屏或出现 #185
+  4. 新增 `src/app/global-error.tsx`：渲染出错时显示可操作的错误页（含"重新加载"），而不是白窗口
+  5. Electron 主进程加 `crash.log`（`uncaughtException` / `unhandledRejection` / `render-process-gone`），浮窗与托盘的创建包在 try/catch 里，失败也不影响主窗口
+
 ## 当前阶段：浮窗可找回 + 浮窗内新建/编辑 (2026-10-21)
 
 ## 验证状态：2026-10-21（最新）

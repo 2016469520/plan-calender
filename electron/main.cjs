@@ -23,6 +23,19 @@ let widgetWindow = null
 let tray = null
 let isQuitting = false
 
+/** 把异常写进 userData/crash.log，方便用户直接把文件发过来 */
+function logCrash(label, err) {
+  try {
+    const line = `[${new Date().toISOString()}] ${label}: ${err?.stack || err}\n`
+    fs.appendFileSync(path.join(app.getPath('userData'), 'crash.log'), line)
+  } catch {
+    /* 连日志都写不了就算了 */
+  }
+}
+
+process.on('uncaughtException', (err) => logCrash('uncaughtException', err))
+process.on('unhandledRejection', (err) => logCrash('unhandledRejection', err))
+
 // 自定义协议必须以 standard + secure 注册，IndexedDB / localStorage 才会持久化
 protocol.registerSchemesAsPrivileged([
   {
@@ -146,6 +159,9 @@ function createMainWindow() {
 }
 
 function attachNavigationGuards(win) {
+  win.webContents.on('render-process-gone', (_event, details) => {
+    logCrash('render-process-gone', `${details.reason} (exitCode ${details.exitCode})`)
+  })
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('http://') || url.startsWith('https://')) {
       shell.openExternal(url)
@@ -457,8 +473,20 @@ if (!gotLock) {
     buildMenu()
 
     mainWindow = createMainWindow()
-    widgetWindow = createWidgetWindow()
-    createTray()
+
+    // 浮窗与托盘都是可选增强：任何一步失败都不能让主窗口用不了
+    try {
+      widgetWindow = createWidgetWindow()
+    } catch (err) {
+      logCrash('createWidgetWindow', err)
+      widgetWindow = null
+    }
+    try {
+      createTray()
+    } catch (err) {
+      logCrash('createTray', err)
+      tray = null
+    }
 
     app.on('activate', () => {
       showMainWindow()
