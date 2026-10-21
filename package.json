@@ -2,6 +2,9 @@
   "name": "my-plan-calendar",
   "version": "0.1.0",
   "private": true,
+  "main": "electron/main.cjs",
+  "description": "个人计划管理系统 — 月/周/日视图、习惯打卡、每日复盘（本地优先）",
+  "author": "2016469520",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -13,10 +16,17 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build",
-    "deploy": "npm run build && npx gh-pages -d out -b gh-pages"
+    "deploy": "npm run build && npx gh-pages -d out -b gh-pages",
+    "build:static": "cross-env BUILD_STATIC=1 NEXT_PUBLIC_LOCAL_ONLY=1 next build",
+    "desktop:dev": "cross-env ELECTRON_START_URL=http://localhost:3000 electron .",
+    "desktop:run": "npm run build:static && electron .",
+    "dist:win": "npm run build:static && electron-builder --win --config electron-builder.yml",
+    "android:sync": "npm run build:static && cap sync android",
+    "android:apk": "npm run build:static && cap sync android && cd android && gradlew.bat assembleDebug"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
+    "@capacitor/core": "^8.5.3",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -45,6 +55,8 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
@@ -53,6 +65,9 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cross-env": "^10.1.0",
+    "electron": "^44.9.3",
+    "electron-builder": "^26.15.3",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "fake-indexeddb": "^6.2.5",
