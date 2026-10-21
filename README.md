@@ -14,8 +14,8 @@
 
 | 平台 | 文件 | 说明 |
 |---|---|---|
-| Windows | `TimeGrid-0.4.3-portable.exe` | 便携版，双击即用，不写注册表、不需要管理员权限 |
-| Android | `TimeGrid-0.4.3-android.apk` | 安装包，7.0（API 24）及以上；首次安装需允许「安装未知来源应用」 |
+| Windows | `TimeGrid-0.5.0-portable.exe` | 便携版，双击即用，不写注册表、不需要管理员权限 |
+| Android | `TimeGrid-0.5.0-android.apk` | 安装包，7.0（API 24）及以上；首次安装需允许「安装未知来源应用」 |
 
 > 两个文件都在 [Releases](https://github.com/2016469520/plan-calender/releases/latest) 页面，手机可以直接扫码或点链接下载。
 
