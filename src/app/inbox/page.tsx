@@ -4,7 +4,6 @@ import { useState, useCallback } from 'react'
 import { useAuth } from '@/providers/auth-provider'
 import { useRepos } from '@/providers/repo-provider'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -93,43 +92,42 @@ export default function InboxPage() {
   if (!user) return null
 
   return (
-    <div className="p-4 space-y-6 max-w-3xl mx-auto">
+    <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:px-6">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">收集箱</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+        <div className="min-w-0">
+          <h1 className="text-display">收集箱</h1>
+          <p className="mt-1 text-caption text-muted-foreground">
             先记下来，再决定什么时候做
           </p>
         </div>
         {inboxTasks.length > 0 && (
-          <span className="text-xs text-muted-foreground tabular-nums mt-2">
+          <span className="mt-1 shrink-0 rounded-full border border-border bg-surface-2 px-2 py-0.5 text-caption text-muted-foreground tabular-nums">
             {inboxTasks.length} 项待安排
           </span>
         )}
       </div>
 
       {/* 快速记录（不设日期） */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Plus className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            data-testid="inbox-capture"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                handleCapture()
-              }
-            }}
-            placeholder="随手记一条，稍后再安排……"
-            className="pl-9"
-          />
-        </div>
+      <div className="surface flex items-center gap-2 p-2">
+        <Plus className="ml-1 h-4 w-4 shrink-0 text-muted-foreground" />
+        <Input
+          data-testid="inbox-capture"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              handleCapture()
+            }
+          }}
+          placeholder="随手记一条，稍后再安排……"
+          className="h-8 min-w-0 flex-1 border-0 bg-transparent px-0 text-body shadow-none dark:bg-transparent"
+        />
         <Button
           data-testid="inbox-capture-save"
           onClick={handleCapture}
           disabled={!draft.trim() || saving}
+          className="h-8 shrink-0 px-3"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : '记录'}
         </Button>
@@ -138,49 +136,48 @@ export default function InboxPage() {
       {isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-16" />
+            <Skeleton key={i} className="h-20 rounded-lg" />
           ))}
         </div>
       ) : inboxTasks.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12 gap-3">
-            <Inbox className="h-12 w-12 text-muted-foreground/50" />
-            <p className="text-muted-foreground text-sm">收集箱是空的</p>
-            <p className="text-xs text-muted-foreground text-center">
-              在上方输入框记下想法，之后再安排到今天或明天
-            </p>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-card px-6 py-12 text-center">
+          <Inbox className="h-7 w-7 text-muted-foreground/60" />
+          <p className="text-body text-foreground">收集箱是空的</p>
+          <p className="max-w-xs text-caption text-muted-foreground">
+            在上方输入框记下想法，之后再安排到今天或明天
+          </p>
+        </div>
       ) : (
-        <div className="space-y-1.5">
+        <div className="space-y-3">
           {inboxTasks.map((task) => (
-            <div key={task.id} className="space-y-1">
+            <div key={task.id} className="surface overflow-hidden">
               <TaskListItem
                 task={task}
                 tags={tags}
                 isActive={task.id === activeTaskId}
                 onClick={() => setActiveTaskId(task.id)}
               />
-              <div className="flex gap-1 pl-10">
+              <div className="flex items-center gap-1.5 border-t border-border px-3 py-1.5">
+                <span className="mr-auto text-micro text-muted-foreground">未安排</span>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="h-6 text-xs text-muted-foreground hover:text-foreground"
+                  className="h-7 gap-1 px-2 text-caption"
                   disabled={movingId === task.id}
                   onClick={() => handleSchedule(task, today, '今天')}
                 >
-                  <ArrowRight className="h-3 w-3 mr-0.5" />
-                  今天
+                  <ArrowRight className="h-3 w-3" />
+                  安排到今天
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="h-6 text-xs text-muted-foreground hover:text-foreground"
+                  className="h-7 gap-1 px-2 text-caption"
                   disabled={movingId === task.id}
                   onClick={() => handleSchedule(task, tomorrowStr(today), '明天')}
                 >
-                  <Calendar className="h-3 w-3 mr-0.5" />
-                  明天
+                  <Calendar className="h-3 w-3" />
+                  安排到明天
                 </Button>
               </div>
             </div>

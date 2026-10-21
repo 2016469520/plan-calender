@@ -4,8 +4,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useAuth } from '@/providers/auth-provider'
 import { useRepos } from '@/providers/repo-provider'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Button, buttonVariants } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -302,30 +301,29 @@ export function HomeHabitsSummary() {
   // The full habits page has its own error boundary for detailed errors
   if (habitsError) {
     return (
-      <Card className="shadow-none border-destructive/20">
-        <CardContent className="p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">今日习惯</span>
-            <span className="text-[10px] text-destructive/70">加载失败</span>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="surface border-destructive/20 p-3">
+        <div className="flex items-center justify-between">
+          <span className="text-caption font-medium text-muted-foreground">今日习惯</span>
+          <span className="text-micro text-destructive">加载失败</span>
+        </div>
+      </div>
     )
   }
 
   if (activeHabits.length === 0) {
     return (
-      <Card className="shadow-none">
-        <CardContent className="p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">今日习惯</span>
-            <Link href="/habits">
-              <Button variant="ghost" size="sm" className="h-6 text-xs">添加</Button>
-            </Link>
-          </div>
-          <p className="text-xs text-muted-foreground text-center py-2">暂无习惯，去添加吧</p>
-        </CardContent>
-      </Card>
+      <div className="surface p-3">
+        <div className="flex items-center justify-between">
+          <span className="text-caption font-medium text-muted-foreground">今日习惯</span>
+          <Link
+            href="/habits"
+            className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'h-6 text-caption')}
+          >
+            添加
+          </Link>
+        </div>
+        <p className="py-2 text-center text-caption text-muted-foreground">暂无习惯，去添加吧</p>
+      </div>
     )
   }
 
@@ -333,71 +331,80 @@ export function HomeHabitsSummary() {
     const log = getLog(h.id)
     return log?.is_completed
   }).length
+  const completionPct =
+    activeHabits.length > 0 ? Math.round((completedCount / activeHabits.length) * 100) : 0
 
   return (
     <>
-      <Card className="shadow-none">
-        <CardContent className="p-3">
-          <div className="flex items-center justify-between mb-2">
+      <div className="surface p-3">
+        <div className="mb-2">
+          <div className="flex items-center justify-between">
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+              className="flex items-center gap-1.5 text-caption font-medium text-muted-foreground ui-transition hover:text-foreground"
             >
-              <CheckSquare className="h-3 w-3" />
+              <CheckSquare className="h-3.5 w-3.5" />
               今日习惯
-              {completedCount > 0 && (
-                <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-1 rounded">
-                  {completedCount}/{activeHabits.length}
-                </span>
-              )}
+              <span className="text-micro tabular-nums text-muted-foreground">
+                {completedCount}/{activeHabits.length}
+              </span>
             </button>
             <div className="flex items-center gap-1">
-              <Link href="/habits">
-                <Button variant="ghost" size="sm" className="h-6 text-xs">全部</Button>
+              <Link
+                href="/habits"
+                className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'h-6 text-caption')}
+              >
+                全部
               </Link>
               <ChevronRight className={cn('h-3 w-3 text-muted-foreground transition-transform', !collapsed && 'rotate-90')} />
             </div>
           </div>
+          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-primary ui-transition"
+              style={{ width: `${completionPct}%` }}
+            />
+          </div>
+        </div>
 
-          {!collapsed && (
-            <div className="space-y-1">
-              {activeHabits.map((habit) => {
-                const log = getLog(habit.id)
-                const isDone = log?.is_completed
-                const persistedValue = log?.value ?? 0
-                const type = (habit.measurement_type as MeasurementType)
-                const effectiveType = type === 'duration' ? 'minutes' : type
-                const saveState = saveStates[habit.id] || 'idle'
-                const displayValue = getDisplayValue(habit.id, persistedValue)
+        {!collapsed && (
+          <div className="space-y-0.5">
+            {activeHabits.map((habit) => {
+              const log = getLog(habit.id)
+              const isDone = log?.is_completed
+              const persistedValue = log?.value ?? 0
+              const type = (habit.measurement_type as MeasurementType)
+              const effectiveType = type === 'duration' ? 'minutes' : type
+              const saveState = saveStates[habit.id] || 'idle'
+              const displayValue = getDisplayValue(habit.id, persistedValue)
 
-                // Stable wheel handler from pre-computed memo map
-                const wheelHandlerKey = `${habit.id}-${today}`
-                const wheelHandler = wheelHandlers[wheelHandlerKey]
+              // Stable wheel handler from pre-computed memo map
+              const wheelHandlerKey = `${habit.id}-${today}`
+              const wheelHandler = wheelHandlers[wheelHandlerKey]
 
-                return (
-                  <HomeHabitRow
-                    key={habit.id}
-                    habit={habit}
-                    log={log}
-                    isDone={isDone}
-                    displayValue={displayValue}
-                    persistedValue={persistedValue}
-                    effectiveType={effectiveType}
-                    saveState={saveState}
-                    togglingIds={togglingIds}
-                    onToggle={handleToggle}
-                    onAdjust={handleAdjust}
-                    onWheel={wheelHandler}
-                    onEditLog={handleEditLog}
-                    onDeleteLog={setDeleteLog}
-                    onRetry={() => retrySave(habit)}
-                  />
-                )
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              return (
+                <HomeHabitRow
+                  key={habit.id}
+                  habit={habit}
+                  log={log}
+                  isDone={isDone}
+                  displayValue={displayValue}
+                  persistedValue={persistedValue}
+                  effectiveType={effectiveType}
+                  saveState={saveState}
+                  togglingIds={togglingIds}
+                  onToggle={handleToggle}
+                  onAdjust={handleAdjust}
+                  onWheel={wheelHandler}
+                  onEditLog={handleEditLog}
+                  onDeleteLog={setDeleteLog}
+                  onRetry={() => retrySave(habit)}
+                />
+              )
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Edit log dialog */}
       <Dialog open={!!editLog} onOpenChange={() => setEditLog(null)}>
@@ -414,7 +421,7 @@ export function HomeHabitsSummary() {
               onChange={(e) => setEditValue(e.target.value)}
               placeholder="输入数值"
               autoFocus
-              className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm"
+              className="h-8 w-full rounded-md border border-input bg-background px-2.5 text-body"
               onKeyDown={(e) => { if (e.key === 'Enter') saveEditLog() }}
             />
           </div>
@@ -477,39 +484,57 @@ function HomeHabitRow({
   const step = getHomeStep(habit)
   const unit = getHomeUnit(effectiveType, habit)
   const hasDraft = displayValue !== persistedValue
+  const progressPct =
+    habit.target_value > 0
+      ? Math.min(100, Math.round((displayValue / habit.target_value) * 100))
+      : 0
 
   return (
     <div
       className={cn(
-        'flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-accent/50 transition-colors',
-        isDone && 'opacity-60'
+        'flex min-h-11 items-center gap-2 rounded-md px-2 py-1.5 ui-transition hover:bg-surface-2',
+        isDone && 'opacity-70'
       )}
     >
-      <span
-        className="h-2 w-2 rounded-full shrink-0"
-        style={{ backgroundColor: habit.color || '#3b82f6' }}
-      />
-      <div className="flex-1 min-w-0">
-        <div className="text-xs font-medium truncate">{habit.name}</div>
-        {effectiveType !== 'boolean' && (
-          <div className="text-[10px] text-muted-foreground">
-            {displayValue}/{habit.target_value}{habit.unit || (effectiveType === 'minutes' ? '分钟' : effectiveType === 'hours' ? '小时' : '')}
-          </div>
-        )}
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-caption font-medium">{habit.name}</div>
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+          {effectiveType !== 'boolean' ? (
+            <>
+              <span className="text-micro tabular-nums text-muted-foreground">
+                {displayValue}/{habit.target_value}
+                {unit ? ` ${unit}` : ''}
+              </span>
+              <span className="h-1 w-12 shrink-0 overflow-hidden rounded-full bg-muted">
+                <span
+                  className="block h-full rounded-full bg-primary ui-transition"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </span>
+            </>
+          ) : (
+            <span className={cn('text-micro', isDone ? 'text-primary' : 'text-muted-foreground')}>
+              {isDone ? '今日已完成' : '今日未完成'}
+            </span>
+          )}
+          <MiniSaveState state={saveState} hasDraft={hasDraft} />
+        </div>
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="flex shrink-0 items-center gap-1">
         {effectiveType === 'boolean' ? (
           <button
             onClick={() => onToggle(habit)}
             disabled={togglingIds.has(habit.id)}
             className={cn(
-              'h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0',
+              'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 ui-transition',
               isDone
-                ? 'bg-emerald-500 border-emerald-500 text-white'
-                : 'border-muted-foreground/30 hover:border-emerald-400'
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border-strong hover:border-primary'
             )}
+            aria-label={isDone ? '取消打卡' : '打卡'}
           >
             {togglingIds.has(habit.id) ? (
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -519,12 +544,13 @@ function HomeHabitRow({
           </button>
         ) : (
           <>
-            {/* Stable +/- control row */}
-            <div className="flex items-center gap-0.5 shrink-0">
+            {/* +/- 控件 */}
+            <div className="flex shrink-0 items-center gap-0.5">
               <Button
-                variant="ghost" size="icon" className="h-6 w-6"
+                variant="ghost" size="icon-sm"
                 onClick={() => onAdjust(habit, -step)}
                 disabled={displayValue <= 0}
+                aria-label={`减少 ${step}`}
               >
                 <Minus className="h-3 w-3" />
               </Button>
@@ -537,12 +563,12 @@ function HomeHabitRow({
                     if (saveState === 'error') onRetry()
                   }}
                   className={cn(
-                    'inline-flex items-center justify-center h-6 min-w-[2rem] px-1 text-xs font-medium tabular-nums rounded border',
+                    'inline-flex h-7 min-w-8 items-center justify-center rounded-md border px-1 text-caption font-medium tabular-nums ui-transition',
                     saveState === 'error'
                       ? 'border-destructive text-destructive'
                       : hasDraft
-                        ? 'border-amber-300 dark:border-amber-600 bg-amber-50/30 dark:bg-amber-950/10'
-                        : 'border-transparent'
+                        ? 'border-warning/50 bg-warning/10'
+                        : 'border-border'
                   )}
                   title={saveState === 'error' ? '保存失败，点击重试' : hasDraft ? '未保存的更改' : undefined}
                 >
@@ -551,29 +577,27 @@ function HomeHabitRow({
               </div>
 
               <Button
-                variant="ghost" size="icon" className="h-6 w-6"
+                variant="ghost" size="icon-sm"
                 onClick={() => onAdjust(habit, step)}
+                aria-label={`增加 ${step}`}
               >
                 <Plus className="h-3 w-3" />
               </Button>
 
               {unit && (
-                <span className="text-[10px] text-muted-foreground shrink-0">{unit}</span>
+                <span className="shrink-0 text-micro text-muted-foreground">{unit}</span>
               )}
             </div>
 
-            {/* Fixed save-state slot */}
-            <MiniSaveState state={saveState} />
-
-            {/* Fixed operation area */}
-            <div className="flex items-center w-8 shrink-0 justify-end">
+            {/* 操作区 */}
+            <div className="flex shrink-0 items-center">
               {log && (
                 <>
-                  <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => onEditLog(log)}>
-                    <Pencil className="h-2.5 w-2.5 text-muted-foreground" />
+                  <Button variant="ghost" size="icon-sm" className="h-6 w-6" onClick={() => onEditLog(log)} aria-label="编辑打卡记录">
+                    <Pencil className="h-3 w-3 text-muted-foreground" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => onDeleteLog(log)}>
-                    <Trash2 className="h-2.5 w-2.5 text-destructive/60" />
+                  <Button variant="ghost" size="icon-sm" className="h-6 w-6" onClick={() => onDeleteLog(log)} aria-label="删除打卡记录">
+                    <Trash2 className="h-3 w-3 text-destructive/60" />
                   </Button>
                 </>
               )}
@@ -585,14 +609,41 @@ function HomeHabitRow({
   )
 }
 
-function MiniSaveState({ state }: { state: 'idle' | 'saving' | 'saved' | 'error' }) {
-  return (
-    <span className="inline-flex items-center justify-center w-4 h-4 shrink-0">
-      {state === 'saving' && <Loader2 className="h-2.5 w-2.5 animate-spin text-muted-foreground" />}
-      {state === 'saved' && <Check className="h-3 w-3 text-emerald-500" />}
-      {state === 'error' && <AlertCircle className="h-3 w-3 text-destructive" />}
-    </span>
-  )
+function MiniSaveState({
+  state,
+  hasDraft,
+}: {
+  state: 'idle' | 'saving' | 'saved' | 'error'
+  hasDraft?: boolean
+}) {
+  if (state === 'saving') {
+    return (
+      <span className="inline-flex items-center gap-1 text-micro text-muted-foreground">
+        <Loader2 className="h-2.5 w-2.5 animate-spin" />
+        保存中
+      </span>
+    )
+  }
+  if (state === 'saved') {
+    return (
+      <span className="inline-flex items-center gap-1 text-micro text-success">
+        <Check className="h-2.5 w-2.5" />
+        已保存
+      </span>
+    )
+  }
+  if (state === 'error') {
+    return (
+      <span className="inline-flex items-center gap-1 text-micro text-destructive">
+        <AlertCircle className="h-2.5 w-2.5" />
+        保存失败
+      </span>
+    )
+  }
+  if (hasDraft) {
+    return <span className="text-micro text-muted-foreground">待保存</span>
+  }
+  return null
 }
 
 // ---- Helpers ----

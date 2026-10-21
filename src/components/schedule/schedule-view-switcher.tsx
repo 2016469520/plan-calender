@@ -26,26 +26,27 @@ export function ScheduleViewSwitcher({
   onGroupByChange,
 }: ScheduleViewSwitcherProps) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       {/* Time range segmented control */}
-      <div className="flex items-center gap-0.5 bg-muted rounded-lg p-0.5">
+      <div className="flex items-center gap-0.5 rounded-full bg-surface-2 p-0.5">
         {TIME_VIEWS.map((v) => (
           <Button
             key={v.value}
             data-testid={`schedule-view-${v.value}`}
             variant="ghost"
             size="sm"
+            aria-pressed={view === v.value}
             className={cn(
-              'h-7 px-3 text-xs rounded-md transition-all',
+              'h-7 gap-1 rounded-full px-2.5 font-normal ui-transition',
               view === v.value
-                ? 'bg-background shadow-sm text-foreground'
+                ? 'acg-pill font-medium hover:bg-primary/[0.14]'
                 : 'text-muted-foreground hover:text-foreground'
             )}
             onClick={() => onViewChange(v.value)}
           >
-            <v.icon className="h-3.5 w-3.5 mr-1 hidden sm:inline" />
-            <span className="hidden sm:inline">{v.label}</span>
-            <span className="sm:hidden">{v.shortLabel}</span>
+            <v.icon className="hidden h-3.5 w-3.5 sm:inline" aria-hidden="true" />
+            <span className="hidden text-caption sm:inline">{v.label}</span>
+            <span className="text-caption sm:hidden">{v.shortLabel}</span>
           </Button>
         ))}
       </div>
@@ -55,18 +56,20 @@ export function ScheduleViewSwitcher({
         data-testid="schedule-group-category"
         variant="ghost"
         size="sm"
+        aria-label="按分类分组"
+        aria-pressed={groupBy === 'category'}
         className={cn(
-          'h-7 px-2.5 text-xs rounded-md transition-all border',
+          'h-7 gap-1 rounded-full px-2.5 font-normal ui-transition',
           groupBy === 'category'
-            ? 'bg-background shadow-sm text-foreground border-border'
-            : 'text-muted-foreground hover:text-foreground border-transparent hover:border-border'
+            ? 'acg-pill font-medium hover:bg-primary/[0.14]'
+            : 'text-muted-foreground hover:text-foreground'
         )}
         onClick={() =>
           onGroupByChange(groupBy === 'category' ? 'none' : 'category')
         }
       >
-        <LayoutGrid className="h-3.5 w-3.5 mr-1" />
-        <span className="hidden sm:inline">按分类</span>
+        <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" />
+        <span className="hidden text-caption sm:inline">按分类</span>
       </Button>
     </div>
   )

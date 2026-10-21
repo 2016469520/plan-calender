@@ -22,7 +22,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer'
 import { useMediaQuery } from '@/hooks/use-media-query'
-import { CheckCircle2, Circle, Clock } from 'lucide-react'
+import { CheckCircle2, Circle, Clock, Inbox } from 'lucide-react'
 
 interface TaskListSheetProps {
   open: boolean
@@ -75,9 +75,13 @@ export function TaskListSheet({
   )
 
   const content = (
-    <div className="space-y-1 py-2">
+    <div className="space-y-1.5 py-2">
       {sorted.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-8">暂无事项</p>
+        <div className="flex flex-col items-center justify-center gap-1.5 px-4 py-10 text-center">
+          <Inbox className="h-6 w-6 text-muted-foreground/60" />
+          <p className="text-body text-muted-foreground">暂无事项</p>
+          <p className="text-caption text-muted-foreground/70">这一时段还没有安排</p>
+        </div>
       )}
       {sorted.map((task) => (
         <div
@@ -97,10 +101,10 @@ export function TaskListSheet({
             }
           }}
           className={cn(
-            'flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer',
-            'border border-border/50 hover:border-border hover:shadow-sm transition-all',
+            'flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2.5 surface-interactive',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             task.status === 'done'
-              ? 'bg-muted/20'
+              ? 'bg-surface-2'
               : 'bg-card'
           )}
         >
@@ -131,7 +135,7 @@ export function TaskListSheet({
               )}
               <span
                 className={cn(
-                  'text-sm truncate',
+                  'truncate text-body',
                   task.status === 'done' && 'line-through text-muted-foreground'
                 )}
               >
@@ -139,7 +143,7 @@ export function TaskListSheet({
               </span>
             </div>
             {task.start_time && (
-              <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
+              <div className="mt-0.5 flex items-center gap-1 text-caption tabular-nums text-muted-foreground">
                 <Clock className="h-3 w-3" />
                 {task.start_time}
                 {task.end_time && ` - ${task.end_time}`}
@@ -173,7 +177,7 @@ export function TaskListSheet({
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle>{title}</DrawerTitle>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-caption text-muted-foreground">{description}</p>
         </DrawerHeader>
         <div className="px-4 pb-8">{content}</div>
       </DrawerContent>

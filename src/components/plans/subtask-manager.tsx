@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { Plus, Trash2, GripVertical, CheckCircle2, Circle } from 'lucide-react'
+import { Plus, Trash2, GripVertical, CheckCircle2, Circle, ListChecks } from 'lucide-react'
 import { toast } from 'sonner'
 import type { TaskSubitem } from '@/types'
 
@@ -78,24 +78,23 @@ export function SubtaskManager({ taskId }: SubtaskManagerProps) {
   }
 
   const completedCount = subitems.filter((s) => s.is_completed).length
+  const percent = subitems.length > 0 ? Math.round((completedCount / subitems.length) * 100) : 0
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <label className="text-sm font-medium">
-          子任务
-          {subitems.length > 0 && (
-            <span className="ml-1.5 text-xs text-muted-foreground font-normal">
-              {completedCount}/{subitems.length}
-            </span>
-          )}
-        </label>
+      <div className="flex items-baseline justify-between">
+        <span className="text-section">子任务</span>
+        {subitems.length > 0 && (
+          <span className="text-caption tabular-nums text-muted-foreground">
+            {completedCount}/{subitems.length}
+          </span>
+        )}
       </div>
 
       {/* Add new subtask */}
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
         <Input
-          placeholder="添加子任务..."
+          placeholder="添加子任务…"
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
           onKeyDown={(e) => {
@@ -104,15 +103,15 @@ export function SubtaskManager({ taskId }: SubtaskManagerProps) {
               handleAdd()
             }
           }}
-          className="h-8 text-sm"
         />
         <Button
-          size="sm"
-          className="h-8 shrink-0"
+          size="icon"
+          className="shrink-0"
           onClick={handleAdd}
           disabled={createMutation.isPending || !newTitle.trim()}
+          aria-label="添加子任务"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-4 w-4" aria-hidden="true" />
         </Button>
       </div>
 
@@ -124,45 +123,52 @@ export function SubtaskManager({ taskId }: SubtaskManagerProps) {
           ))}
         </div>
       ) : subitems.length === 0 ? (
-        <p className="text-xs text-muted-foreground py-1">
-          暂无子任务，将大任务拆分为小步骤
-        </p>
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border px-3 py-5 text-center">
+          <ListChecks className="h-6 w-6 text-muted-foreground/60" aria-hidden="true" />
+          <p className="text-body text-muted-foreground">暂无子任务</p>
+          <p className="text-caption text-muted-foreground/80">把大任务拆成小步骤，逐项完成</p>
+        </div>
       ) : (
-        <div className="space-y-1 max-h-48 overflow-y-auto">
+        <div className="max-h-48 space-y-0.5 overflow-y-auto">
           {subitems.map((sub) => (
             <div
               key={sub.id}
               className={cn(
-                'flex items-center gap-2 px-2 py-1.5 rounded-md group hover:bg-accent/50 transition-colors',
+                'group flex min-h-8 items-center gap-2 rounded-md px-2 py-1.5 ui-transition hover:bg-accent/60',
                 sub.is_completed && 'opacity-60'
               )}
             >
-              {/* Drag handle (future) */}
-              <GripVertical className="h-3 w-3 text-muted-foreground/40 shrink-0 opacity-0 group-hover:opacity-100" />
+              {/* Drag handle（暂未启用拖拽，弱化展示） */}
+              <GripVertical
+                className="h-3.5 w-3.5 shrink-0 text-muted-foreground/30"
+                aria-hidden="true"
+              />
 
               {/* Toggle */}
               <button
+                type="button"
                 onClick={() => handleToggle(sub)}
-                className="shrink-0"
+                className="shrink-0 rounded-full"
                 title={sub.is_completed ? '标记未完成' : '标记完成'}
+                aria-label={sub.is_completed ? '标记未完成' : '标记完成'}
               >
                 {sub.is_completed ? (
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  <CheckCircle2 className="h-4 w-4 text-success" aria-hidden="true" />
                 ) : (
-                  <Circle className="h-4 w-4 text-muted-foreground" />
+                  <Circle className="h-4 w-4 text-muted-foreground/70" aria-hidden="true" />
                 )}
               </button>
 
               {/* Title (editable on double-click) */}
               <span
                 className={cn(
-                  'text-sm flex-1 truncate',
-                  sub.is_completed && 'line-through text-muted-foreground'
+                  'flex-1 truncate text-body',
+                  sub.is_completed && 'text-muted-foreground line-through'
                 )}
                 onDoubleClick={() => {
-                  const newTitle = prompt('编辑子任务', sub.title)
-                  if (newTitle && newTitle !== sub.title) {
-                    handleEditTitle(sub, newTitle)
+                  const nextTitle = prompt('编辑子任务', sub.title)
+                  if (nextTitle && nextTitle !== sub.title) {
+                    handleEditTitle(sub, nextTitle)
                   }
                 }}
                 title="双击编辑"
@@ -173,11 +179,12 @@ export function SubtaskManager({ taskId }: SubtaskManagerProps) {
               {/* Delete */}
               <Button
                 variant="ghost"
-                size="icon"
-                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 text-muted-foreground hover:text-destructive"
+                size="icon-xs"
+                className="shrink-0 text-muted-foreground opacity-0 ui-transition hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
                 onClick={() => deleteMutation.mutate(sub.id)}
+                aria-label="删除子任务"
               >
-                <Trash2 className="h-3 w-3" />
+                <Trash2 className="h-3 w-3" aria-hidden="true" />
               </Button>
             </div>
           ))}
@@ -187,17 +194,13 @@ export function SubtaskManager({ taskId }: SubtaskManagerProps) {
       {/* Progress bar */}
       {subitems.length > 0 && (
         <div className="flex items-center gap-2">
-          <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
             <div
-              className="h-full bg-emerald-500 rounded-full transition-all"
-              style={{
-                width: `${Math.round((completedCount / subitems.length) * 100)}%`,
-              }}
+              className="h-full rounded-full bg-success transition-all"
+              style={{ width: `${percent}%` }}
             />
           </div>
-          <span className="text-xs text-muted-foreground">
-            {Math.round((completedCount / subitems.length) * 100)}%
-          </span>
+          <span className="text-caption tabular-nums text-muted-foreground">{percent}%</span>
         </div>
       )}
     </div>

@@ -47,6 +47,31 @@ interface ReviewDetailProps {
   hasNext?: boolean
 }
 
+/** 横向小方块：1~max */
+function BlockMeter({ value, max }: { value: number; max: number }) {
+  const filled = Math.round(Math.min(Math.max(value, 0), max))
+  return (
+    <div className="flex items-center gap-0.5" role="img" aria-label={`${filled}/${max}`}>
+      {Array.from({ length: max }).map((_, i) => (
+        <span
+          key={i}
+          className={`h-2 w-1 rounded-full ${i < filled ? 'bg-primary' : 'bg-muted'}`}
+        />
+      ))}
+    </div>
+  )
+}
+
+/** 连续细条：0~100 */
+function BarMeter({ value }: { value: number }) {
+  const pct = Math.round(Math.min(Math.max(value, 0), 100))
+  return (
+    <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="img" aria-label={`${pct}%`}>
+      <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+    </div>
+  )
+}
+
 export function ReviewDetail({
   review,
   open,
@@ -81,10 +106,12 @@ export function ReviewDetail({
   if (editing) {
     return (
       <Sheet open={open} onOpenChange={(o) => { if (!o) setEditing(false); onOpenChange(o); }}>
-        <SheetContent side="right" className="w-full sm:max-w-lg p-0">
+        <SheetContent side="right" className="w-full p-0 sm:max-w-lg">
           <ScrollArea className="h-full p-6">
             <SheetHeader className="mb-4">
-              <SheetTitle>编辑评价 — {formatDisplayDate(review.review_date)}</SheetTitle>
+              <SheetTitle className="text-section">
+                编辑评价 — {formatDisplayDate(review.review_date)}
+              </SheetTitle>
             </SheetHeader>
             <DailyReviewForm
               date={review.review_date}
@@ -100,10 +127,10 @@ export function ReviewDetail({
   }
 
   const fields = [
-    { label: '评分', value: review.score, icon: Star, unit: '/10', color: 'text-amber-500' },
-    { label: '完成度', value: review.subjective_completion, icon: TrendingUp, unit: '%', color: 'text-emerald-500' },
-    { label: '心情', value: review.mood, icon: Smile, unit: '/5', color: 'text-rose-400' },
-    { label: '精力', value: review.energy, icon: Zap, unit: '/5', color: 'text-amber-400' },
+    { label: '评分', value: review.score, icon: Star, unit: '/10', max: 10, kind: 'blocks' as const },
+    { label: '完成度', value: review.subjective_completion, icon: TrendingUp, unit: '%', max: 100, kind: 'bar' as const },
+    { label: '心情', value: review.mood, icon: Smile, unit: '/5', max: 5, kind: 'blocks' as const },
+    { label: '精力', value: review.energy, icon: Zap, unit: '/5', max: 5, kind: 'blocks' as const },
   ]
 
   const textFields = [
@@ -118,45 +145,66 @@ export function ReviewDetail({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="w-full sm:max-w-lg p-0">
+        <SheetContent side="right" className="w-full p-0 sm:max-w-lg">
           <ScrollArea className="h-full p-6">
             <SheetHeader className="mb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-1">
                   {hasPrevious && (
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onPrevious}>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={onPrevious}
+                      aria-label="上一条评价"
+                    >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                   )}
-                  <SheetTitle className="text-base">
+                  <SheetTitle className="truncate text-section">
                     {formatDisplayDate(review.review_date)}
                   </SheetTitle>
                   {hasNext && (
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onNext}>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={onNext}
+                      aria-label="下一条评价"
+                    >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
-                <span className="text-xs text-muted-foreground">
+                <span className="shrink-0 text-micro text-muted-foreground">
                   {formatWeekday(review.review_date)}
                 </span>
               </div>
             </SheetHeader>
 
             {/* Score fields */}
-            <div className="grid grid-cols-4 gap-3 mb-5">
+            <div className="mb-5 grid grid-cols-2 gap-2">
               {fields.map((f) => (
-                <div key={f.label} className="text-center">
-                  <div className="text-xs text-muted-foreground mb-1">{f.label}</div>
-                  <div className="flex items-center justify-center gap-0.5">
-                    <f.icon className={`h-4 w-4 ${f.color}`} />
-                    <span className="text-lg font-bold tabular-nums">
+                <div key={f.label} className="rounded-md bg-surface-2 p-3">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-caption text-muted-foreground">{f.label}</span>
+                    <f.icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
+                  </div>
+                  <div className="mt-1 flex items-baseline gap-0.5">
+                    <span className="text-title tabular-nums">
                       {f.value != null ? f.value : '—'}
                     </span>
+                    {f.value != null && (
+                      <span className="text-micro text-muted-foreground">{f.unit}</span>
+                    )}
                   </div>
-                  {f.value != null && (
-                    <div className="text-[10px] text-muted-foreground">{f.unit}</div>
-                  )}
+                  <div className="mt-2">
+                    {f.value == null ? (
+                      <div className="h-1.5 rounded-full bg-muted" />
+                    ) : f.kind === 'bar' ? (
+                      <BarMeter value={f.value} />
+                    ) : (
+                      <BlockMeter value={f.value} max={f.max} />
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -166,37 +214,35 @@ export function ReviewDetail({
               {textFields.map((f) =>
                 f.value ? (
                   <div key={f.label} className="space-y-1">
-                    <div className="text-xs font-medium text-muted-foreground">{f.label}</div>
-                    <p className="text-sm whitespace-pre-wrap">{f.value}</p>
+                    <div className="text-caption text-muted-foreground">{f.label}</div>
+                    <p className="whitespace-pre-wrap text-body">{f.value}</p>
                   </div>
                 ) : null
               )}
             </div>
 
             {/* Created/Updated */}
-            <div className="mt-6 pt-4 border-t space-y-1 text-xs text-muted-foreground">
+            <div className="mt-6 space-y-1 border-t border-border pt-4 text-micro text-muted-foreground">
               <div>创建：{new Date(review.created_at).toLocaleString('zh-CN')}</div>
               <div>更新：{new Date(review.updated_at).toLocaleString('zh-CN')}</div>
             </div>
 
             {/* Actions */}
-            <div className="flex gap-2 mt-6 pt-4 border-t">
+            <div className="mt-6 flex gap-2 border-t border-border pt-4">
               <Button
                 variant="outline"
-                size="sm"
                 className="flex-1"
                 onClick={() => setEditing(true)}
               >
-                <Pencil className="h-4 w-4 mr-1" />
+                <Pencil className="h-4 w-4" />
                 编辑
               </Button>
               <Button
                 variant="outline"
-                size="sm"
                 className="flex-1 text-destructive hover:bg-destructive/10"
                 onClick={() => setDeleteOpen(true)}
               >
-                <Trash2 className="h-4 w-4 mr-1" />
+                <Trash2 className="h-4 w-4" />
                 删除
               </Button>
             </div>
@@ -222,7 +268,7 @@ export function ReviewDetail({
               onClick={() => deleteMutation.mutate()}
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
+              {deleteMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               删除
             </Button>
           </DialogFooter>

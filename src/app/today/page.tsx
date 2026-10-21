@@ -9,8 +9,10 @@ import { DailyReviewForm } from '@/components/reviews/daily-review-form'
 import { HabitCheckin } from '@/components/habits/habit-checkin'
 import { format, formatWeekday } from '@/lib/utils/date'
 import { useToday } from '@/hooks/use-today'
+import { PRIORITY_COLORS, PRIORITY_LABELS, PERIOD_LABELS } from '@/lib/constants'
+import { cn } from '@/lib/utils'
 import Link from 'next/link'
-import { History, Sun, Moon, Sunrise } from 'lucide-react'
+import { History, Sun, Moon, Sunrise, AlertCircle, CheckCircle2, CalendarPlus } from 'lucide-react'
 
 function getGreeting(): { text: string; icon: typeof Sun; period: 'morning' | 'afternoon' | 'evening' } {
   const hour = new Date().getHours()
@@ -51,65 +53,102 @@ export default function TodayPage() {
 
   return (
     <div className="flex flex-col h-full overflow-auto">
-      {/* Welcome section */}
-      <div className="px-4 pt-4 pb-3 border-b bg-gradient-to-b from-muted/30 to-transparent">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center gap-2 mb-1">
-            <greeting.icon className="h-5 w-5 text-primary/70" />
-            <h2 className="text-lg font-semibold">{greeting.text}</h2>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {format(new Date(), 'yyyy年M月d日')} {formatWeekday(currentDate)}
-          </p>
-
-          {/* Task summary */}
-          <div className="flex items-center gap-4 mt-3 text-sm">
-            <div className="flex items-center gap-1.5">
-              <span className="text-muted-foreground">今日事项</span>
-              <span className="font-semibold tabular-nums">{taskStats.total}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-muted-foreground">已完成</span>
-              <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
-                {taskStats.done}
-              </span>
-            </div>
-            {/* Mini progress bar */}
-            {taskStats.total > 0 && (
-              <div className="flex items-center gap-1.5 flex-1 max-w-24">
-                <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                    style={{ width: `${taskStats.rate}%` }}
-                  />
-                </div>
-                <span className="text-xs tabular-nums text-muted-foreground">
-                  {taskStats.rate}%
+      {/* 顶部概览：问候 + 主卡 */}
+      <div>
+        <div className="mx-auto max-w-3xl space-y-3 px-4 pb-2 pt-4 sm:px-6">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="flex items-center gap-1.5 text-caption text-muted-foreground">
+                <greeting.icon className="h-4 w-4 shrink-0 text-primary/70" />
+                {greeting.text}
+              </p>
+              <h1 className="mt-0.5 truncate text-title text-foreground">
+                {format(new Date(), 'yyyy年M月d日')}
+                <span className="ml-1.5 text-caption font-normal text-muted-foreground">
+                  {formatWeekday(currentDate)}
                 </span>
+              </h1>
+            </div>
+            <span className="shrink-0 rounded-full bg-surface-2 px-2 py-1 text-micro tabular-nums text-muted-foreground">
+              今日 {taskStats.total} 项
+            </span>
+          </div>
+
+          {/* 主卡：完成度 + 优先级最高的事项 */}
+          <div className="surface p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <span className="text-section tabular-nums text-primary">{taskStats.rate}%</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-caption text-muted-foreground">今日完成度</p>
+                <p className="text-body font-medium tabular-nums text-foreground">
+                  {taskStats.done}
+                  <span className="text-muted-foreground"> / {taskStats.total}</span>
+                  <span className="ml-1 text-caption font-normal text-muted-foreground">
+                    项已完成
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-success transition-all duration-500"
+                style={{ width: `${taskStats.rate}%` }}
+              />
+            </div>
+
+            {topTask ? (
+              <div className="mt-3 rounded-md bg-surface-2 px-3 py-2">
+                <div className="flex items-center gap-1.5 text-micro text-muted-foreground">
+                  <AlertCircle
+                    className={cn('h-3.5 w-3.5 shrink-0', PRIORITY_COLORS[topTask.priority])}
+                  />
+                  <span>优先级最高</span>
+                  <span className={cn('font-medium', PRIORITY_COLORS[topTask.priority])}>
+                    {PRIORITY_LABELS[topTask.priority]}
+                  </span>
+                  <span className="ml-auto shrink-0">{PERIOD_LABELS[topTask.period]}</span>
+                </div>
+                <p
+                  className="mt-0.5 truncate text-body font-medium text-foreground"
+                  title={topTask.title}
+                >
+                  {topTask.title}
+                </p>
+              </div>
+            ) : (
+              <div className="mt-3 flex items-center gap-2.5 rounded-md bg-surface-2 px-3 py-2.5">
+                {taskStats.total > 0 ? (
+                  <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-500" />
+                ) : (
+                  <CalendarPlus className="h-6 w-6 shrink-0 text-muted-foreground/60" />
+                )}
+                <div className="min-w-0">
+                  <p className="text-body text-muted-foreground">
+                    {taskStats.total > 0 ? '今天的安排都完成了' : '今天还没有待办'}
+                  </p>
+                  <p className="text-caption text-muted-foreground/70">
+                    {taskStats.total > 0 ? '留一点时间给自己' : '从日历或日程添加第一件事'}
+                  </p>
+                </div>
               </div>
             )}
           </div>
-
-          {/* Most important task hint */}
-          {topTask && (
-            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-              <span className="inline-block w-1 h-1 rounded-full bg-amber-400" />
-              今天最重要：{topTask.title}
-            </p>
-          )}
         </div>
       </div>
 
-      <DayView currentDate={currentDate} onDateChange={() => {}} />
+      <DayView currentDate={currentDate} onDateChange={() => {}} embedded />
 
-      <div className="p-4 space-y-6 border-t">
-        <div className="max-w-2xl mx-auto space-y-6">
+      <div className="mt-4">
+        <div className="mx-auto max-w-3xl space-y-6 px-4 pb-8 pt-2 sm:px-6">
           <HabitCheckin compact />
           <DailyReviewForm date={currentDate} />
           <div className="flex justify-end">
             <Link
               href="/reviews"
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-accent"
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-caption text-muted-foreground ui-transition hover:bg-accent hover:text-foreground"
             >
               <History className="h-3.5 w-3.5" />
               查看历史评价

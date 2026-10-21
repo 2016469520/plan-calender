@@ -143,12 +143,20 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
     <div className={cn('space-y-2', className)}>
       <div
         className={cn(
-          'border rounded-lg transition-all',
-          expanded ? 'border-border bg-card shadow-sm p-3' : 'border-dashed border-muted-foreground/30 hover:border-muted-foreground/50 p-2'
+          'ui-transition rounded-lg border focus-within:border-primary/40',
+          expanded
+            ? 'border-solid border-border bg-card p-3 shadow-[var(--shadow-card)]'
+            : 'border-dashed border-border-strong p-2 hover:border-muted-foreground/50 hover:bg-surface-2/60'
         )}
       >
         <div className="flex items-center gap-2">
-          <Plus className="h-4 w-4 text-muted-foreground shrink-0" />
+          <Plus
+            className={cn(
+              'h-4 w-4 shrink-0 ui-transition',
+              expanded ? 'text-primary' : 'text-muted-foreground'
+            )}
+            aria-hidden="true"
+          />
           <input
             data-testid="quick-add-title"
             ref={inputRef}
@@ -158,34 +166,39 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
             onFocus={() => setExpanded(true)}
             onKeyDown={handleKeyDown}
             placeholder="添加一项计划……"
-            className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground/60"
+            className="min-w-0 flex-1 border-none bg-transparent text-body outline-none placeholder:text-muted-foreground"
           />
           {title && (
             <Button
               data-testid="quick-add-save"
               size="sm"
-              className="h-7 text-xs"
+              className="h-7"
               onClick={handleSave}
               disabled={saving}
             >
-              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : '保存'}
+              {saving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <span className="text-caption">保存</span>
+              )}
             </Button>
           )}
           {expanded && (
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              aria-label="取消添加"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
               onClick={reset}
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
             </Button>
           )}
         </div>
 
         {/* Expanded fields: date, period, tag, difficulty */}
         {expanded && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 pt-3 border-t border-border/50">
+          <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border pt-3 sm:grid-cols-4">
             {/* 1. Date with calendar picker */}
             <div>
               <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
@@ -193,10 +206,10 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
                   render={
                     <Button
                       variant="outline"
-                      className="h-8 text-xs w-full justify-start font-normal"
+                      className="h-8 w-full justify-start text-caption font-normal"
                       type="button"
                     >
-                      <Calendar className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                      <Calendar className="mr-1 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                       {getDateLabel()}
                     </Button>
                   }
@@ -208,39 +221,39 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
                       <Button
                         variant={isToday ? 'default' : 'outline'}
                         size="sm"
-                        className="h-7 text-xs"
+                        className="h-7"
                         onClick={() => { setDate(todayStr()); setCalendarOpen(false) }}
                       >
-                        今天
+                        <span className="text-caption">今天</span>
                       </Button>
                       <Button
                         variant={isTomorrow ? 'default' : 'outline'}
                         size="sm"
-                        className="h-7 text-xs"
+                        className="h-7"
                         onClick={() => { setDate(tomorrowStr()); setCalendarOpen(false) }}
                       >
-                        明天
+                        <span className="text-caption">明天</span>
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 text-xs"
+                        className="h-7"
                         onClick={() => { setDate(thisWeekendStr()); setCalendarOpen(false) }}
                       >
-                        本周末
+                        <span className="text-caption">本周末</span>
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 text-xs"
+                        className="h-7"
                         onClick={() => { setDate(nextWeekStr()); setCalendarOpen(false) }}
                       >
-                        下周
+                        <span className="text-caption">下周</span>
                       </Button>
                     </div>
                     {/* Calendar date input */}
-                    <div className="border-t pt-2">
-                      <p className="text-[10px] text-muted-foreground mb-1">选择日期</p>
+                    <div className="border-t border-border pt-2">
+                      <p className="mb-1 text-micro text-muted-foreground">选择日期</p>
                       <Input
                         type="date"
                         value={date}
@@ -248,7 +261,7 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
                           setDate(e.target.value)
                           setCalendarOpen(false)
                         }}
-                        className="h-8 text-xs"
+                        className="h-8 text-caption"
                       />
                     </div>
                   </div>
@@ -259,7 +272,7 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
             {/* 2. Period — placeholder until selected */}
             <div>
               <Select value={period || ''} onValueChange={(v) => setPeriod((v as Period) || '')}>
-                <SelectTrigger className="h-8 text-xs">
+                <SelectTrigger className="h-8 text-caption">
                   <SelectValue>
                     {period ? getPeriodLabel(period) : '选择时段'}
                   </SelectValue>
@@ -275,7 +288,7 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
             {/* 3. Tag */}
             <div>
               <Select value={tagId || 'none'} onValueChange={(v) => setTagId(v && v !== 'none' ? v : '')}>
-                <SelectTrigger className="h-8 text-xs">
+                <SelectTrigger className="h-8 text-caption">
                   <SelectValue placeholder="选择标签">
                     {tagId ? (
                       <span className="flex items-center gap-1.5">
@@ -312,7 +325,7 @@ export function QuickAddTask({ defaultDate, defaultTagId, className }: QuickAddT
             {/* 4. Difficulty — placeholder until selected */}
             <div>
               <Select value={difficulty || ''} onValueChange={(v) => setDifficulty((v as Difficulty) || '')}>
-                <SelectTrigger className="h-8 text-xs">
+                <SelectTrigger className="h-8 text-caption">
                   <SelectValue>
                     {difficulty ? getDifficultyLabel(difficulty) : '选择难度'}
                   </SelectValue>

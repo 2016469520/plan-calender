@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
   SelectContent,
@@ -12,7 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useRepos } from '@/providers/repo-provider'
 import { useAuth } from '@/providers/auth-provider'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -95,28 +95,32 @@ export function DailyReviewForm({ date = todayStr(), onSaved }: DailyReviewFormP
     })
   }
 
-  if (isLoading) return <div className="h-32 bg-muted animate-pulse rounded-lg" />
+  if (isLoading) return <Skeleton className="h-32 w-full rounded-lg" />
 
   return (
     <form onSubmit={form.handleSubmit(handleSubmit)}>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base font-medium">每日评价</CardTitle>
-          <Button type="submit" size="sm" disabled={mutation.isPending}>
+      <div className="surface overflow-hidden">
+        <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+          <div>
+            <p className="text-section">每日评价</p>
+            <p className="mt-0.5 text-micro text-muted-foreground">记录今天的感受与收获</p>
+          </div>
+          <Button type="submit" disabled={mutation.isPending}>
             {mutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Save className="h-4 w-4 mr-1" />
+              <Save className="h-4 w-4" />
             )}
             保存
           </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        </div>
+
+        <div className="space-y-4 p-4">
           {/* Quick scores */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <ScoreSelect
               label="评分"
-              icon={<Star className="h-4 w-4" />}
+              icon={<Star className="h-3.5 w-3.5" />}
               value={form.watch('score')}
               onChange={(v) => form.setValue('score', v ?? undefined)}
               max={10}
@@ -132,14 +136,14 @@ export function DailyReviewForm({ date = todayStr(), onSaved }: DailyReviewFormP
             />
             <ScoreSelect
               label="心情"
-              icon={<Smile className="h-4 w-4" />}
+              icon={<Smile className="h-3.5 w-3.5" />}
               value={form.watch('mood')}
               onChange={(v) => form.setValue('mood', v ?? undefined)}
               max={5}
             />
             <ScoreSelect
               label="精力"
-              icon={<Zap className="h-4 w-4" />}
+              icon={<Zap className="h-3.5 w-3.5" />}
               value={form.watch('energy')}
               onChange={(v) => form.setValue('energy', v ?? undefined)}
               max={5}
@@ -149,32 +153,62 @@ export function DailyReviewForm({ date = todayStr(), onSaved }: DailyReviewFormP
           {/* Text fields */}
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label>今日最重要的成果</Label>
-              <Textarea {...form.register('achievement')} placeholder="今天完成了什么？" rows={2} />
+              <Label className="text-caption text-muted-foreground">今日最重要的成果</Label>
+              <Textarea
+                {...form.register('achievement')}
+                placeholder="今天完成了什么？"
+                rows={2}
+                className="text-body"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label>未完成的事情</Label>
-              <Textarea {...form.register('unfinished')} placeholder="什么没有按计划完成？" rows={2} />
+              <Label className="text-caption text-muted-foreground">未完成的事情</Label>
+              <Textarea
+                {...form.register('unfinished')}
+                placeholder="什么没有按计划完成？"
+                rows={2}
+                className="text-body"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label>遇到的问题</Label>
-              <Textarea {...form.register('problems')} placeholder="遇到了什么困难？" rows={2} />
+              <Label className="text-caption text-muted-foreground">遇到的问题</Label>
+              <Textarea
+                {...form.register('problems')}
+                placeholder="遇到了什么困难？"
+                rows={2}
+                className="text-body"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label>今日收获</Label>
-              <Textarea {...form.register('lessons')} placeholder="今天学到了什么？" rows={2} />
+              <Label className="text-caption text-muted-foreground">今日收获</Label>
+              <Textarea
+                {...form.register('lessons')}
+                placeholder="今天学到了什么？"
+                rows={2}
+                className="text-body"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label>明日最重要的三件事</Label>
-              <Textarea {...form.register('tomorrow_focus')} placeholder="明天需要优先完成什么？" rows={2} />
+              <Label className="text-caption text-muted-foreground">明日最重要的三件事</Label>
+              <Textarea
+                {...form.register('tomorrow_focus')}
+                placeholder="明天需要优先完成什么？"
+                rows={2}
+                className="text-body"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label>自由总结</Label>
-              <Textarea {...form.register('summary')} placeholder="还有想记录的..." rows={3} />
+              <Label className="text-caption text-muted-foreground">自由总结</Label>
+              <Textarea
+                {...form.register('summary')}
+                placeholder="还有想记录的..."
+                rows={3}
+                className="text-body"
+              />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </form>
   )
 }
@@ -202,14 +236,23 @@ function ScoreSelect({
   const options = includeZero ? [0, ...baseOptions] : baseOptions
   const stringValue = value != null ? value.toString() : ''
 
+  // 纯展示：用横向小方块预览当前档位
+  const blocks = Math.round(max / step)
+  const filled = value != null ? Math.round(value / step) : 0
+
   return (
-    <div className="space-y-1.5">
-      <Label className="text-xs flex items-center gap-1">
-        {icon}
-        {label}
-      </Label>
+    <div className="space-y-1.5 rounded-md bg-surface-2 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <Label className="flex items-center gap-1.5 text-caption text-muted-foreground">
+          {icon}
+          {label}
+        </Label>
+        <span className="text-micro tabular-nums text-muted-foreground">
+          {value != null ? `${value}${unit}` : '—'}
+        </span>
+      </div>
       <Select value={stringValue} onValueChange={(v: string | null) => onChange(v ? Number(v) : null)}>
-        <SelectTrigger className="h-9 text-sm">
+        <SelectTrigger className="h-8 text-caption">
           <SelectValue placeholder="—" />
         </SelectTrigger>
         <SelectContent>
@@ -221,6 +264,14 @@ function ScoreSelect({
           ))}
         </SelectContent>
       </Select>
+      <div className="flex items-center gap-0.5" aria-hidden>
+        {Array.from({ length: blocks }).map((_, i) => (
+          <span
+            key={i}
+            className={`h-1.5 flex-1 rounded-full ${i < filled ? 'bg-primary' : 'bg-muted'}`}
+          />
+        ))}
+      </div>
     </div>
   )
 }

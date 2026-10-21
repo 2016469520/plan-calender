@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useMemo, useState, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -8,6 +8,7 @@ import { getWeekRange, format, parseISO, isToday } from '@/lib/utils/date'
 import { cn } from '@/lib/utils'
 import { PERIOD_LABELS, WEEKDAY_NAMES } from '@/lib/constants'
 import { useTaskDnd } from '@/hooks/use-task-dnd'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   TaskDragContext,
   TaskDragOverlay,
@@ -20,9 +21,17 @@ import {
   DragOverlay,
 } from '@dnd-kit/core'
 import type { Task, Period } from '@/types'
-import { Circle, CheckCircle2, Clock, AlertCircle, GripVertical, ChevronRight } from 'lucide-react'
+import { Circle, CheckCircle2, Clock, AlertCircle, GripVertical } from 'lucide-react'
 
 const MAX_VISIBLE_TASKS = 3
+
+/** 时段行/列用的极浅底色（令牌 --period 的 8%，不引入新颜色） */
+
+const PERIOD_CLASS: Record<Period, string> = {
+  morning: 'p-morning',
+  afternoon: 'p-afternoon',
+  evening: 'p-evening',
+}
 
 interface WeekViewProps {
   currentDate: string
@@ -113,9 +122,15 @@ export function WeekView({ currentDate, onTaskClick, onOverflowClick }: WeekView
 
   if (isLoading) {
     return (
-      <div className="flex-1 p-4 space-y-4">
+      <div className="flex-1 space-y-3 p-4">
+        <div className="flex gap-2">
+          <Skeleton className="h-12 w-16 shrink-0" />
+          {Array.from({ length: 7 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 flex-1" />
+          ))}
+        </div>
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-32 bg-muted animate-pulse rounded-lg" />
+          <Skeleton key={i} className="h-28" />
         ))}
       </div>
     )
@@ -128,7 +143,7 @@ export function WeekView({ currentDate, onTaskClick, onOverflowClick }: WeekView
     >
       <div className="flex flex-col h-full overflow-hidden">
         {/* Day headers */}
-        <div className="sticky top-0 z-20 bg-background border-b shrink-0">
+        <div className="sticky top-0 z-20 shrink-0 border-b border-border bg-background">
           <div className="flex">
             <div className="w-16 shrink-0" />
             {weekData.days.map((day) => {
@@ -138,20 +153,29 @@ export function WeekView({ currentDate, onTaskClick, onOverflowClick }: WeekView
                 <div
                   key={day}
                   className={cn(
-                    'flex-1 text-center py-2 border-l min-w-[80px]',
-                    today && 'bg-primary/5'
+                    'flex-1 border-l border-border py-1.5 text-center min-w-[80px]',
+                    today && 'bg-primary/[0.04]'
                   )}
                 >
-                  <div className="text-xs text-muted-foreground">
-                    {WEEKDAY_NAMES[d.getDay()]}
-                  </div>
                   <div
                     className={cn(
-                      'text-lg font-semibold',
-                      today && 'text-primary'
+                      'text-caption',
+                      today ? 'font-medium text-primary' : 'text-muted-foreground'
                     )}
                   >
-                    {format(d, 'd')}
+                    {WEEKDAY_NAMES[d.getDay()]}
+                  </div>
+                  <div className="mt-0.5 flex justify-center">
+                    <span
+                      className={cn(
+                        'inline-flex h-7 w-7 items-center justify-center rounded-full text-section tabular-nums',
+                        today
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-foreground'
+                      )}
+                    >
+                      {format(d, 'd')}
+                    </span>
                   </div>
                 </div>
               )
@@ -163,11 +187,17 @@ export function WeekView({ currentDate, onTaskClick, onOverflowClick }: WeekView
         <div className="flex-1 overflow-auto">
           <div className="min-w-[640px]">
             {PERIODS.map((period) => (
-              <div key={period} className="border-b">
+              <div
+                key={period}
+                className={cn(
+                  'border-b border-border last:border-b-0',
+                  PERIOD_CLASS[period]
+                )}
+              >
                 <div className="flex">
                   {/* Period label */}
-                  <div className="w-16 shrink-0 bg-muted/30 border-r flex flex-col items-center justify-center py-2 sticky left-0 z-10">
-                    <span className="text-xs font-medium text-muted-foreground">
+                  <div className="sticky left-0 z-10 flex w-16 shrink-0 flex-col items-center justify-center bg-surface-2 py-2">
+                    <span className="period-chip rounded-full px-2 py-0.5 text-micro font-medium">
                       {PERIOD_LABELS[period]}
                     </span>
                   </div>
@@ -186,8 +216,8 @@ export function WeekView({ currentDate, onTaskClick, onOverflowClick }: WeekView
                         taskDate={day}
                         period={period}
                         className={cn(
-                          'flex-1 border-l p-1 min-w-[80px]',
-                          today && 'bg-primary/[0.02]'
+                          'flex-1 border-l border-border p-1 min-w-[80px]',
+                          today && 'bg-primary/[0.03]'
                         )}
                       >
                         <div className="space-y-1 min-h-[72px]">
@@ -206,10 +236,10 @@ export function WeekView({ currentDate, onTaskClick, onOverflowClick }: WeekView
                                 e.stopPropagation()
                                 onOverflowClick?.(day, period, dayTasks)
                               }}
-                              className="w-full text-[10px] text-muted-foreground hover:text-foreground px-1 py-0.5 rounded hover:bg-accent transition-colors flex items-center gap-0.5"
+                              aria-label={`查看${format(parseISO(day), 'M月d日')}${PERIOD_LABELS[period]}的另外 ${overflowCount} 项`}
+                              className="flex w-full items-center justify-center rounded-md px-1 py-1 text-micro tabular-nums text-muted-foreground ui-transition hover:bg-background hover:text-foreground"
                             >
-                              <ChevronRight className="h-2.5 w-2.5" />
-                              还有 {overflowCount} 项
+                              +{overflowCount}
                             </button>
                           )}
                         </div>
@@ -310,48 +340,44 @@ function DraggableTaskChip({
       style={mergedStyle}
       onClick={handleClick}
       className={cn(
-        'group rounded-md px-2 py-1 text-xs cursor-pointer',
-        'border border-transparent hover:border-border hover:shadow-sm',
-        'transition-all min-w-0',
+        'group flex min-w-0 cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1 text-caption surface-interactive',
         isDragging && 'opacity-50 shadow-lg',
         task.status === 'done'
-          ? 'bg-muted/30 text-muted-foreground line-through'
-          : 'bg-card border-border/50'
+          ? 'border-transparent bg-surface-2 text-muted-foreground line-through'
+          : 'border-border bg-card'
       )}
       title={task.title}
     >
-      <div className="flex items-center gap-1.5 min-w-0">
-        {/* Drag handle — separate from click */}
-        <button
-          className="shrink-0 cursor-grab active:cursor-grabbing text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity"
-          {...attributes}
-          {...listeners}
-          tabIndex={-1}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <GripVertical className="h-3 w-3" />
-        </button>
+      {/* Drag handle — separate from click */}
+      <button
+        className="shrink-0 cursor-grab text-muted-foreground/50 opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing"
+        {...attributes}
+        {...listeners}
+        tabIndex={-1}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <GripVertical className="h-3 w-3" />
+      </button>
 
-        {/* Status icon */}
-        {task.status === 'done' ? (
-          <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
-        ) : task.priority === 'urgent' ? (
-          <AlertCircle className="h-3 w-3 text-red-500 shrink-0" />
-        ) : (
-          <Circle className="h-3 w-3 text-muted-foreground shrink-0" />
-        )}
+      {/* Status icon */}
+      {task.status === 'done' ? (
+        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+      ) : task.priority === 'urgent' ? (
+        <AlertCircle className="h-3.5 w-3.5 shrink-0 text-red-500" />
+      ) : (
+        <Circle className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+      )}
 
-        {/* Title */}
-        <span className="truncate flex-1 min-w-0">{task.title}</span>
+      {/* Title */}
+      <span className="min-w-0 flex-1 truncate">{task.title}</span>
 
-        {/* Time indicator */}
-        {task.start_time && (
-          <span className="text-[10px] text-muted-foreground shrink-0 flex items-center gap-0.5">
-            <Clock className="h-2.5 w-2.5" />
-            {task.start_time}
-          </span>
-        )}
-      </div>
+      {/* Time indicator */}
+      {task.start_time && (
+        <span className="flex shrink-0 items-center gap-0.5 text-micro tabular-nums text-muted-foreground">
+          <Clock className="h-2.5 w-2.5" />
+          {task.start_time}
+        </span>
+      )}
     </div>
   )
 }

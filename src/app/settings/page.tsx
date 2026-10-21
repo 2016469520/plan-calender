@@ -3,7 +3,6 @@
 import { useAuth } from '@/providers/auth-provider'
 import { useRepos } from '@/providers/repo-provider'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
@@ -41,6 +40,61 @@ const SECTION_ITEMS: { id: SettingsSection; label: string; icon: React.Component
   { id: 'data', label: '数据', icon: Database },
   { id: 'account', label: '账户', icon: User },
 ]
+
+/** 设置区卡片：统一 surface + text-section 标题 + text-caption 描述 */
+function SectionCard({
+  icon: Icon,
+  title,
+  description,
+  children,
+}: {
+  icon?: React.ComponentType<{ className?: string }>
+  title: string
+  description?: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="surface p-4">
+      <div className="flex items-start gap-3">
+        {Icon && (
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+            <Icon className="h-4 w-4" />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <h2 className="text-section">{title}</h2>
+          {description && (
+            <p className="mt-0.5 text-caption text-muted-foreground">{description}</p>
+          )}
+        </div>
+      </div>
+      <div className="mt-4">{children}</div>
+    </section>
+  )
+}
+
+/** 设置行：点击区高度至少 40 */
+function SettingRow({
+  label,
+  description,
+  children,
+}: {
+  label: string
+  description?: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex min-h-10 items-center justify-between gap-3 py-1">
+      <div className="min-w-0">
+        <Label className="text-body font-medium text-foreground">{label}</Label>
+        {description && (
+          <p className="mt-0.5 text-caption text-muted-foreground">{description}</p>
+        )}
+      </div>
+      <div className="flex shrink-0 items-center gap-1.5">{children}</div>
+    </div>
+  )
+}
 
 export default function SettingsPage() {
   const { user, isDemoMode, signOut } = useAuth()
@@ -121,45 +175,61 @@ export default function SettingsPage() {
   const compactMode = prefs?.compact_mode ?? false
   const defaultView = prefs?.default_calendar_view || 'month'
   const weekStartsOn = prefs?.week_starts_on ?? 0
+  const accountLabel = isDemoMode ? '本地演示模式' : (user.email ?? '')
 
   return (
-    <div className="flex flex-col lg:flex-row h-full">
+    <div className="flex h-full flex-col lg:flex-row">
       {/* Desktop secondary nav */}
-      <aside className="hidden lg:flex flex-col w-48 lg:w-56 border-b lg:border-b-0 lg:border-r bg-card/30 shrink-0">
-        <div className="p-4">
-          <h1 className="text-lg font-bold">设置</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {isDemoMode ? '本地演示模式' : user.email?.split('@')[0]}
+      <aside className="hidden w-56 shrink-0 flex-col border-b border-border bg-card/40 lg:flex lg:border-b-0 lg:border-r">
+        <div className="px-4 pt-6 pb-4">
+          <h1 className="text-display">设置</h1>
+          <p className="mt-1 truncate text-caption text-muted-foreground" title={accountLabel}>
+            {accountLabel}
           </p>
         </div>
-        <nav className="flex-1 px-2 pb-2 space-y-0.5">
+        <nav className="flex-1 space-y-1 overflow-y-auto px-2 pb-4">
+          <p className="px-3 pb-1 text-micro text-muted-foreground">设置分区</p>
           {SECTION_ITEMS.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveSection(item.id)}
-              className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm transition-colors ${
+              className={`relative flex w-full items-center gap-2.5 rounded-md py-2 pl-3 pr-2.5 text-body ui-transition ${
                 activeSection === item.id
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                  ? 'bg-primary/[0.08] font-medium text-primary'
+                  : 'text-muted-foreground hover:bg-surface-2 hover:text-foreground'
               }`}
             >
-              <item.icon className="h-4 w-4" />
-              {item.label}
+              {activeSection === item.id && (
+                <span
+                  aria-hidden
+                  className="absolute top-1.5 bottom-1.5 left-0 w-[3px] rounded-full bg-primary"
+                />
+              )}
+              <item.icon className="h-4 w-4 shrink-0" />
+              <span className="truncate">{item.label}</span>
             </button>
           ))}
         </nav>
       </aside>
 
+      {/* Mobile page header */}
+      <div className="px-4 pt-6 pb-3 lg:hidden">
+        <h1 className="text-display">设置</h1>
+        <p className="mt-1 truncate text-caption text-muted-foreground" title={accountLabel}>
+          {accountLabel}
+        </p>
+      </div>
+
       {/* Mobile section tabs */}
-      <div className="lg:hidden flex overflow-x-auto border-b px-2 py-2 gap-1">
+      <div className="flex gap-1 overflow-x-auto border-b border-border px-3 py-2 lg:hidden">
         {SECTION_ITEMS.map((item) => (
           <button
             key={item.id}
             onClick={() => setActiveSection(item.id)}
-            className={`shrink-0 px-3 py-1.5 rounded-full text-xs transition-colors ${
+            className={`shrink-0 rounded-full px-3 py-1.5 text-caption ui-transition ${
               activeSection === item.id
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground'
+                ? 'bg-primary font-medium text-primary-foreground'
+                : 'bg-muted text-muted-foreground hover:text-foreground'
             }`}
           >
             {item.label}
@@ -168,270 +238,208 @@ export default function SettingsPage() {
       </div>
 
       {/* Content area */}
-      <div className="flex-1 overflow-y-auto p-4 lg:p-6 lg:max-w-3xl xl:max-w-4xl">
-        {/* PWA Install — always visible at top */}
-        {isInstallable && (
-          <Card className="border-primary/30 bg-primary/5 mb-6">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <MonitorDown className="h-5 w-5" />安装应用
-              </CardTitle>
-              <CardDescription>
-                将应用安装到桌面或主屏幕，像原生 App 一样使用
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button onClick={() => { promptInstall(); toast.success('请在弹出的安装窗口中确认') }}>
-                <MonitorDown className="h-4 w-4 mr-2" />添加到主屏幕
+      <div className="flex-1 overflow-y-auto">
+        <div className="w-full max-w-3xl space-y-6 px-4 py-6 lg:px-8 lg:py-8">
+          {/* PWA Install — always visible at top */}
+          {isInstallable && (
+            <SectionCard
+              icon={MonitorDown}
+              title="安装应用"
+              description="将应用安装到桌面或主屏幕，像原生 App 一样使用"
+            >
+              <Button
+                className="h-8"
+                onClick={() => { promptInstall(); toast.success('请在弹出的安装窗口中确认') }}
+              >
+                <MonitorDown className="mr-1.5 h-4 w-4" />添加到主屏幕
               </Button>
-            </CardContent>
-          </Card>
-        )}
+            </SectionCard>
+          )}
 
-        {/* Appearance */}
-        {activeSection === 'appearance' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">主题</CardTitle>
-                  <CardDescription>选择界面颜色模式</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-1">
+          {/* Appearance */}
+          {activeSection === 'appearance' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                <SectionCard icon={Palette} title="主题" description="选择界面颜色模式">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <Button
                       variant={theme === 'light' ? 'default' : 'outline'}
                       size="sm"
+                      className="h-8"
                       onClick={() => handleThemeChange('light')}
                     >
-                      <Sun className="h-4 w-4 mr-1" />浅色
+                      <Sun className="h-4 w-4" />浅色
                     </Button>
                     <Button
                       variant={theme === 'dark' ? 'default' : 'outline'}
                       size="sm"
+                      className="h-8"
                       onClick={() => handleThemeChange('dark')}
                     >
-                      <Moon className="h-4 w-4 mr-1" />深色
+                      <Moon className="h-4 w-4" />深色
                     </Button>
                     <Button
                       variant={theme === 'system' ? 'default' : 'outline'}
                       size="sm"
+                      className="h-8"
                       onClick={() => handleThemeChange('system')}
                     >
-                      <Monitor className="h-4 w-4 mr-1" />跟随系统
+                      <Monitor className="h-4 w-4" />跟随系统
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
+                </SectionCard>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">界面偏好</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label className="text-sm">紧凑模式</Label>
-                      <p className="text-xs text-muted-foreground">使用更紧凑的界面布局</p>
-                    </div>
+                <SectionCard icon={Monitor} title="界面偏好" description="调整列表与页面的疏密">
+                  <SettingRow label="紧凑模式" description="使用更紧凑的界面布局">
                     <Switch checked={compactMode} onCheckedChange={handleCompactMode} />
-                  </div>
-                </CardContent>
-              </Card>
+                  </SettingRow>
+                </SectionCard>
+              </div>
+
+              {/* 桌面浮窗开关（仅 Electron 打包版显示） */}
+              <DesktopWidgetControl variant="card" />
             </div>
+          )}
 
-            {/* 桌面浮窗开关（仅 Electron 打包版显示） */}
-            <DesktopWidgetControl variant="card" />
-          </div>
-        )}
-
-        {/* Calendar */}
-        {activeSection === 'calendar' && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">日历偏好</CardTitle>
-              <CardDescription>设置默认视图和每周起始日</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm">默认视图</Label>
-                <Select value={defaultView} onValueChange={handleDefaultView}>
-                  <SelectTrigger className="w-28">
-                    <SelectValue placeholder="请选择">
-                      {CALENDAR_VIEW_LABELS[defaultView as CalendarView] || defaultView}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(Object.entries(CALENDAR_VIEW_LABELS) as [CalendarView, string][]).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {/* Calendar */}
+          {activeSection === 'calendar' && (
+            <SectionCard icon={CalendarDays} title="日历偏好" description="设置默认视图和每周起始日">
+              <div className="space-y-2">
+                <SettingRow label="默认视图">
+                  <Select value={defaultView} onValueChange={handleDefaultView}>
+                    <SelectTrigger className="h-8 w-28">
+                      <SelectValue placeholder="请选择">
+                        {CALENDAR_VIEW_LABELS[defaultView as CalendarView] || defaultView}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(Object.entries(CALENDAR_VIEW_LABELS) as [CalendarView, string][]).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </SettingRow>
+                <SettingRow label="每周起始日">
+                  <Select value={String(weekStartsOn)} onValueChange={handleWeekStart}>
+                    <SelectTrigger className="h-8 w-28">
+                      <SelectValue placeholder="请选择">
+                        {WEEK_START_LABELS[weekStartsOn as WeekStartDay] || String(weekStartsOn)}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(Object.entries(WEEK_START_LABELS) as [string, string][]).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </SettingRow>
               </div>
-              <div className="flex items-center justify-between">
-                <Label className="text-sm">每周起始日</Label>
-                <Select value={String(weekStartsOn)} onValueChange={handleWeekStart}>
-                  <SelectTrigger className="w-28">
-                    <SelectValue placeholder="请选择">
-                      {WEEK_START_LABELS[weekStartsOn as WeekStartDay] || String(weekStartsOn)}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(Object.entries(WEEK_START_LABELS) as [string, string][]).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+            </SectionCard>
+          )}
 
-        {/* Focus */}
-        {activeSection === 'focus' && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">专注设置</CardTitle>
-              <CardDescription>设置专注计时的默认参数</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
+          {/* Focus */}
+          {activeSection === 'focus' && (
+            <SectionCard icon={Timer} title="专注设置" description="设置专注计时的默认参数">
+              <p className="text-body text-muted-foreground">
                 专注功能使用番茄钟计时法。默认专注时长为 25 分钟，
                 短休息 5 分钟，长休息 15 分钟。可在专注页面中自定义每次时长。
               </p>
-            </CardContent>
-          </Card>
-        )}
+            </SectionCard>
+          )}
 
-        {/* Notifications */}
-        {activeSection === 'notifications' && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">浏览器通知</CardTitle>
-                <CardDescription>管理通知和提醒设置</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-sm">通知开关</Label>
-                    <p className="text-xs text-muted-foreground">
-                      {!notifSupported
-                        ? '当前浏览器不支持通知'
-                        : permission === 'granted'
+          {/* Notifications */}
+          {activeSection === 'notifications' && (
+            <div className="space-y-4">
+              <SectionCard icon={Bell} title="浏览器通知" description="管理通知权限与提醒方式">
+                <SettingRow
+                  label="通知开关"
+                  description={
+                    !notifSupported
+                      ? '当前浏览器不支持通知'
+                      : permission === 'granted'
                         ? '通知已开启'
                         : permission === 'denied'
-                        ? '通知已被浏览器阻止'
-                        : '点击开启通知权限'}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    {permission === 'granted' ? (
-                      <BellRing className="h-4 w-4 text-primary" />
-                    ) : permission === 'denied' ? (
-                      <BellOff className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <Bell className="h-4 w-4 text-muted-foreground" />
-                    )}
-                    <Switch
-                      checked={notificationEnabled && permission === 'granted'}
-                      onCheckedChange={handleNotificationToggle}
-                      disabled={!notifSupported || permission === 'denied'}
-                    />
-                  </div>
-                </div>
-                <div className="pt-3 border-t">
-                  <ReminderList />
-                </div>
-              </CardContent>
-            </Card>
+                          ? '通知已被浏览器阻止'
+                          : '点击开启通知权限'
+                  }
+                >
+                  {permission === 'granted' ? (
+                    <BellRing className="h-4 w-4 text-primary" />
+                  ) : permission === 'denied' ? (
+                    <BellOff className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Bell className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <Switch
+                    checked={notificationEnabled && permission === 'granted'}
+                    onCheckedChange={handleNotificationToggle}
+                    disabled={!notifSupported || permission === 'denied'}
+                  />
+                </SettingRow>
+              </SectionCard>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">延期事项处理</CardTitle>
-              </CardHeader>
-              <CardContent>
+              <section className="surface p-4">
+                <ReminderList />
+              </section>
+
+              <section className="surface p-4">
                 <OverdueProcessor />
-              </CardContent>
-            </Card>
-          </div>
-        )}
+              </section>
+            </div>
+          )}
 
-        {/* Tags */}
-        {activeSection === 'tags' && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">标签管理</CardTitle>
-              <CardDescription>创建、编辑和排序标签</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <TagManager />
-            </CardContent>
-          </Card>
-        )}
+          {/* Tags */}
+          {activeSection === 'tags' && <TagManager />}
 
-        {/* Data */}
-        {activeSection === 'data' && (
-          <div className="space-y-6">
-            <BackupPanel />
+          {/* Data */}
+          {activeSection === 'data' && (
+            <div className="space-y-4">
+              <BackupPanel />
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">事项模板</CardTitle>
-                <CardDescription>从常用事项创建模板，快速添加</CardDescription>
-              </CardHeader>
-              <CardContent>
+              <section className="surface p-4">
                 <TemplateManager />
-              </CardContent>
-            </Card>
+              </section>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">导入导出事项</CardTitle>
-                <CardDescription>按事项导入 / 导出（CSV 或 JSON）</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="outline" onClick={() => setShowImportExport(true)}>
-                  <Download className="h-4 w-4 mr-2" />导入 / 导出
+              <SectionCard icon={Download} title="导入导出事项" description="按事项导入 / 导出（CSV 或 JSON）">
+                <Button variant="outline" className="h-8" onClick={() => setShowImportExport(true)}>
+                  <Download className="mr-1.5 h-4 w-4" />导入 / 导出
                 </Button>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+              </SectionCard>
+            </div>
+          )}
 
-        {/* Account */}
-        {activeSection === 'account' && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">账户</CardTitle>
-              <CardDescription>
-                {IS_LOCAL_ONLY
+          {/* Account */}
+          {activeSection === 'account' && (
+            <SectionCard
+              icon={User}
+              title="账户"
+              description={
+                IS_LOCAL_ONLY
                   ? `本地模式 — 数据保存在${LOCAL_STORAGE_LABEL}，不上传到任何服务器`
                   : isDemoMode
                     ? '本地演示模式 — 数据保存在浏览器中'
-                    : `登录账号：${user.email}`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
+                    : `登录账号：${user.email}`
+              }
+            >
               {IS_LOCAL_ONLY ? (
-                <>
-                  <p className="text-sm text-muted-foreground">
+                <div className="space-y-3">
+                  <p className="text-body text-muted-foreground">
                     建议定期到「数据」里导出 JSON 备份；卸载应用或清除应用数据会导致记录丢失。
                   </p>
-                  <Button variant="outline" onClick={() => setActiveSection('data')}>
-                    <Database className="h-4 w-4 mr-2" />前往数据备份
+                  <Button variant="outline" className="h-8" onClick={() => setActiveSection('data')}>
+                    <Database className="mr-1.5 h-4 w-4" />前往数据备份
                   </Button>
-                </>
+                </div>
               ) : (
-                <Button variant="destructive" onClick={handleSignOut}>
-                  <LogOut className="h-4 w-4 mr-2" />退出登录
+                <Button variant="destructive" className="h-8" onClick={handleSignOut}>
+                  <LogOut className="mr-1.5 h-4 w-4" />退出登录
                 </Button>
               )}
-            </CardContent>
-          </Card>
-        )}
+            </SectionCard>
+          )}
 
-        <ImportExportDialog open={showImportExport} onOpenChange={setShowImportExport} />
+          <ImportExportDialog open={showImportExport} onOpenChange={setShowImportExport} />
+        </div>
       </div>
     </div>
   )

@@ -1,7 +1,6 @@
 'use client'
 
 import { Component, type ReactNode } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AlertTriangle } from 'lucide-react'
 
@@ -35,24 +34,22 @@ export class HabitCheckinErrorWrapper extends Component<Props, State> {
   render() {
     if (this.state.error) {
       return (
-        <Card className="border-destructive/30">
-          <CardContent className="py-6 text-center space-y-3">
-            <AlertTriangle className="h-8 w-8 text-destructive/60 mx-auto" />
-            <div>
-              <p className="text-sm font-medium text-destructive">习惯组件渲染失败</p>
-              <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto break-all">
-                {this.state.error.message.slice(0, 200)}
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => this.setState({ error: null })}
-            >
-              重试
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="surface space-y-3 border-destructive/30 p-6 text-center">
+          <AlertTriangle className="mx-auto h-7 w-7 text-destructive/60" />
+          <div>
+            <p className="text-body font-medium text-destructive">习惯组件渲染失败</p>
+            <p className="mx-auto mt-1 max-w-md break-all text-micro text-muted-foreground">
+              {this.state.error.message.slice(0, 200)}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => this.setState({ error: null })}
+          >
+            重试
+          </Button>
+        </div>
       )
     }
 

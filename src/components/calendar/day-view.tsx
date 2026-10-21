@@ -66,6 +66,7 @@ import {
   Sun,
   Sunset,
   Moon,
+  CalendarPlus,
 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { useMediaQuery } from '@/hooks/use-media-query'
@@ -79,6 +80,13 @@ const PERIOD_ICONS: Record<Period, typeof Sun> = {
   evening: Moon,
 }
 
+const PERIOD_CLASS: Record<Period, string> = {
+  morning: 'p-morning',
+  afternoon: 'p-afternoon',
+  evening: 'p-evening',
+}
+
+
 function dayNav(date: string, dir: -1 | 1): string {
   const d = parseISO(date)
   d.setDate(d.getDate() + dir)
@@ -88,9 +96,11 @@ function dayNav(date: string, dir: -1 | 1): string {
 interface DayViewProps {
   currentDate: string
   onDateChange: (date: string) => void
+  /** 嵌入到其它页面（如今日页）时：不自带滚动容器与日期头 */
+  embedded?: boolean
 }
 
-export function DayView({ currentDate, onDateChange }: DayViewProps) {
+export function DayView({ currentDate, onDateChange, embedded = false }: DayViewProps) {
   const { user } = useAuth()
   const { tasks, tags } = useRepos()
   const queryClient = useQueryClient()
@@ -275,58 +285,93 @@ export function DayView({ currentDate, onDateChange }: DayViewProps) {
   )
 
   return (
-    <div className="flex flex-col h-full overflow-auto">
-      {/* Day header */}
-      <div className="sticky top-0 z-20 bg-background border-b px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDateChange(dayNav(currentDate, -1))}>
+    <div className={cn('flex flex-col', !embedded && 'h-full overflow-auto')}>
+      {/* Day header —— 嵌入模式（今日页）由页面自己的概览卡承担，避免日期与完成度重复 */}
+      {!embedded && (
+      <div className="sticky top-0 z-20 border-b border-border bg-background/95 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              onClick={() => onDateChange(dayNav(currentDate, -1))}
+              title="前一天"
+              aria-label="前一天"
+            >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <div className="text-center">
-              <h2 className={cn('text-lg font-bold', isToday(parseISO(currentDate)) && 'text-primary')}>
+            <div className="min-w-0 px-1">
+              <h2
+                className={cn(
+                  'truncate text-section',
+                  isToday(parseISO(currentDate)) ? 'text-primary' : 'text-foreground'
+                )}
+              >
                 {format(parseISO(currentDate), 'M月d日 EEEE', { locale: zhCN })}
               </h2>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-micro tabular-nums text-muted-foreground">
                 {doneCount}/{totalCount} 已完成
-                {isMoving && ' — 移动中...'}
+                {isMoving && ' · 移动中'}
               </p>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDateChange(dayNav(currentDate, 1))}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              onClick={() => onDateChange(dayNav(currentDate, 1))}
+              title="后一天"
+              aria-label="后一天"
+            >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
 
-          <div className="hidden sm:flex items-center gap-2">
-            <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+          <div className="hidden shrink-0 items-center gap-2 sm:flex">
+            <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full bg-emerald-500 rounded-full transition-all"
+                className="h-full rounded-full bg-success transition-all"
                 style={{ width: `${completionPct}%` }}
               />
             </div>
-            <span className="text-xs text-muted-foreground">{completionPct}%</span>
+            <span className="text-caption tabular-nums text-muted-foreground">{completionPct}%</span>
           </div>
         </div>
       </div>
+      )}
 
       {/* Three periods with DnD */}
       <TaskDragContext
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex-1 p-4 space-y-4">
+        <div
+          className={cn(
+            'mx-auto w-full max-w-2xl flex-1 space-y-3',
+            embedded ? 'px-0 py-0' : 'p-4 sm:p-6'
+          )}
+        >
           {PERIODS.map((period) => {
             const periodTasks = tasksByPeriod[period]
             const taskIds = periodTasks.map((t) => t.id)
             const PeriodIcon = PERIOD_ICONS[period]
 
             return (
-              <section key={period} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5">
-                    <PeriodIcon className="h-3.5 w-3.5" />
+              <section
+                key={period}
+                className={cn('rounded-lg border border-border bg-card p-3', PERIOD_CLASS[period])}
+              >
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <h3
+                    className={cn(
+                      'flex min-w-0 items-center gap-1.5 pl-2.5 text-section text-foreground',
+                      PERIOD_CLASS[period],
+                      'period-rail'
+                    )}
+                  >
+                    <PeriodIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     {PERIOD_LABELS[period]}
-                    <span className="ml-1 text-xs font-normal">
+                    <span className="ml-0.5 text-caption font-normal tabular-nums text-muted-foreground">
                       {periodTasks.filter((t) => t.status === 'done').length}/
                       {periodTasks.filter((t) => t.status !== 'cancelled').length}
                     </span>
@@ -334,10 +379,10 @@ export function DayView({ currentDate, onDateChange }: DayViewProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 text-xs"
+                    className="h-7 shrink-0 px-2 text-caption"
                     onClick={() => setNewTaskPeriod(period)}
                   >
-                    <Plus className="h-3 w-3 mr-1" />添加
+                    <Plus className="h-3.5 w-3.5" />添加
                   </Button>
                 </div>
 
@@ -345,13 +390,20 @@ export function DayView({ currentDate, onDateChange }: DayViewProps) {
                   period={period}
                   taskIds={taskIds}
                   isOver={dragOverPeriod === period}
+                  className="space-y-2"
                 >
                   {periodTasks.length === 0 ? (
                     <div
-                      className="text-center py-8 text-muted-foreground text-sm border border-dashed rounded-lg"
+                      className="flex flex-col items-center justify-center gap-1.5 rounded-md border border-dashed border-border px-3 py-6 text-center"
                       data-droppable-period={period}
                     >
-                      暂无事项，拖拽或点击添加
+                      <CalendarPlus className="h-6 w-6 text-muted-foreground/60" />
+                      <p className="text-body text-muted-foreground">
+                        {PERIOD_LABELS[period]}暂无事项
+                      </p>
+                      <p className="text-caption text-muted-foreground/70">
+                        拖拽事项到这里，或点击右上角「添加」
+                      </p>
                     </div>
                   ) : (
                     periodTasks.map((task) => (
@@ -453,11 +505,10 @@ function TaskCard({
   return (
     <div
       className={cn(
-        'group flex items-start gap-1.5 px-2 py-2.5 rounded-lg border transition-all',
+        // 分区本身已是卡片，任务行不再套边框，避免"卡中卡"
+        'group flex items-start gap-2 rounded-md px-2.5 py-2.5 ui-transition hover:bg-surface-2',
         isDragging && 'shadow-lg ring-2 ring-primary',
-        task.status === 'done'
-          ? 'bg-muted/20 border-transparent'
-          : 'bg-card border-border/50 hover:border-border hover:shadow-sm'
+        task.status === 'done' && 'bg-surface-2'
       )}
     >
       {/* Drag handle */}
@@ -487,24 +538,24 @@ function TaskCard({
           )}
           <span
             className={cn(
-              'text-sm font-medium truncate',
+              'truncate text-body font-medium',
               task.status === 'done' && 'line-through text-muted-foreground'
             )}
           >
             {task.title}
           </span>
           {task.priority === 'urgent' && task.status !== 'done' && (
-            <Badge variant="destructive" className="text-[10px] h-4 px-1">紧急</Badge>
+            <Badge variant="destructive" className="h-4 shrink-0 px-1.5 text-micro">紧急</Badge>
           )}
           {task.priority === 'high' && task.status !== 'done' && (
-            <Badge variant="outline" className="text-[10px] h-4 px-1 text-orange-600 border-orange-300">高</Badge>
+            <Badge variant="outline" className="h-4 shrink-0 border-orange-300 px-1.5 text-micro text-orange-600">高</Badge>
           )}
         </div>
 
         {(task.start_time || task.description) && (
-          <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-caption text-muted-foreground">
             {task.start_time && (
-              <span className="flex items-center gap-0.5">
+              <span className="flex items-center gap-0.5 tabular-nums">
                 <Clock className="h-3 w-3" />
                 {task.start_time}
                 {task.end_time && ` - ${task.end_time}`}
@@ -518,9 +569,9 @@ function TaskCard({
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
         <DropdownMenu>
-          <DropdownMenuTrigger className="inline-flex items-center justify-center size-7 rounded-lg hover:bg-muted transition-colors">
+          <DropdownMenuTrigger className="inline-flex size-7 items-center justify-center rounded-md transition-colors hover:bg-muted">
             <MoreHorizontal className="h-3.5 w-3.5" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">

@@ -51,55 +51,57 @@ export function OverdueSection({ tasks, tags, activeTaskId, onTaskClick }: Overd
   if (tasks.length === 0) return null
 
   return (
-    <div className="rounded-lg border border-amber-200 dark:border-amber-800/50 bg-amber-50/30 dark:bg-amber-950/10">
+    <section className="surface overflow-hidden">
       <button
+        type="button"
         onClick={() => setCollapsed(!collapsed)}
-        className="w-full flex items-center gap-2 p-3 text-left"
+        aria-expanded={!collapsed}
+        className="flex w-full items-center gap-2 px-4 py-3 text-left ui-transition hover:bg-surface-2"
       >
         {collapsed ? (
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         ) : (
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         )}
-        <AlertCircle className="h-4 w-4 text-amber-500" />
-        <span className="text-sm font-medium">待处理延期</span>
-        <span className="text-xs text-muted-foreground">({tasks.length})</span>
+        <AlertCircle className="h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
+        <span className="text-section">待处理延期</span>
+        <span className="text-micro tabular-nums text-muted-foreground">{tasks.length}</span>
       </button>
 
       {!collapsed && (
-        <div className="px-3 pb-3 space-y-1.5">
+        <div className="space-y-0.5 px-2 pb-2">
           {tasks.map((task) => (
-            <div key={task.id} className="space-y-1">
+            <div key={task.id}>
               <TaskListItem
                 task={task}
                 tags={tags}
                 isActive={task.id === activeTaskId}
                 onClick={() => onTaskClick(task)}
               />
-              <div className="flex gap-1 pl-10">
+              <div className="flex gap-1 pb-1 pl-10">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 text-xs text-muted-foreground hover:text-foreground"
+                  className="h-6 px-2 text-muted-foreground hover:text-foreground"
                   onClick={() => handleMoveToToday(task)}
                 >
-                  <ArrowRight className="h-3 w-3 mr-0.5" />
-                  今天
+                  <ArrowRight className="mr-0.5 h-3 w-3" aria-hidden="true" />
+                  <span className="text-caption">今天</span>
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 text-xs text-muted-foreground hover:text-foreground"
+                  className="h-6 px-2 text-muted-foreground hover:text-foreground"
                   onClick={() => handleMoveToTomorrow(task)}
                 >
-                  <Calendar className="h-3 w-3 mr-0.5" />
-                  明天
+                  <Calendar className="mr-0.5 h-3 w-3" aria-hidden="true" />
+                  <span className="text-caption">明天</span>
                 </Button>
               </div>
             </div>
           ))}
         </div>
       )}
-    </div>
+    </section>
   )
 }

@@ -13,6 +13,7 @@ import { TimePeriodSection } from '@/components/schedule/time-period-section'
 import { OverdueSection } from '@/components/schedule/overdue-section'
 import { UpcomingTasks } from '@/components/schedule/upcoming-tasks'
 import { InboxSection } from '@/components/schedule/inbox-section'
+import { ScheduleEmptyState } from '@/components/schedule/schedule-empty-state'
 import { TaskDetailPanel } from '@/components/schedule/task-detail-panel'
 import { TaskListItem } from '@/components/schedule/task-list-item'
 import { HomeFocusTimer } from '@/components/focus/focus-timer'
@@ -191,18 +192,17 @@ export default function SchedulePage() {
   return (
     <div className="flex h-full">
       {/* Main content area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto">
-          {/* Header with greeting and stats */}
-          <ScheduleHeader today={today} tasks={allTasks} />
+          <div className="mx-auto w-full max-w-3xl space-y-4 px-4 py-4 sm:px-6 sm:py-6">
+            {/* 今日概览卡：日期 + 完成进度 + 专注时长 */}
+            <ScheduleHeader today={today} tasks={allTasks} />
 
-          {/* Main content */}
-          <div className="px-4 py-4 max-w-3xl mx-auto space-y-4">
             {/* Quick add */}
             <QuickAddTask />
 
             {/* View controls: time range + category grouping */}
-            <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <ScheduleViewSwitcher
                 view={view}
                 onViewChange={(v) => {
@@ -221,7 +221,7 @@ export default function SchedulePage() {
             {isLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <Skeleton key={i} className="h-20" />
+                  <Skeleton key={i} className="h-16 rounded-lg" />
                 ))}
               </div>
             ) : (
@@ -232,13 +232,11 @@ export default function SchedulePage() {
                     {todayTasks.length === 0 &&
                     overdueTasks.length === 0 &&
                     undatedTasks.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground space-y-3">
-                        <FolderOpen className="h-10 w-10 opacity-40" />
-                        <p className="text-sm">今天还没有计划</p>
-                        <p className="text-xs text-muted-foreground/70">
-                          在上方输入框添加一项计划吧
-                        </p>
-                      </div>
+                      <ScheduleEmptyState
+                        icon={FolderOpen}
+                        title="今天还没有计划"
+                        description="在上方输入框添加一项计划吧"
+                      />
                     ) : (
                       <>
                         <TodayFocus
@@ -253,16 +251,18 @@ export default function SchedulePage() {
                           activeTaskId={activeTaskId}
                           onTaskClick={handleTaskClick}
                         />
-                        {PERIODS.map((period) => (
-                          <TimePeriodSection
-                            key={period}
-                            period={period}
-                            tasks={periodGroups[period]}
-                            tags={tags}
-                            activeTaskId={activeTaskId}
-                            onTaskClick={handleTaskClick}
-                          />
-                        ))}
+                        <div className="space-y-4">
+                          {PERIODS.map((period) => (
+                            <TimePeriodSection
+                              key={period}
+                              period={period}
+                              tasks={periodGroups[period]}
+                              tags={tags}
+                              activeTaskId={activeTaskId}
+                              onTaskClick={handleTaskClick}
+                            />
+                          ))}
+                        </div>
                         <UpcomingTasks
                           tasks={allTasks}
                           tags={tags}
@@ -291,13 +291,11 @@ export default function SchedulePage() {
                 {view === 'week' && groupBy === 'none' && (
                   <div className="space-y-4">
                     {weekDateGroups.length === 0 && overdueTasks.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground space-y-3">
-                        <FolderOpen className="h-10 w-10 opacity-40" />
-                        <p className="text-sm">未来7天暂无计划</p>
-                        <p className="text-xs text-muted-foreground/70">
-                          可以新增一项计划，提前安排接下来的时间
-                        </p>
-                      </div>
+                      <ScheduleEmptyState
+                        icon={FolderOpen}
+                        title="未来7天暂无计划"
+                        description="可以新增一项计划，提前安排接下来的时间"
+                      />
                     ) : (
                       <>
                         {/* Overdue tasks still shown at top */}
@@ -311,18 +309,25 @@ export default function SchedulePage() {
                         {/* Date-grouped week tasks */}
                         {weekDateGroups.map((group) => (
                           <div key={group.date} className="space-y-1">
-                            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide px-1">
-                              {group.label}
-                            </h3>
-                            {group.tasks.map((task) => (
-                              <TaskListItem
-                                key={task.id}
-                                task={task}
-                                tags={tags}
-                                isActive={task.id === activeTaskId}
-                                onClick={() => handleTaskClick(task)}
-                              />
-                            ))}
+                            <div className="flex items-center gap-2 px-2">
+                              <h3 className="text-micro font-medium uppercase tracking-wider text-muted-foreground">
+                                {group.label}
+                              </h3>
+                              <span className="text-micro tabular-nums text-muted-foreground">
+                                {group.tasks.length}
+                              </span>
+                            </div>
+                            <div className="space-y-0.5">
+                              {group.tasks.map((task) => (
+                                <TaskListItem
+                                  key={task.id}
+                                  task={task}
+                                  tags={tags}
+                                  isActive={task.id === activeTaskId}
+                                  onClick={() => handleTaskClick(task)}
+                                />
+                              ))}
+                            </div>
                           </div>
                         ))}
 
@@ -350,15 +355,19 @@ export default function SchedulePage() {
                 {view === 'all' && groupBy === 'none' && (
                   <div className="space-y-4">
                     <div className="relative">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Search
+                        className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
+                        aria-hidden="true"
+                      />
                       <Input
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="搜索所有事项……"
-                        className="pl-8 h-9 text-sm"
+                        aria-label="搜索所有事项"
+                        className="h-9 pl-8 text-body"
                       />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-0.5">
                       {allTasks
                         .filter(
                           (t) =>
@@ -384,37 +393,38 @@ export default function SchedulePage() {
                 {groupBy === 'category' && categoryGroups && (
                   <div className="space-y-4">
                     {categoryGroups.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground space-y-3">
-                        <TagIcon className="h-10 w-10 opacity-40" />
-                        <p className="text-sm">暂无分类任务</p>
-                        <p className="text-xs text-muted-foreground/70">
-                          当前视图范围内没有任务
-                        </p>
-                      </div>
+                      <ScheduleEmptyState
+                        icon={TagIcon}
+                        title="暂无分类任务"
+                        description="当前视图范围内没有任务"
+                      />
                     ) : (
                       categoryGroups.map((group) => (
                         <div key={group.tagId ?? '__uncategorized__'} className="space-y-1">
-                          <div className="flex items-center gap-2 px-1">
+                          <div className="flex items-center gap-2 px-2">
                             <span
-                              className="h-2.5 w-2.5 rounded-full shrink-0"
+                              className="h-2 w-2 shrink-0 rounded-full"
                               style={{ backgroundColor: group.tagColor }}
+                              aria-hidden="true"
                             />
-                            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            <h3 className="text-micro font-medium uppercase tracking-wider text-muted-foreground">
                               {group.tagName}
                             </h3>
-                            <span className="text-[10px] text-muted-foreground tabular-nums">
+                            <span className="text-micro tabular-nums text-muted-foreground">
                               {group.total}
                             </span>
                           </div>
-                          {group.tasks.map((task) => (
-                            <TaskListItem
-                              key={task.id}
-                              task={task}
-                              tags={tags}
-                              isActive={task.id === activeTaskId}
-                              onClick={() => handleTaskClick(task)}
-                            />
-                          ))}
+                          <div className="space-y-0.5">
+                            {group.tasks.map((task) => (
+                              <TaskListItem
+                                key={task.id}
+                                task={task}
+                                tags={tags}
+                                isActive={task.id === activeTaskId}
+                                onClick={() => handleTaskClick(task)}
+                              />
+                            ))}
+                          </div>
                         </div>
                       ))
                     )}
@@ -435,11 +445,11 @@ export default function SchedulePage() {
 
       {/* Desktop: Right panel */}
       {isDesktop && (
-        <div className="w-72 xl:w-80 border-l bg-card/50 h-full overflow-y-auto shrink-0 p-3 space-y-3">
+        <aside className="h-full w-72 shrink-0 space-y-3 overflow-y-auto border-l border-border p-3 xl:w-80">
           <HomeFocusTimer />
           <HomeCountdowns />
           <HomeHabitsSummary />
-        </div>
+        </aside>
       )}
 
       {/* Floating task detail panel */}

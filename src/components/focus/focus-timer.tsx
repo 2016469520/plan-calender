@@ -98,8 +98,8 @@ function StepButton({
       onPointerCancel={clearTimer}
       onContextMenu={(e) => e.preventDefault()}
       className={cn(
-        'flex h-9 w-9 items-center justify-center rounded-full border border-violet-300/60 bg-background/70 text-foreground shadow-sm transition-all',
-        'hover:border-violet-400 hover:bg-violet-50 active:scale-95 dark:border-violet-500/40 dark:hover:bg-violet-950/40',
+        'flex h-9 w-9 items-center justify-center rounded-md border border-border bg-background text-foreground ui-transition',
+        'hover:border-border-strong hover:bg-surface-2 active:scale-95',
         className
       )}
     >
@@ -161,7 +161,7 @@ export function HomeFocusTimer({ variant = 'card' }: FocusTimerProps) {
   // 仍在专注中：浮窗与主窗口共用一个会话，这里只做展示与操作
   if (isActive) {
     return (
-      <div className={cn(!isWidget && 'acg-frame', isWidget ? 'rounded-xl' : 'rounded-2xl')}>
+      <div className={cn('rounded-xl', !isWidget && 'acg-frame')}>
         <div
           className={cn(
             'acg-surface rounded-[inherit] bg-card',
@@ -169,17 +169,22 @@ export function HomeFocusTimer({ variant = 'card' }: FocusTimerProps) {
             !isPaused && 'acg-shadow'
           )}
         >
-          <div className="flex items-center justify-between mb-1">
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <span
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-micro',
+                isPaused ? 'bg-warning/10 text-foreground/70' : 'acg-pill'
+              )}
+            >
               <span
                 className={cn(
                   'h-1.5 w-1.5 rounded-full',
-                  isPaused ? 'bg-amber-500' : 'bg-emerald-400 acg-breathe'
+                  isPaused ? 'bg-warning' : 'bg-primary acg-breathe'
                 )}
               />
               {isPaused ? '已暂停' : isStopwatch ? '正计时中' : '专注中'}
             </span>
-            <span className="text-[11px] text-muted-foreground tabular-nums">
+            <span className="shrink-0 text-micro tabular-nums text-muted-foreground">
               {isStopwatch ? (target > 0 ? `目标 ${target} 分钟` : '自由计时') : `${focus.plannedMinutes} 分钟`}
             </span>
           </div>
@@ -191,25 +196,18 @@ export function HomeFocusTimer({ variant = 'card' }: FocusTimerProps) {
               size={ringSize}
               strokeWidth={isWidget ? 7 : 9}
             >
-              <span
-                className={cn(
-                  'font-bold tabular-nums tracking-tight',
-                  isWidget ? 'text-2xl' : 'text-4xl'
-                )}
-              >
-                {centerTime}
-              </span>
+              <span className="text-display tabular-nums">{centerTime}</span>
               {overtime ? (
-                <span className="mt-0.5 text-[10px] font-medium text-rose-500 tabular-nums">
+                <span className="mt-0.5 text-micro font-medium tabular-nums text-destructive">
                   超出 {overtime}
                 </span>
               ) : (
-                <span className="mt-0.5 text-[10px] text-muted-foreground">
+                <span className="mt-0.5 text-micro text-muted-foreground">
                   {isStopwatch ? '已专注' : '剩余'}
                 </span>
               )}
               {focus.sessionTitle && !isWidget && (
-                <span className="mt-1 max-w-[120px] truncate text-[10px] text-muted-foreground">
+                <span className="mt-1 max-w-[120px] truncate text-micro text-muted-foreground">
                   {focus.sessionTitle}
                 </span>
               )}
@@ -218,16 +216,12 @@ export function HomeFocusTimer({ variant = 'card' }: FocusTimerProps) {
 
           <div className="flex items-center justify-center gap-1.5">
             {isPaused ? (
-              <Button
-                size="sm"
-                onClick={focus.resume}
-                className="h-8 bg-gradient-to-r from-violet-500 to-cyan-500 text-white hover:opacity-90"
-              >
-                <Play className="mr-1 h-3.5 w-3.5" />继续
+              <Button size="sm" onClick={focus.resume} className="h-8">
+                <Play className="h-3.5 w-3.5" />继续
               </Button>
             ) : (
               <Button size="sm" variant="outline" onClick={focus.pause} className="h-8">
-                <Pause className="mr-1 h-3.5 w-3.5" />暂停
+                <Pause className="h-3.5 w-3.5" />暂停
               </Button>
             )}
             {!isStopwatch && (
@@ -238,7 +232,7 @@ export function HomeFocusTimer({ variant = 'card' }: FocusTimerProps) {
                 className="h-8"
                 title="加 1 分钟"
               >
-                <Plus className="mr-0.5 h-3.5 w-3.5" />1
+                <Plus className="h-3.5 w-3.5" />1
               </Button>
             )}
             <Button
@@ -247,7 +241,7 @@ export function HomeFocusTimer({ variant = 'card' }: FocusTimerProps) {
               onClick={() => setShowCancelConfirm(true)}
               className="h-8 text-destructive hover:bg-destructive/10"
             >
-              <Square className="mr-1 h-3.5 w-3.5" />结束
+              <Square className="h-3.5 w-3.5" />结束
             </Button>
           </div>
 
@@ -284,7 +278,7 @@ export function HomeFocusTimer({ variant = 'card' }: FocusTimerProps) {
   const body = (
     <div className={cn('acg-surface rounded-[inherit] bg-card', isWidget ? 'p-2.5' : 'p-4')}>
       {/* 模式切换 */}
-      <div className="mb-2 flex rounded-full bg-muted/70 p-0.5">
+      <div className="mb-2 flex rounded-full bg-surface-2 p-0.5">
         {(
           [
             { key: 'countdown', label: '倒计时', icon: Brain },
@@ -296,9 +290,9 @@ export function HomeFocusTimer({ variant = 'card' }: FocusTimerProps) {
             type="button"
             onClick={() => setMode(item.key)}
             className={cn(
-              'flex flex-1 items-center justify-center gap-1 rounded-full py-1 text-[11px] transition-all',
+              'flex flex-1 items-center justify-center gap-1 rounded-full py-1.5 text-micro ui-transition',
               mode === item.key
-                ? 'bg-gradient-to-r from-violet-500 to-cyan-500 font-medium text-white shadow-sm'
+                ? 'acg-pill font-medium'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
@@ -318,10 +312,10 @@ export function HomeFocusTimer({ variant = 'card' }: FocusTimerProps) {
                 type="button"
                 onPointerDown={() => setMinutes(preset.minutes)}
                 className={cn(
-                  'flex flex-col items-center rounded-lg py-1 text-[11px] transition-all',
+                  'flex h-9 flex-col items-center justify-center rounded-md text-micro ui-transition',
                   minutes === preset.minutes
-                    ? 'acg-pill font-semibold text-violet-700 dark:text-violet-200'
-                    : 'text-muted-foreground hover:bg-muted'
+                    ? 'border border-primary/30 bg-primary/10 font-semibold text-primary'
+                    : 'border border-transparent text-muted-foreground hover:bg-surface-2'
                 )}
                 title={`${preset.hint}（${preset.minutes} 分钟）`}
               >
@@ -337,7 +331,7 @@ export function HomeFocusTimer({ variant = 'card' }: FocusTimerProps) {
 
           {/* 时长微调：±1 分钟，按住连加，Shift 为 ±5 */}
           <div
-            className="mb-1 flex items-center justify-center gap-3"
+            className="mb-2 flex items-center justify-center gap-3"
             onWheel={(e) => {
               e.preventDefault()
               setMinutes((prev) => adjustMinutes(prev, e.deltaY < 0 ? 1 : -1))
@@ -356,10 +350,10 @@ export function HomeFocusTimer({ variant = 'card' }: FocusTimerProps) {
                   if (Number.isNaN(parsed)) return
                   setMinutes(clampMinutes(parsed))
                 }}
-                className="w-16 bg-transparent text-center text-2xl font-bold tabular-nums outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-20 bg-transparent text-center text-display tabular-nums outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
                 aria-label="专注时长（分钟）"
               />
-              <span className="text-[10px] text-muted-foreground">分钟</span>
+              <span className="text-micro text-muted-foreground">分钟</span>
             </div>
             <StepButton direction={1} onStep={(fine) => setMinutes((prev) => adjustMinutes(prev, 1, fine))} />
           </div>
@@ -374,15 +368,15 @@ export function HomeFocusTimer({ variant = 'card' }: FocusTimerProps) {
             max={240}
             step={1}
             aria-label="专注时长滑块"
-            className="mb-2"
-            trackClassName="bg-violet-100 dark:bg-violet-950/60"
-            indicatorClassName="bg-gradient-to-r from-violet-400 to-cyan-400"
-            thumbClassName="border-violet-400/70 data-[dragging]:border-violet-500 data-[dragging]:bg-gradient-to-br data-[dragging]:from-violet-500 data-[dragging]:to-cyan-500"
+            className="mb-3"
+            trackClassName="bg-surface-2"
+            indicatorClassName="bg-primary"
+            thumbClassName="border-primary/60 data-[dragging]:border-primary data-[dragging]:bg-primary"
           />
         </>
       ) : (
         <div className="mb-2 space-y-1.5">
-          <p className="text-center text-[11px] text-muted-foreground">
+          <p className="text-center text-micro text-muted-foreground">
             从 00:00 开始，先做起来再说
           </p>
           <div className="flex items-center justify-center gap-1">
@@ -392,10 +386,10 @@ export function HomeFocusTimer({ variant = 'card' }: FocusTimerProps) {
                 type="button"
                 onClick={() => setTarget(value)}
                 className={cn(
-                  'rounded-full px-2 py-1 text-[11px] transition-all',
+                  'inline-flex h-8 items-center rounded-full px-2.5 text-micro ui-transition',
                   target === value
-                    ? 'acg-pill font-semibold text-violet-700 dark:text-violet-200'
-                    : 'text-muted-foreground hover:bg-muted'
+                    ? 'acg-pill font-medium'
+                    : 'text-muted-foreground hover:bg-surface-2'
                 )}
               >
                 {value === 0 ? '不设目标' : `${value} 分`}
@@ -411,7 +405,7 @@ export function HomeFocusTimer({ variant = 'card' }: FocusTimerProps) {
           value={focusTagId || 'none'}
           onValueChange={(value) => setFocusTagId(value && value !== 'none' ? value : '')}
         >
-          <SelectTrigger className="mb-2 h-7 text-xs">
+          <SelectTrigger className="mb-2 h-8 text-caption">
             <SelectValue placeholder="选择专注分类">
               {focusTagId ? getTagDisplayName(tagList, focusTagId) : '选择专注分类'}
             </SelectValue>
@@ -442,9 +436,9 @@ export function HomeFocusTimer({ variant = 'card' }: FocusTimerProps) {
           }
           handleStart(mode === 'stopwatch' ? target : minutes, mode)
         }}
-        className="h-8 w-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 text-white shadow-md shadow-violet-500/25 hover:opacity-90"
+        className="h-9 w-full"
       >
-        <Play className="mr-1.5 h-3.5 w-3.5" />
+        <Play className="h-3.5 w-3.5" />
         {mode === 'stopwatch' ? '开始正计时' : `开始专注 · ${minutes} 分钟`}
       </Button>
     </div>
@@ -455,20 +449,20 @@ export function HomeFocusTimer({ variant = 'card' }: FocusTimerProps) {
   }
 
   return (
-    <div className="acg-frame rounded-2xl">
+    <div className="acg-frame rounded-xl">
       <div className="rounded-[inherit] bg-card">
         <button
           type="button"
           onClick={() => setCollapsed(!collapsed)}
-          className="flex w-full items-center justify-between px-3 pt-2.5 pb-1"
+          className="flex w-full items-center justify-between px-4 pt-3 pb-2"
         >
-          <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <Sparkles className="h-3 w-3 text-violet-500" />
+          <span className="flex items-center gap-1.5 text-caption font-medium text-muted-foreground">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
             专注
           </span>
           <ChevronRight
             className={cn(
-              'h-3 w-3 text-muted-foreground transition-transform',
+              'h-3.5 w-3.5 text-muted-foreground transition-transform',
               !collapsed && 'rotate-90'
             )}
           />

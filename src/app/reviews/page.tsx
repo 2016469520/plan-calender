@@ -11,8 +11,9 @@ import { ReviewDetail } from '@/components/reviews/review-detail'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { todayStr } from '@/lib/utils/date'
+import { cn } from '@/lib/utils'
 import type { DailyReview } from '@/types'
-import { CalendarDays, List, ClipboardList } from 'lucide-react'
+import { CalendarDays, List, ClipboardList, PenLine } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 type ReviewMode = 'calendar' | 'timeline'
@@ -115,61 +116,73 @@ export default function ReviewsPage() {
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
       {/* Page header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">复盘记录</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            回顾过去的每一天
-          </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-display">复盘记录</h1>
+          <p className="mt-1 text-caption text-muted-foreground">回顾过去的每一天</p>
         </div>
-        <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
-          <Button
-            variant={mode === 'calendar' ? 'default' : 'ghost'}
-            size="sm"
-            className="h-8"
-            onClick={() => handleModeChange('calendar')}
-          >
-            <CalendarDays className="h-4 w-4 mr-1" />
-            月历
-          </Button>
-          <Button
-            variant={mode === 'timeline' ? 'default' : 'ghost'}
-            size="sm"
-            className="h-8"
-            onClick={() => handleModeChange('timeline')}
-          >
-            <List className="h-4 w-4 mr-1" />
-            时间线
-          </Button>
-        </div>
+        <Button className="shrink-0" onClick={() => router.push('/today')}>
+          <PenLine className="h-4 w-4" />
+          写今日评价
+        </Button>
       </div>
 
       {/* Monthly summary */}
       {isLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-16" />
+            <Skeleton key={i} className="h-24" />
           ))}
         </div>
       ) : (
         <ReviewSummary reviews={reviews} year={year} month={month} />
       )}
 
+      {/* View switch */}
+      {!isLoading && reviews.length > 0 && (
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-section">评价记录</h2>
+          <div className="flex items-center gap-0.5 rounded-full bg-surface-2 p-0.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                'h-7 rounded-full px-2.5 text-caption',
+                mode === 'calendar' ? 'acg-pill' : 'text-muted-foreground hover:text-foreground'
+              )}
+              onClick={() => handleModeChange('calendar')}
+            >
+              <CalendarDays className="h-3.5 w-3.5" />
+              月历
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                'h-7 rounded-full px-2.5 text-caption',
+                mode === 'timeline' ? 'acg-pill' : 'text-muted-foreground hover:text-foreground'
+              )}
+              onClick={() => handleModeChange('timeline')}
+            >
+              <List className="h-3.5 w-3.5" />
+              时间线
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Main content */}
       {isLoading ? (
         <Skeleton className="h-96" />
       ) : reviews.length === 0 ? (
-        <div className="text-center py-16 space-y-4">
-          <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground/50" />
+        <div className="surface flex flex-col items-center gap-3 px-4 py-14 text-center">
+          <ClipboardList className="h-7 w-7 text-muted-foreground/60" />
           <div>
-            <p className="text-sm text-muted-foreground">还没有评价记录</p>
-            <p className="text-xs text-muted-foreground/70 mt-1">
+            <p className="text-body">还没有评价记录</p>
+            <p className="mt-1 text-caption text-muted-foreground">
               每天结束时写下一份评价，记录自己的成长
             </p>
           </div>
-          <Button onClick={() => router.push('/today')}>
-            写下今天的评价
-          </Button>
         </div>
       ) : mode === 'calendar' ? (
         <ReviewCalendar

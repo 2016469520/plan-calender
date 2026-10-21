@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -20,7 +20,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/dialog'
 import {
   Drawer,
@@ -60,6 +59,32 @@ interface TaskEditDialogProps {
   defaultDate?: string
   defaultPeriod?: Period
   defaultTagId?: string
+}
+
+/** 表单字段：label（text-caption）+ 控件 + 错误/提示（text-micro），统一 8/12 节奏 */
+function Field({
+  label,
+  htmlFor,
+  error,
+  hint,
+  children,
+}: {
+  label: ReactNode
+  htmlFor?: string
+  error?: string
+  hint?: string
+  children: ReactNode
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={htmlFor} className="text-caption text-muted-foreground">
+        {label}
+      </Label>
+      {children}
+      {error && <p className="text-micro text-destructive">{error}</p>}
+      {hint && <p className="text-micro text-muted-foreground">{hint}</p>}
+    </div>
+  )
 }
 
 export function TaskEditDialog({
@@ -165,32 +190,49 @@ export function TaskEditDialog({
 
   const formContent = (
     <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="title">标题 *</Label>
-        <Input id="title" {...form.register('title')} placeholder="事项标题" autoFocus />
-        {form.formState.errors.title && (
-          <p className="text-xs text-destructive">{form.formState.errors.title.message}</p>
-        )}
+      {/* 标题 / 描述 */}
+      <div className="space-y-3">
+        <Field
+          label={
+            <>
+              标题<span className="text-destructive"> *</span>
+            </>
+          }
+          htmlFor="title"
+          error={form.formState.errors.title?.message}
+        >
+          <Input
+            id="title"
+            {...form.register('title')}
+            placeholder="事项标题"
+            autoFocus
+            aria-invalid={!!form.formState.errors.title}
+          />
+        </Field>
+
+        <Field label="详细说明" htmlFor="desc">
+          <Textarea
+            id="desc"
+            {...form.register('description')}
+            placeholder="可选：详细描述"
+            rows={2}
+            className="rounded-md"
+          />
+        </Field>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="desc">详细说明</Label>
-        <Textarea id="desc" {...form.register('description')} placeholder="可选：详细描述" rows={2} />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <Label>日期</Label>
+      {/* 日期 / 时段 */}
+      <div className="grid grid-cols-2 gap-3 border-t border-border pt-3">
+        <Field label="日期">
           <Input type="date" {...form.register('task_date')} />
-        </div>
-        <div className="space-y-2">
-          <Label>时段</Label>
+        </Field>
+        <Field label="时段">
           <Controller
             name="period"
             control={form.control}
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full rounded-md">
                   <SelectValue>
                     {{ morning: '上午', afternoon: '下午', evening: '晚上' }[field.value as string] || field.value}
                   </SelectValue>
@@ -203,29 +245,49 @@ export function TaskEditDialog({
               </Select>
             )}
           />
-        </div>
+        </Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <Label>开始时间</Label>
-          <Input type="time" {...form.register('start_time')} />
-        </div>
-        <div className="space-y-2">
-          <Label>结束时间</Label>
-          <Input type="time" {...form.register('end_time')} />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <Label>难度</Label>
+      {/* 标签 / 难度 */}
+      <div className="grid grid-cols-2 gap-3 border-t border-border pt-3">
+        <Field label="标签">
+          <Controller
+            name="tag_id"
+            control={form.control}
+            render={({ field }) => (
+              <Select value={field.value || 'none'} onValueChange={field.onChange}>
+                <SelectTrigger className="w-full rounded-md">
+                  <SelectValue placeholder="未分类">
+                    {field.value && field.value !== 'none'
+                      ? (tagList.find((t) => t.id === field.value)?.name || '未分类')
+                      : '未分类'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">未分类</SelectItem>
+                  {tagList.map((tag) => (
+                    <SelectItem key={tag.id} value={tag.id}>
+                      <span className="flex items-center gap-1.5">
+                        <span
+                          className="h-2.5 w-2.5 rounded-full"
+                          style={{ backgroundColor: tag.color }}
+                        />
+                        {tag.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </Field>
+        <Field label="难度">
           <Controller
             name="priority"
             control={form.control}
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full rounded-md">
                   <SelectValue>
                     {{ low: '简单', normal: '一般', high: '困难', urgent: '极难', medium: '一般' }[field.value as string] || '一般'}
                   </SelectValue>
@@ -239,57 +301,42 @@ export function TaskEditDialog({
               </Select>
             )}
           />
-        </div>
-        <div className="space-y-2">
-          <Label>标签</Label>
-          <Controller
-            name="tag_id"
-            control={form.control}
-            render={({ field }) => (
-              <Select value={field.value || 'none'} onValueChange={field.onChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="未分类">
-                    {field.value && field.value !== 'none'
-                      ? (tagList.find((t) => t.id === field.value)?.name || '未分类')
-                      : '未分类'}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">未分类</SelectItem>
-                  {tagList.map((tag) => (
-                    <SelectItem key={tag.id} value={tag.id}>
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tag.color }} />
-                        {tag.name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-        </div>
+        </Field>
       </div>
 
-      <div className="space-y-2">
-        <Label className="flex items-center gap-1.5">
-          <Bell className="h-3.5 w-3.5 text-muted-foreground" />
-          提醒时间
-        </Label>
-        <Input type="datetime-local" {...form.register('reminder_at')} />
-        <p className="text-xs text-muted-foreground">设置提醒时间，届时会通过浏览器通知提醒你</p>
+      {/* 时间 / 提醒 */}
+      <div className="space-y-3 border-t border-border pt-3">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="开始时间">
+            <Input type="time" {...form.register('start_time')} />
+          </Field>
+          <Field label="结束时间">
+            <Input type="time" {...form.register('end_time')} />
+          </Field>
+        </div>
+
+        <Field
+          label={
+            <span className="flex items-center gap-1.5">
+              <Bell className="h-3.5 w-3.5" aria-hidden="true" />
+              提醒时间
+            </span>
+          }
+          hint="设置提醒时间，届时会通过浏览器通知提醒你"
+        >
+          <Input type="datetime-local" {...form.register('reminder_at')} />
+        </Field>
       </div>
 
       {isEditing && (
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label>状态</Label>
+        <div className="grid grid-cols-2 gap-3 border-t border-border pt-3">
+          <Field label="状态">
             <Controller
               name="status"
               control={form.control}
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full rounded-md">
                     <SelectValue>
                       {{ todo: '待办', in_progress: '进行中', done: '已完成', cancelled: '已取消' }[field.value as string] || field.value}
                     </SelectValue>
@@ -303,31 +350,37 @@ export function TaskEditDialog({
                 </Select>
               )}
             />
-          </div>
-          <div className="space-y-2">
-            <Label>预计用时 (分钟)</Label>
-            <Input type="text" inputMode="numeric" {...form.register('estimated_minutes')} placeholder="30" />
-          </div>
+          </Field>
+          <Field label="预计用时（分钟）">
+            <Input
+              type="text"
+              inputMode="numeric"
+              {...form.register('estimated_minutes')}
+              placeholder="30"
+            />
+          </Field>
         </div>
       )}
 
-      <DialogFooter className="gap-2 pt-2">
+      <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
         <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
           取消
         </Button>
         <Button type="submit">
           {isEditing ? '保存修改' : '创建事项'}
         </Button>
-      </DialogFooter>
+      </div>
     </form>
   )
 
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto shadow-[var(--shadow-pop)] sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{isEditing ? '编辑事项' : '新建事项'}</DialogTitle>
+            <DialogTitle className="text-section">
+              {isEditing ? '编辑事项' : '新建事项'}
+            </DialogTitle>
           </DialogHeader>
           {formContent}
         </DialogContent>
@@ -337,9 +390,11 @@ export function TaskEditDialog({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[90vh] overflow-y-auto">
+      <DrawerContent className="max-h-[90vh] overflow-y-auto shadow-[var(--shadow-pop)]">
         <DrawerHeader>
-          <DrawerTitle>{isEditing ? '编辑事项' : '新建事项'}</DrawerTitle>
+          <DrawerTitle className="text-section">
+            {isEditing ? '编辑事项' : '新建事项'}
+          </DrawerTitle>
         </DrawerHeader>
         <div className="px-4 pb-4">{formContent}</div>
       </DrawerContent>

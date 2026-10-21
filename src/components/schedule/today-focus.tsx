@@ -29,14 +29,17 @@ export function TodayFocus({ tasks, tags, activeTaskId, onTaskClick }: TodayFocu
   if (focusTasks.length === 0) return null
 
   return (
-    <div className="rounded-lg border-2 border-amber-200/60 dark:border-amber-800/30 bg-gradient-to-r from-amber-50/40 to-transparent dark:from-amber-950/10 p-3">
-      <div className="flex items-center gap-2 mb-2">
-        <Star className="h-4 w-4 text-amber-500" />
-        <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
+    <section className="surface p-4">
+      <div className="mb-2 flex items-center gap-2 px-2">
+        <Star className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+        <h3 className="text-micro font-medium uppercase tracking-wider text-muted-foreground">
           今日焦点
+        </h3>
+        <span className="text-micro tabular-nums text-muted-foreground">
+          {focusTasks.length}
         </span>
       </div>
-      <div className="space-y-1">
+      <div className="space-y-0.5">
         {focusTasks.map((task) => (
           <TaskListItem
             key={task.id}
@@ -48,6 +51,6 @@ export function TodayFocus({ tasks, tags, activeTaskId, onTaskClick }: TodayFocu
           />
         ))}
       </div>
-    </div>
+    </section>
   )
 }

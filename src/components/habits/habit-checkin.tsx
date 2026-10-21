@@ -4,7 +4,6 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/providers/auth-provider'
 import { useRepos } from '@/providers/repo-provider'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -18,7 +17,7 @@ import {
 } from '@/components/ui/dialog'
 import { useToday } from '@/hooks/use-today'
 import type { Habit, HabitLog, MeasurementType } from '@/types'
-import { CheckCircle2, Circle, Flame, Target, Pencil, Trash2, Plus, Minus, Loader2, Check, AlertCircle } from 'lucide-react'
+import { CheckCircle2, Circle, Flame, Pencil, Trash2, Plus, Minus, Loader2, Check, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -389,9 +388,9 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
 
   if (isLoading) {
     return (
-      <div className="space-y-2">
+      <div className={cn('space-y-2', compact && 'space-y-1')}>
         {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-16 w-full" />
+          <Skeleton key={i} className="h-14 w-full" />
         ))}
       </div>
     )
@@ -399,170 +398,205 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
 
   if (habitsError) {
     return (
-      <Card className="border-destructive/30">
-        <CardContent className="py-6 text-center space-y-2">
-          <p className="text-sm text-destructive">加载习惯数据失败</p>
-          <p className="text-xs text-muted-foreground">
-            {habitsQueryError instanceof Error
-              ? habitsQueryError.message.slice(0, 100)
-              : '请检查网络连接后刷新重试'}
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => queryClient.invalidateQueries({ queryKey: ['habits'] })}
-          >
-            重试
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="surface space-y-2 border-destructive/30 p-6 text-center">
+        <p className="text-body text-destructive">加载习惯数据失败</p>
+        <p className="text-micro text-muted-foreground">
+          {habitsQueryError instanceof Error
+            ? habitsQueryError.message.slice(0, 100)
+            : '请检查网络连接后刷新重试'}
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => queryClient.invalidateQueries({ queryKey: ['habits'] })}
+        >
+          重试
+        </Button>
+      </div>
     )
   }
 
-  if (activeHabits.length === 0 && !compact) {
+  if (activeHabits.length === 0) {
+    if (compact) return null
     return (
-      <Card className="border-dashed">
-        <CardContent className="py-8 text-center text-muted-foreground text-sm">
-          还没有习惯，去创建第一个吧
-        </CardContent>
-      </Card>
+      <div className="surface flex flex-col items-center gap-2 px-4 py-10 text-center">
+        <Flame className="h-6 w-6 text-muted-foreground/60" />
+        <p className="text-body">还没有习惯</p>
+        <p className="text-caption text-muted-foreground">去创建第一个，从今天开始</p>
+      </div>
     )
   }
+
+  const completedCount = activeHabits.filter((h) => getLogForHabit(h.id)?.is_completed).length
+  const completionPct =
+    activeHabits.length > 0 ? Math.round((completedCount / activeHabits.length) * 100) : 0
 
   return (
     <>
-      <div className={cn('space-y-2', compact && 'space-y-1')}>
-        {activeHabits.map((habit) => {
-          const log = getLogForHabit(habit.id)
-          const isChecked = log?.is_completed ?? false
-          const persistedValue = log?.value ?? 0
-          const type = habit.measurement_type as MeasurementType
-          const effectiveType = type === 'duration' ? 'minutes' : type
-          const habitKey = `${habit.id}-${today}`
-          const inputVal = inputValues[habitKey]
-          const saveState = saveStates[habit.id] || 'idle'
-          const isSaving = savingIds.has(habit.id)
+      <div className="surface overflow-hidden">
+        <div
+          className={cn(
+            'flex items-center justify-between gap-3 border-b border-border px-4',
+            compact ? 'py-2.5' : 'py-3'
+          )}
+        >
+          <div className="flex items-baseline gap-2">
+            <span className={compact ? 'text-caption font-medium' : 'text-section'}>今日习惯</span>
+            <span className="text-micro tabular-nums text-muted-foreground">
+              {completedCount}/{activeHabits.length} 已完成
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-1 w-16 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary ui-transition"
+                style={{ width: `${completionPct}%` }}
+              />
+            </div>
+            <span className="text-micro tabular-nums text-muted-foreground">{completionPct}%</span>
+          </div>
+        </div>
 
-          // Display value: draft (local) takes precedence over persisted
-          const displayValue = getDisplayValue(habit.id, persistedValue)
+        <ul className="divide-y divide-border">
+          {activeHabits.map((habit) => {
+            const log = getLogForHabit(habit.id)
+            const isChecked = log?.is_completed ?? false
+            const persistedValue = log?.value ?? 0
+            const type = habit.measurement_type as MeasurementType
+            const effectiveType = type === 'duration' ? 'minutes' : type
+            const habitKey = `${habit.id}-${today}`
+            const inputVal = inputValues[habitKey]
+            const saveState = saveStates[habit.id] || 'idle'
+            const isSaving = savingIds.has(habit.id)
+            const unitLabel = getUnitForType(effectiveType, habit)
 
-          // Stable wheel handler from pre-computed memo map
-          const wheelHandlerKey = `${habit.id}-${today}`
-          const wheelHandler = wheelHandlers[wheelHandlerKey]
+            // Display value: draft (local) takes precedence over persisted
+            const displayValue = getDisplayValue(habit.id, persistedValue)
+            const hasDraft = displayValue !== persistedValue
+            const progressPct =
+              habit.target_value > 0
+                ? Math.min(100, Math.round((displayValue / habit.target_value) * 100))
+                : 0
 
-          return (
-            <Card
-              key={habit.id}
-              className={cn(
-                'transition-all',
-                isChecked && 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/30 dark:bg-emerald-950/10'
-              )}
-            >
-              <CardContent className={cn('flex items-center gap-2', compact ? 'py-2' : 'py-3')}>
-                {/* Icon */}
-                <div
-                  className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
-                  style={{
-                    backgroundColor: (habit.color || '#3b82f6') + '15',
-                    color: habit.color || '#3b82f6',
-                  }}
-                >
-                  <Flame className="h-4 w-4" />
-                </div>
+            // Stable wheel handler from pre-computed memo map
+            const wheelHandlerKey = `${habit.id}-${today}`
+            const wheelHandler = wheelHandlers[wheelHandlerKey]
 
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{habit.name}</p>
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Target className="h-3 w-3" />
-                    <span>
-                      {effectiveType === 'boolean'
-                        ? '目标: 完成'
-                        : `目标: ${habit.target_value}${habit.unit || (effectiveType === 'minutes' ? '分钟' : effectiveType === 'hours' ? '小时' : '次')}`}
-                    </span>
-                    {effectiveType !== 'boolean' && (
-                      <span className={cn(
-                        'ml-1',
-                        displayValue >= habit.target_value ? 'text-emerald-500 font-medium' : 'text-muted-foreground'
-                      )}>
-                        (已完成 {displayValue})
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Actions */}
-                {effectiveType === 'boolean' ? (
-                  <Button
-                    variant={isChecked ? 'default' : 'outline'}
-                    size="sm"
-                    className={cn(
-                      'shrink-0',
-                      isChecked && 'bg-emerald-500 hover:bg-emerald-600 text-white'
-                    )}
-                    onClick={() => toggleBoolean(habit)}
-                    disabled={isSaving}
-                  >
-                    {isSaving ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : isChecked ? (
-                      <CheckCircle2 className="h-4 w-4" />
-                    ) : (
-                      <Circle className="h-4 w-4" />
-                    )}
-                    <span className="ml-1 hidden sm:inline">
-                      {isChecked ? '已完成' : '打卡'}
-                    </span>
-                  </Button>
-                ) : (
-                  <div
-                    className="grid items-center shrink-0 gap-x-1"
-                    style={{ gridTemplateColumns: '2rem 3rem 2rem 2.5rem 1.25rem 3.5rem' }}
-                  >
-                    <MinuteControl
-                      habit={habit}
-                      inputVal={inputVal}
-                      displayValue={displayValue}
-                      persistedValue={persistedValue}
-                      effectiveType={effectiveType}
-                      saveState={saveState}
-                      onInputChange={(v) => setInputValues((prev) => ({ ...prev, [habitKey]: v }))}
-                      onInputSave={() => handleInputSave(habit)}
-                      onAdjust={(delta) => adjustValue(habit, delta)}
-                      onWheel={wheelHandler}
-                      onRetry={() => retrySave(habit)}
-                    />
-
-                    {/* === Fixed save-state slot (always present) === */}
-                    <SaveStateSlot state={saveState} />
-
-                    {/* === Fixed operation area (always reserved) === */}
-                    <div className="flex items-center justify-end">
-                      {log && (
+            return (
+              <li
+                key={habit.id}
+                className={cn(
+                  'group flex min-h-11 gap-2 px-4 py-3 ui-transition hover:bg-surface-2',
+                  effectiveType === 'boolean'
+                    ? 'items-center'
+                    : 'flex-col sm:flex-row sm:items-center sm:gap-3'
+                )}
+              >
+                {/* 名称 + 今日状态 */}
+                <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <Flame className="h-3.5 w-3.5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-body font-medium">{habit.name}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      {effectiveType === 'boolean' ? (
+                        <span
+                          className={cn(
+                            'text-micro',
+                            isChecked ? 'text-primary' : 'text-muted-foreground'
+                          )}
+                        >
+                          {isChecked ? '今日已完成' : '今日未完成'}
+                        </span>
+                      ) : (
                         <>
-                          <Button
-                            variant="ghost" size="icon" className="h-7 w-7"
-                            onClick={() => handleEditLog(log)}
-                            aria-label="编辑打卡记录"
-                          >
-                            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                          </Button>
-                          <Button
-                            variant="ghost" size="icon" className="h-7 w-7"
-                            onClick={() => setDeleteLog(log)}
-                            aria-label="删除打卡记录"
-                          >
-                            <Trash2 className="h-3.5 w-3.5 text-destructive/60" />
-                          </Button>
+                          <span className="text-micro tabular-nums text-muted-foreground">
+                            {displayValue} / {habit.target_value}
+                            {unitLabel ? ` ${unitLabel}` : ''}
+                          </span>
+                          <span className="h-1 w-16 shrink-0 overflow-hidden rounded-full bg-muted">
+                            <span
+                              className="block h-full rounded-full bg-primary ui-transition"
+                              style={{ width: `${progressPct}%` }}
+                            />
+                          </span>
+                          {displayValue >= habit.target_value && habit.target_value > 0 && (
+                            <span className="text-micro text-primary">已达标</span>
+                          )}
                         </>
                       )}
+                      <SaveStatus
+                        state={isSaving ? 'saving' : saveState}
+                        hasDraft={hasDraft}
+                      />
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          )
-        })}
+                </div>
+
+                {/* 计量控件 + 操作 */}
+                <div className="flex items-center justify-between gap-2 sm:justify-end">
+                  {effectiveType === 'boolean' ? (
+                    <Button
+                      data-testid="habit-checkin-toggle"
+                      variant={isChecked ? 'default' : 'outline'}
+                      size="sm"
+                      className="h-8 shrink-0 px-3 text-caption"
+                      onClick={() => toggleBoolean(habit)}
+                      disabled={isSaving}
+                    >
+                      {isSaving ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : isChecked ? (
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      ) : (
+                        <Circle className="h-3.5 w-3.5" />
+                      )}
+                      <span>{isChecked ? '已完成' : '打卡'}</span>
+                    </Button>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <MinuteControl
+                        habit={habit}
+                        inputVal={inputVal}
+                        displayValue={displayValue}
+                        persistedValue={persistedValue}
+                        effectiveType={effectiveType}
+                        saveState={saveState}
+                        onInputChange={(v) => setInputValues((prev) => ({ ...prev, [habitKey]: v }))}
+                        onInputSave={() => handleInputSave(habit)}
+                        onAdjust={(delta) => adjustValue(habit, delta)}
+                        onWheel={wheelHandler}
+                        onRetry={() => retrySave(habit)}
+                      />
+
+                      <div className="flex items-center gap-0.5">
+                        {log && (
+                          <>
+                            <Button
+                              variant="ghost" size="icon-sm"
+                              onClick={() => handleEditLog(log)}
+                              aria-label="编辑打卡记录"
+                            >
+                              <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                            </Button>
+                            <Button
+                              variant="ghost" size="icon-sm"
+                              onClick={() => setDeleteLog(log)}
+                              aria-label="删除打卡记录"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 text-destructive/60" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </li>
+            )
+          })}
+        </ul>
       </div>
 
       {/* Edit log dialog */}
@@ -616,15 +650,42 @@ export function HabitCheckin({ compact = false }: HabitCheckinProps) {
 // Sub-components
 // ============================================================
 
-/** Fixed-width save state indicator — never changes layout */
-function SaveStateSlot({ state }: { state: 'idle' | 'saving' | 'saved' | 'error' }) {
-  return (
-    <span className="inline-flex items-center justify-center w-5 h-5 shrink-0">
-      {state === 'saving' && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
-      {state === 'saved' && <Check className="h-4 w-4 text-emerald-500" />}
-      {state === 'error' && <AlertCircle className="h-4 w-4 text-destructive" />}
-    </span>
-  )
+/** 保存状态：始终用 text-micro + 状态色展示，不依赖 toast */
+function SaveStatus({
+  state,
+  hasDraft,
+}: {
+  state: 'idle' | 'saving' | 'saved' | 'error'
+  hasDraft?: boolean
+}) {
+  if (state === 'saving') {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1 text-micro text-muted-foreground">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        保存中
+      </span>
+    )
+  }
+  if (state === 'saved') {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1 text-micro text-success">
+        <Check className="h-3 w-3" />
+        已保存
+      </span>
+    )
+  }
+  if (state === 'error') {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1 text-micro text-destructive">
+        <AlertCircle className="h-3 w-3" />
+        保存失败
+      </span>
+    )
+  }
+  if (hasDraft) {
+    return <span className="inline-flex shrink-0 items-center gap-1 text-micro text-muted-foreground">待保存</span>
+  }
+  return null
 }
 
 /** Stable minute/value control with wheel support */
@@ -694,13 +755,12 @@ function MinuteControl({
     setEditText('')
   }
 
-  // Render as Fragment — children participate in parent CSS Grid columns
+  // Fragment 渲染：子元素由父级 flex 行统一排布
   return (
     <>
-      {/* Column 1: - button */}
       <Button
         variant="outline"
-        size="icon"
+        size="icon-sm"
         className="h-8 w-8"
         onClick={() => onAdjust(-step)}
         disabled={displayValue <= 0}
@@ -709,8 +769,8 @@ function MinuteControl({
         <Minus className="h-3.5 w-3.5" />
       </Button>
 
-      {/* Column 2: Value display / input (wheel-aware) — clicking failed state retries */}
-      <div ref={wheelRef} className="relative flex items-center justify-center">
+      {/* 值显示 / 输入（支持滚轮）— 失败态点击重试 */}
+      <div ref={wheelRef} className="relative flex w-12 items-center justify-center">
         {isEditing ? (
           <input
             ref={inputRef}
@@ -724,7 +784,7 @@ function MinuteControl({
               if (e.key === 'Escape') cancelEdit()
             }}
             className={cn(
-              'h-8 w-full rounded-lg border-2 bg-background text-center text-sm font-medium tabular-nums outline-none',
+              'h-8 w-full rounded-md border bg-background text-center text-body font-medium tabular-nums outline-none',
               saveState === 'error' ? 'border-destructive' : 'border-ring'
             )}
             aria-label="输入数值"
@@ -741,11 +801,11 @@ function MinuteControl({
               }
             }}
             className={cn(
-              'h-8 w-full rounded-lg border bg-background text-center text-sm font-medium tabular-nums transition-colors cursor-text',
-              hasDraft && 'border-amber-300 dark:border-amber-600 bg-amber-50/30 dark:bg-amber-950/10',
+              'h-8 w-full cursor-text rounded-md border bg-background text-center text-body font-medium tabular-nums ui-transition',
+              hasDraft && 'border-warning/50 bg-warning/10',
               saveState === 'error'
-                ? 'border-destructive hover:border-destructive/80'
-                : 'border-input hover:bg-muted/50'
+                ? 'border-destructive text-destructive hover:border-destructive/80'
+                : 'border-border hover:bg-surface-2'
             )}
             aria-label={`当前值 ${showValue}${hasDraft ? '（未保存）' : ''}，点击编辑`}
             title={saveState === 'error' ? '保存失败，点击重试' : hasDraft ? '未保存的更改' : undefined}
@@ -755,10 +815,9 @@ function MinuteControl({
         )}
       </div>
 
-      {/* Column 3: + button */}
       <Button
         variant="outline"
-        size="icon"
+        size="icon-sm"
         className="h-8 w-8"
         onClick={() => onAdjust(step)}
         aria-label={`增加 ${step}`}
@@ -766,8 +825,8 @@ function MinuteControl({
         <Plus className="h-3.5 w-3.5" />
       </Button>
 
-      {/* Column 4: Unit label — fixed width, always rendered for grid stability */}
-      <span className="w-10 text-xs text-muted-foreground text-center truncate select-none">
+      {/* 单位：固定宽度，避免行内跳动 */}
+      <span className="w-8 select-none truncate text-center text-micro text-muted-foreground">
         {unit || ''}
       </span>
     </>

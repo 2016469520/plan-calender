@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { getDesktopBridge, type DesktopBridge } from '@/lib/desktop-bridge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { MonitorSmartphone, Pin, PinOff, Eye, EyeOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -62,27 +61,29 @@ export function DesktopWidgetControl({ variant = 'sidebar' }: { variant?: 'sideb
 
   if (variant === 'card') {
     return (
-      <Card className="shadow-none">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
+      <section className="surface p-4">
+        <div className="flex items-start gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
             <MonitorSmartphone className="h-4 w-4" />
-            桌面浮窗
-          </CardTitle>
-          <CardDescription>
-            一个常驻桌面角落的小清单，随时勾选、随手加事项；关闭主窗口后它仍留在桌面上
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Button variant={visible ? 'outline' : 'default'} onClick={toggleVisible}>
-            {visible ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-section">桌面浮窗</h2>
+            <p className="mt-0.5 text-caption text-muted-foreground">
+              一个常驻桌面角落的小清单，随时勾选、随手加事项；关闭主窗口后它仍留在桌面上
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button variant={visible ? 'outline' : 'default'} className="h-8" onClick={toggleVisible}>
+            {visible ? <EyeOff className="mr-1.5 h-4 w-4" /> : <Eye className="mr-1.5 h-4 w-4" />}
             {visible ? '隐藏浮窗' : '显示浮窗'}
           </Button>
-          <Button variant="outline" onClick={togglePin}>
-            {pinned ? <PinOff className="h-4 w-4 mr-2" /> : <Pin className="h-4 w-4 mr-2" />}
+          <Button variant="outline" className="h-8" onClick={togglePin}>
+            {pinned ? <PinOff className="mr-1.5 h-4 w-4" /> : <Pin className="mr-1.5 h-4 w-4" />}
             {pinned ? '取消置顶' : '置顶浮窗'}
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     )
   }
 
@@ -92,20 +93,25 @@ export function DesktopWidgetControl({ variant = 'sidebar' }: { variant?: 'sideb
       data-testid="sidebar-widget-toggle"
       onClick={toggleVisible}
       title={visible ? '隐藏桌面浮窗' : '显示桌面浮窗'}
-      className={cn(
-        'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+      className={`relative flex w-full items-center gap-3 rounded-md py-2 pl-3 pr-2.5 text-body ui-transition ${
         visible
-          ? 'text-violet-600 hover:bg-violet-50 dark:text-violet-300 dark:hover:bg-violet-950/30'
-          : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-      )}
+          ? 'bg-primary/[0.08] font-medium text-primary'
+          : 'text-muted-foreground hover:bg-surface-2 hover:text-foreground'
+      }`}
     >
-      <MonitorSmartphone className="h-5 w-5" />
-      <span>桌面浮窗</span>
       <span
+        aria-hidden="true"
         className={cn(
-          'ml-auto text-[10px] rounded-full px-1.5 py-0.5',
-          visible ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-300' : 'bg-muted text-muted-foreground'
+          'absolute bottom-1.5 left-0 top-1.5 w-[3px] rounded-full bg-primary transition-opacity duration-[var(--motion-fast)]',
+          visible ? 'opacity-100' : 'opacity-0'
         )}
+      />
+      <MonitorSmartphone className="h-4 w-4 shrink-0" />
+      <span className="truncate">桌面浮窗</span>
+      <span
+        className={`ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-micro ${
+          visible ? 'bg-primary/10 text-primary' : 'bg-surface-2 text-muted-foreground'
+        }`}
       >
         {visible ? '显示中' : '已隐藏'}
       </span>

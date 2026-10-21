@@ -59,7 +59,7 @@ export function MoveToCategoryMenu({ task, className }: MoveToCategoryMenuProps)
         <Button
           variant="ghost"
           size="sm"
-          className={cn('h-7 text-xs', className)}
+          className={cn('h-7 px-2 text-caption', className)}
           disabled={moveMutation.isPending}
           type="button"
         >
@@ -72,14 +72,14 @@ export function MoveToCategoryMenu({ task, className }: MoveToCategoryMenuProps)
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuLabel className="text-xs">选择分类</DropdownMenuLabel>
+        <DropdownMenuLabel className="text-micro">选择分类</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {tags.map((tag) => (
           <DropdownMenuItem
             key={tag.id}
             onClick={() => moveMutation.mutate(tag.id)}
             disabled={tag.id === currentTagId || moveMutation.isPending}
-            className="flex items-center gap-2 text-sm"
+            className="flex items-center gap-2 text-body"
           >
             <div
               className="h-2.5 w-2.5 rounded-full shrink-0"
@@ -87,7 +87,7 @@ export function MoveToCategoryMenu({ task, className }: MoveToCategoryMenuProps)
             />
             <span>{tag.name}</span>
             {tag.id === currentTagId && (
-              <span className="ml-auto text-xs text-muted-foreground">当前</span>
+              <span className="ml-auto text-micro text-muted-foreground">当前</span>
             )}
           </DropdownMenuItem>
         ))}
@@ -95,12 +95,12 @@ export function MoveToCategoryMenu({ task, className }: MoveToCategoryMenuProps)
         <DropdownMenuItem
           onClick={() => moveMutation.mutate(null)}
           disabled={currentTagId === null || moveMutation.isPending}
-          className="flex items-center gap-2 text-sm"
+          className="flex items-center gap-2 text-body"
         >
           <TagIcon className="h-3.5 w-3.5 text-muted-foreground" />
           <span>未分类</span>
           {currentTagId === null && (
-            <span className="ml-auto text-xs text-muted-foreground">当前</span>
+            <span className="ml-auto text-micro text-muted-foreground">当前</span>
           )}
         </DropdownMenuItem>
       </DropdownMenuContent>

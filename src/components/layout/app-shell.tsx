@@ -33,8 +33,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">加载中...</p>
+      <div className="flex h-screen items-center justify-center bg-background">
+        <p className="text-body text-muted-foreground">加载中…</p>
       </div>
     )
   }

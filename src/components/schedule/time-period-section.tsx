@@ -16,19 +16,10 @@ interface TimePeriodSectionProps {
 }
 
 const periodConfig = {
-  morning: {
-    icon: Sun,
-    bgClass: 'from-amber-50/30 to-transparent dark:from-amber-950/10',
-  },
-  afternoon: {
-    icon: Sunset,
-    bgClass: 'from-orange-50/20 to-transparent dark:from-orange-950/5',
-  },
-  evening: {
-    icon: Moon,
-    bgClass: 'from-slate-100/30 to-transparent dark:from-slate-900/10',
-  },
-}
+  morning: { icon: Sun, periodClass: 'p-morning' },
+  afternoon: { icon: Sunset, periodClass: 'p-afternoon' },
+  evening: { icon: Moon, periodClass: 'p-evening' },
+} as const
 
 export function TimePeriodSection({
   period,
@@ -44,15 +35,16 @@ export function TimePeriodSection({
   if (tasks.length === 0) return null
 
   return (
-    <div className={cn('rounded-lg bg-gradient-to-b', config.bgClass, 'p-3')}>
-      <div className="flex items-center gap-2 mb-2">
-        <Icon className="h-4 w-4 text-muted-foreground" />
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+    <section className={cn('period-rail pl-3', config.periodClass)}>
+      <div className="mb-1.5 flex items-center gap-2 pl-2">
+        <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <h3 className="text-micro font-medium uppercase tracking-wider text-muted-foreground">
           {PERIOD_LABELS[period]}
-        </span>
-        <span className="text-xs text-muted-foreground/60">({tasks.length})</span>
+        </h3>
+        <span className="text-micro tabular-nums text-muted-foreground">{tasks.length}</span>
+        <span aria-hidden="true" className="period-dot ml-0.5 h-1 w-1 rounded-full opacity-70" />
       </div>
-      <div className="space-y-1">
+      <div className="space-y-0.5">
         {tasks.map((task) => (
           <TaskListItem
             key={task.id}
@@ -64,6 +56,6 @@ export function TimePeriodSection({
           />
         ))}
       </div>
-    </div>
+    </section>
   )
 }

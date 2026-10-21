@@ -51,13 +51,18 @@ export function UpcomingTasks({
   if (groups.length === 0) return null
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide px-1">
+    <section className="space-y-3">
+      <h3 className="px-2 text-micro font-medium uppercase tracking-wider text-muted-foreground">
         接下来
       </h3>
       {groups.map((group) => (
-        <div key={group.label} className="space-y-1">
-          <span className="text-[10px] text-muted-foreground px-1">{group.label} ({group.tasks.length})</span>
+        <div key={group.label} className="space-y-0.5">
+          <div className="flex items-center gap-2 px-2 pb-0.5">
+            <span className="text-caption text-muted-foreground">{group.label}</span>
+            <span className="text-micro tabular-nums text-muted-foreground">
+              {group.tasks.length}
+            </span>
+          </div>
           {group.tasks.slice(0, maxPreview).map((task) => (
             <TaskListItem
               key={task.id}
@@ -68,14 +73,18 @@ export function UpcomingTasks({
             />
           ))}
           {group.tasks.length > maxPreview && (
-            <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground w-full">
-              查看全部 {group.tasks.length} 项
-              <ChevronRight className="h-3 w-3 ml-1" />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-full text-muted-foreground"
+            >
+              <span className="text-caption">查看全部 {group.tasks.length} 项</span>
+              <ChevronRight className="ml-1 h-3 w-3" aria-hidden="true" />
             </Button>
           )}
         </div>
       ))}
-    </div>
+    </section>
   )
 }
 

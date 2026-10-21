@@ -153,14 +153,14 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
             setTitle(e.target.value)
             debouncedSave('title', e.target.value)
           }}
-          className="text-base font-medium border-none px-0 h-auto focus-visible:ring-0"
+          className="h-auto border-none px-0 text-body font-medium focus-visible:ring-0"
           placeholder="任务标题"
         />
       </div>
 
       {/* Status */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground w-14 shrink-0">状态</span>
+        <span className="w-14 shrink-0 text-caption text-muted-foreground">状态</span>
         <Select
           value={status}
           onValueChange={(v) => {
@@ -168,7 +168,7 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
             saveField('status', v)
           }}
         >
-          <SelectTrigger className="h-8 text-xs flex-1">
+          <SelectTrigger className="h-8 text-caption flex-1">
             <SelectValue>{getStatusLabel(status)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -186,7 +186,7 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
 
       {/* Difficulty */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground w-14 shrink-0">难度</span>
+        <span className="w-14 shrink-0 text-caption text-muted-foreground">难度</span>
         <Select
           value={difficulty}
           onValueChange={(v) => {
@@ -194,7 +194,7 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
             saveField('difficulty', v)
           }}
         >
-          <SelectTrigger className="h-8 text-xs flex-1">
+          <SelectTrigger className="h-8 text-caption flex-1">
             <SelectValue>{getDifficultyLabel(difficulty)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -222,10 +222,10 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
               const val = e.target.value ? new Date(e.target.value).toISOString() : null
               saveField('due_at', val)
             }}
-            className="h-8 text-xs"
+            className="h-8 text-caption"
           />
           {task.due_at && (
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-micro text-muted-foreground">
               紧迫度：{URGENCY_LABELS[urgency]}
             </span>
           )}
@@ -243,7 +243,7 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
             setTaskDate(e.target.value)
             saveField('task_date', e.target.value || null)
           }}
-          className="h-8 text-xs flex-1"
+          className="h-8 text-caption flex-1"
         />
       </div>
 
@@ -257,7 +257,7 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
             saveField('period', v)
           }}
         >
-          <SelectTrigger className="h-8 text-xs flex-1">
+          <SelectTrigger className="h-8 text-caption flex-1">
             <SelectValue>{getPeriodLabel(period)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -279,7 +279,7 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
             saveField('tag_id', val || null)
           }}
         >
-          <SelectTrigger className="h-8 text-xs flex-1">
+          <SelectTrigger className="h-8 text-caption flex-1">
             <SelectValue>
               {tagId ? (
                 <span className="flex items-center gap-1.5">
@@ -318,13 +318,13 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
             debouncedSave('estimated_minutes', e.target.value ? Number(e.target.value) : null)
           }}
           placeholder="预计用时（分钟）"
-          className="h-8 text-xs flex-1"
+          className="h-8 text-caption flex-1"
         />
       </div>
 
       {/* Description */}
       <div className="space-y-1">
-        <span className="text-xs text-muted-foreground">说明</span>
+        <span className="text-caption text-muted-foreground">说明</span>
         <Textarea
           value={description}
           onChange={(e) => {
@@ -333,18 +333,18 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
           }}
           placeholder="添加说明..."
           rows={3}
-          className="text-xs resize-none"
+          className="resize-none text-caption"
         />
       </div>
 
       {/* Meta info */}
-      <div className="text-[10px] text-muted-foreground space-y-1 pt-2 border-t">
+      <div className="space-y-1 border-t border-border pt-2 text-micro text-muted-foreground">
         <div>创建：{task.created_at ? new Date(task.created_at).toLocaleString('zh-CN') : '—'}</div>
         <div>更新：{task.updated_at ? new Date(task.updated_at).toLocaleString('zh-CN') : '—'}</div>
       </div>
 
       {/* Footer */}
-      <div className="flex gap-2 pt-2 border-t">
+      <div className="flex gap-2 border-t border-border pt-2">
         <Button
           data-testid="task-detail-delete"
           variant="outline"
@@ -365,7 +365,7 @@ export function TaskDetailPanel({ task, open, onClose }: TaskDetailPanelProps) {
       <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
         <DialogContent className="sm:max-w-lg max-h-[88vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-sm font-medium sr-only">任务详情</DialogTitle>
+            <DialogTitle className="sr-only text-section">任务详情</DialogTitle>
           </DialogHeader>
           {formContent}
         </DialogContent>

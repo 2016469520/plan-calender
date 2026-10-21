@@ -1,7 +1,6 @@
 'use client'
 
 import { useNotifications, type ReminderItem, type TaskReminder, type HabitReminder, type ReviewReminder } from '@/hooks/use-notifications'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -80,13 +79,14 @@ export function ReminderList({ className, compact = false }: ReminderListProps) 
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 relative"
+            className="relative"
             onClick={handleNotifyNow}
             title="发送提醒"
+            aria-label="发送提醒"
           >
-            <BellRing className="h-4 w-4" />
+            <BellRing className="h-4 w-4" aria-hidden="true" />
             {overdueCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground">
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-micro tabular-nums text-destructive-foreground">
                 {overdueCount}
               </span>
             )}
@@ -95,21 +95,21 @@ export function ReminderList({ className, compact = false }: ReminderListProps) 
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
             onClick={handleEnableNotifications}
             title="通知已关闭"
+            aria-label="通知已关闭，点击开启"
           >
-            <BellOff className="h-4 w-4 text-muted-foreground" />
+            <BellOff className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
           </Button>
         ) : (
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
             onClick={handleEnableNotifications}
             title="开启通知"
+            aria-label="开启通知"
           >
-            <Bell className="h-4 w-4" />
+            <Bell className="h-4 w-4" aria-hidden="true" />
           </Button>
         )}
       </div>
@@ -120,12 +120,14 @@ export function ReminderList({ className, compact = false }: ReminderListProps) 
   return (
     <div className={cn('space-y-4', className)}>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <BellRing className="h-5 w-5" />
-          <h2 className="text-lg font-semibold">提醒中心</h2>
+          <BellRing className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+          <h2 className="text-title">提醒中心</h2>
           {overdueCount > 0 && (
-            <Badge variant="destructive">{overdueCount} 过期</Badge>
+            <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-micro tabular-nums text-destructive">
+              {overdueCount} 过期
+            </span>
           )}
         </div>
         <div className="flex items-center gap-1">
@@ -133,28 +135,28 @@ export function ReminderList({ className, compact = false }: ReminderListProps) 
             <Button
               variant="outline"
               size="sm"
-              className="h-7 text-xs"
+              className="text-caption"
               onClick={handleNotifyNow}
             >
-              <RefreshCw className="h-3 w-3 mr-1" />
+              <RefreshCw className="h-3 w-3" aria-hidden="true" />
               立即提醒
             </Button>
           ) : (
             <Button
               variant="outline"
               size="sm"
-              className="h-7 text-xs"
+              className="text-caption"
               onClick={handleEnableNotifications}
               disabled={!isSupported || permission === 'denied'}
             >
               {permission === 'denied' ? (
                 <>
-                  <BellOff className="h-3 w-3 mr-1" />
+                  <BellOff className="h-3 w-3" aria-hidden="true" />
                   通知已关闭
                 </>
               ) : (
                 <>
-                  <Bell className="h-3 w-3 mr-1" />
+                  <Bell className="h-3 w-3" aria-hidden="true" />
                   开启通知
                 </>
               )}
@@ -165,26 +167,26 @@ export function ReminderList({ className, compact = false }: ReminderListProps) 
 
       {/* Unsupported browser warning */}
       {!isSupported && (
-        <div className="flex items-center gap-2 p-3 rounded-md bg-muted/50 text-sm text-muted-foreground">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-2 px-3 py-2 text-caption text-muted-foreground">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           您的浏览器不支持桌面通知，请使用 Chrome、Edge 或 Firefox 等现代浏览器
         </div>
       )}
 
       {/* Permission denied message */}
       {permission === 'denied' && (
-        <div className="flex items-center gap-2 p-3 rounded-md bg-muted/50 text-sm text-muted-foreground">
-          <BellOff className="h-4 w-4 shrink-0" />
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-2 px-3 py-2 text-caption text-muted-foreground">
+          <BellOff className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           通知已被关闭，请在浏览器设置中重新开启通知权限
         </div>
       )}
 
       {/* Empty state */}
       {items.length === 1 && reviewReminder?.isDone && overdueItems.length === 0 && taskReminders.length === 0 && habitReminders.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-8 text-center">
-          <CheckCircle2 className="h-10 w-10 text-muted-foreground/40 mb-2" />
-          <p className="text-sm text-muted-foreground">今天没有需要提醒的事项</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">太棒了！</p>
+        <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+          <CheckCircle2 className="h-8 w-8 text-muted-foreground/50" aria-hidden="true" />
+          <p className="text-body text-muted-foreground">今天没有需要提醒的事项</p>
+          <p className="text-caption text-muted-foreground/80">太棒了，继续保持</p>
         </div>
       )}
 
@@ -192,10 +194,11 @@ export function ReminderList({ className, compact = false }: ReminderListProps) 
       {overdueItems.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-1.5">
-            <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
-            <h3 className="text-sm font-medium text-destructive">
-              过期事项 ({overdueItems.length})
-            </h3>
+            <AlertTriangle className="h-3.5 w-3.5 text-destructive" aria-hidden="true" />
+            <h3 className="text-section text-destructive">过期事项</h3>
+            <span className="text-caption tabular-nums text-muted-foreground">
+              {overdueItems.length}
+            </span>
           </div>
           <div className="space-y-1.5">
             {overdueItems.map((item) => (
@@ -209,8 +212,11 @@ export function ReminderList({ className, compact = false }: ReminderListProps) 
       {taskReminders.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-1.5">
-            <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
-            <h3 className="text-sm font-medium">事项提醒 ({taskReminders.length})</h3>
+            <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+            <h3 className="text-section">事项提醒</h3>
+            <span className="text-caption tabular-nums text-muted-foreground">
+              {taskReminders.length}
+            </span>
           </div>
           <div className="space-y-1.5">
             {taskReminders.map((item) => (
@@ -224,8 +230,11 @@ export function ReminderList({ className, compact = false }: ReminderListProps) 
       {habitReminders.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-1.5">
-            <Activity className="h-3.5 w-3.5 text-muted-foreground" />
-            <h3 className="text-sm font-medium">习惯打卡 ({habitReminders.length})</h3>
+            <Activity className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+            <h3 className="text-section">习惯打卡</h3>
+            <span className="text-caption tabular-nums text-muted-foreground">
+              {habitReminders.length}
+            </span>
           </div>
           <div className="space-y-1.5">
             {habitReminders.map((item) => (
@@ -239,8 +248,8 @@ export function ReminderList({ className, compact = false }: ReminderListProps) 
       {reviewReminder && !reviewReminder.isDone && (
         <div className="space-y-2">
           <div className="flex items-center gap-1.5">
-            <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
-            <h3 className="text-sm font-medium">每日总结</h3>
+            <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+            <h3 className="text-section">每日总结</h3>
           </div>
           <ReminderCard item={reviewReminder} variant="review" />
         </div>
@@ -258,13 +267,13 @@ interface ReminderCardProps {
 
 function ReminderCard({ item, variant }: ReminderCardProps) {
   const baseClasses =
-    'flex items-center gap-3 p-2.5 rounded-lg border transition-colors'
+    'flex items-center gap-3 rounded-lg border px-3 py-2.5 ui-transition'
 
   const variantClasses: Record<string, string> = {
-    overdue: 'border-destructive/30 bg-destructive/5 hover:bg-destructive/10',
-    task: 'border-border bg-card hover:bg-accent/50',
-    habit: 'border-border bg-card hover:bg-accent/50',
-    review: 'border-border bg-card hover:bg-accent/50 bg-muted/30',
+    overdue: 'border-destructive/30 bg-destructive/5 hover:border-destructive/45 hover:bg-destructive/10',
+    task: 'border-border bg-surface hover:border-border-strong',
+    habit: 'border-border bg-surface hover:border-border-strong',
+    review: 'border-border bg-surface-2 hover:border-border-strong',
   }
 
   return (
@@ -272,25 +281,25 @@ function ReminderCard({ item, variant }: ReminderCardProps) {
       {/* Icon */}
       <div className="shrink-0">
         {variant === 'overdue' && (
-          <AlertTriangle className="h-4 w-4 text-destructive" />
+          <AlertTriangle className="h-4 w-4 text-destructive" aria-hidden="true" />
         )}
         {variant === 'task' && (
-          <Clock className="h-4 w-4 text-muted-foreground" />
+          <Clock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
         )}
         {variant === 'habit' && (
-          <Activity className="h-4 w-4 text-muted-foreground" />
+          <Activity className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
         )}
         {variant === 'review' && (
-          <ClipboardList className="h-4 w-4 text-muted-foreground" />
+          <ClipboardList className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
         )}
       </div>
 
       {/* Content */}
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         {item.type === 'task' && (
           <>
-            <p className="text-sm font-medium truncate">{item.task.title}</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="truncate text-body font-medium">{item.task.title}</p>
+            <p className="text-caption tabular-nums text-muted-foreground">
               {item.isOverdue ? '已过期' : `提醒 ${item.timeLabel}`}
               {item.task.task_date && ` · ${item.task.task_date}`}
               {item.task.period && ` · ${PERIOD_LABELS[item.task.period]}`}
@@ -299,8 +308,8 @@ function ReminderCard({ item, variant }: ReminderCardProps) {
         )}
         {item.type === 'habit' && (
           <>
-            <p className="text-sm font-medium truncate">{item.habit.name}</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="truncate text-body font-medium">{item.habit.name}</p>
+            <p className="text-caption tabular-nums text-muted-foreground">
               提醒 {item.timeLabel}
               {item.habit.target_value > 1
                 ? ` · 目标 ${item.habit.target_value}${item.habit.unit || ''}`
@@ -310,8 +319,8 @@ function ReminderCard({ item, variant }: ReminderCardProps) {
         )}
         {item.type === 'review' && (
           <>
-            <p className="text-sm font-medium">今日总结</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-body font-medium">今日总结</p>
+            <p className="text-caption text-muted-foreground">
               {item.isDone ? '已完成' : '尚未填写'}
             </p>
           </>
@@ -322,7 +331,7 @@ function ReminderCard({ item, variant }: ReminderCardProps) {
       {item.type === 'task' && (
         <span
           className={cn(
-            'shrink-0 text-[10px] px-1.5 py-0.5 rounded-full',
+            'shrink-0 rounded-full px-1.5 py-0.5 text-micro',
             PRIORITY_COLORS[item.task.priority]
           )}
         >

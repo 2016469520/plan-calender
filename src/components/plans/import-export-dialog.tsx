@@ -5,7 +5,6 @@ import { useAuth } from '@/providers/auth-provider'
 import { useRepos } from '@/providers/repo-provider'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
@@ -29,6 +28,7 @@ import {
   type ImportableTask,
 } from '@/lib/utils/import-export'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 import {
   Download,
   Upload,
@@ -38,8 +38,20 @@ import {
   CheckCircle2,
   Loader2,
 } from 'lucide-react'
-import type { Task } from '@/types'
+import type { Task, Period } from '@/types'
 import { todayStr } from '@/lib/utils/date'
+
+const PERIOD_LABELS: Record<Period, string> = {
+  morning: '上午',
+  afternoon: '下午',
+  evening: '晚上',
+}
+
+const PERIOD_TONES: Record<Period, string> = {
+  morning: 'p-morning',
+  afternoon: 'p-afternoon',
+  evening: 'p-evening',
+}
 
 interface ImportExportDialogProps {
   open: boolean
@@ -147,44 +159,42 @@ export function ImportExportDialog({ open, onOpenChange }: ImportExportDialogPro
     <div className="space-y-4">
       {/* Export section */}
       <div className="space-y-3">
-        <h3 className="text-sm font-medium flex items-center gap-1.5">
-          <Download className="h-4 w-4 text-muted-foreground" />
-          导出事项
-        </h3>
-        <p className="text-xs text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <Download className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <h3 className="text-section">导出事项</h3>
+        </div>
+        <p className="text-caption text-muted-foreground">
           将当前所有事项导出为文件，可用于备份或迁移
         </p>
         <div className="flex gap-2">
           <Button
             variant="outline"
-            size="sm"
             className="flex-1"
             onClick={handleExportJson}
           >
-            <FileJson className="h-4 w-4 mr-1.5" />
+            <FileJson className="h-4 w-4" aria-hidden="true" />
             JSON
           </Button>
           <Button
             variant="outline"
-            size="sm"
             className="flex-1"
             onClick={handleExportCsv}
           >
-            <FileSpreadsheet className="h-4 w-4 mr-1.5" />
+            <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
             CSV
           </Button>
         </div>
       </div>
 
-      <div className="border-t" />
+      <div className="border-t border-border" />
 
       {/* Import section */}
       <div className="space-y-3">
-        <h3 className="text-sm font-medium flex items-center gap-1.5">
-          <Upload className="h-4 w-4 text-muted-foreground" />
-          导入事项
-        </h3>
-        <p className="text-xs text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <Upload className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <h3 className="text-section">导入事项</h3>
+        </div>
+        <p className="text-caption text-muted-foreground">
           从 JSON 文件导入事项（仅支持 JSON 格式）
         </p>
 
@@ -195,25 +205,25 @@ export function ImportExportDialog({ open, onOpenChange }: ImportExportDialogPro
           onChange={handleFileSelect}
           className="hidden"
           id="import-file"
+          aria-label="选择 JSON 备份文件"
         />
         <Button
           variant="outline"
-          size="sm"
           className="w-full"
           onClick={() => fileInputRef.current?.click()}
         >
-          <Upload className="h-4 w-4 mr-1.5" />
+          <Upload className="h-4 w-4" aria-hidden="true" />
           选择 JSON 文件
         </Button>
 
         {/* Import errors */}
         {importErrors.length > 0 && (
-          <div className="space-y-1 p-3 rounded-lg border border-destructive/30 bg-destructive/5">
-            <div className="flex items-center gap-1.5 text-sm font-medium text-destructive">
-              <AlertTriangle className="h-3.5 w-3.5" />
+          <div className="space-y-1.5 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+            <div className="flex items-center gap-1.5 text-caption font-medium text-destructive">
+              <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
               验证错误
             </div>
-            <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside">
+            <ul className="list-inside list-disc space-y-0.5 text-micro text-muted-foreground">
               {importErrors.map((err, i) => (
                 <li key={i}>{err}</li>
               ))}
@@ -225,46 +235,53 @@ export function ImportExportDialog({ open, onOpenChange }: ImportExportDialogPro
         {importPreview && importPreview.length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-              <span className="text-sm font-medium">
-                预览 ({importPreview.length} 个事项)
+              <CheckCircle2 className="h-3.5 w-3.5 text-success" aria-hidden="true" />
+              <span className="text-caption font-medium">预览</span>
+              <span className="text-micro tabular-nums text-muted-foreground">
+                {importPreview.length} 个事项
               </span>
             </div>
-            <div className="max-h-40 overflow-y-auto space-y-1">
+            <div className="max-h-40 space-y-1 overflow-y-auto">
               {importPreview.slice(0, 10).map((item, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-2 p-2 rounded-md bg-muted/30 text-sm"
+                  className="flex items-center gap-2 rounded-md bg-surface-2 px-2.5 py-1.5 text-body"
                 >
-                  <span className="text-muted-foreground text-xs w-5">{i + 1}.</span>
+                  <span className="w-5 shrink-0 text-micro tabular-nums text-muted-foreground">
+                    {i + 1}.
+                  </span>
                   <span className="flex-1 truncate">{item.title}</span>
                   {item.period && (
-                    <Badge variant="outline" className="text-[10px] h-4">
-                      {item.period === 'morning' ? '上午' : item.period === 'afternoon' ? '下午' : '晚上'}
-                    </Badge>
+                    <span
+                      className={cn(
+                        'shrink-0 rounded-full px-2 py-0.5 text-micro period-chip',
+                        PERIOD_TONES[item.period as Period]
+                      )}
+                    >
+                      {PERIOD_LABELS[item.period as Period]}
+                    </span>
                   )}
                 </div>
               ))}
               {importPreview.length > 10 && (
-                <p className="text-xs text-muted-foreground text-center">
-                  ...还有 {importPreview.length - 10} 个
+                <p className="text-center text-micro text-muted-foreground">
+                  还有 {importPreview.length - 10} 个未显示
                 </p>
               )}
             </div>
             <Button
-              size="sm"
               className="w-full"
               onClick={handleImport}
               disabled={importing}
             >
               {importing ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                  导入中...
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  导入中…
                 </>
               ) : (
                 <>
-                  <Upload className="h-4 w-4 mr-1.5" />
+                  <Upload className="h-4 w-4" aria-hidden="true" />
                   确认导入 {importPreview.length} 个事项
                 </>
               )}
@@ -278,10 +295,10 @@ export function ImportExportDialog({ open, onOpenChange }: ImportExportDialogPro
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="shadow-[var(--shadow-pop)] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>导入 / 导出</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-section">导入 / 导出</DialogTitle>
+            <DialogDescription className="text-caption text-muted-foreground">
               导出事项备份或从 JSON 文件导入
             </DialogDescription>
           </DialogHeader>
@@ -293,10 +310,10 @@ export function ImportExportDialog({ open, onOpenChange }: ImportExportDialogPro
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent>
+      <DrawerContent className="shadow-[var(--shadow-pop)]">
         <DrawerHeader>
-          <DrawerTitle>导入 / 导出</DrawerTitle>
-          <DrawerDescription>
+          <DrawerTitle className="text-section">导入 / 导出</DrawerTitle>
+          <DrawerDescription className="text-caption text-muted-foreground">
             导出事项备份或从 JSON 文件导入
           </DrawerDescription>
         </DrawerHeader>

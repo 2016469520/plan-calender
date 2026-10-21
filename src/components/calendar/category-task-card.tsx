@@ -2,10 +2,16 @@
 
 import { cn } from '@/lib/utils'
 import { formatDisplayDate, formatWeekday, todayStr } from '@/lib/utils/date'
-import { PERIOD_LABELS, PRIORITY_LABELS } from '@/lib/constants'
+import { PERIOD_LABELS, PRIORITY_LABELS, PRIORITY_COLORS } from '@/lib/constants'
 import { MoveToCategoryMenu } from './move-to-category-menu'
-import type { Task } from '@/types'
+import type { Period, Task } from '@/types'
 import { Clock, AlertCircle, Repeat, Bell, ListChecks } from 'lucide-react'
+
+const PERIOD_CLASS: Record<Period, string> = {
+  morning: 'p-morning',
+  afternoon: 'p-afternoon',
+  evening: 'p-evening',
+}
 
 interface CategoryTaskCardProps {
   task: Task
@@ -28,13 +34,12 @@ export function CategoryTaskCard({ task, onClick, showMoveMenu = false }: Catego
     <button
       onClick={() => onClick(task)}
       className={cn(
-        'w-full text-left p-3 rounded-lg border border-border bg-card transition-all',
-        'hover:shadow-sm hover:border-border/80',
+        'surface w-full p-3 text-left surface-interactive',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         isDone && 'opacity-60'
       )}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2.5">
         {/* Tag color strip */}
         {task.tag?.color && (
           <div
@@ -43,25 +48,51 @@ export function CategoryTaskCard({ task, onClick, showMoveMenu = false }: Catego
           />
         )}
 
-        <div className="min-w-0 flex-1 space-y-1">
-          {/* Title */}
-          <div className={cn('text-sm font-medium', isDone && 'line-through')}>
-            {task.title}
+        <div className="min-w-0 flex-1 space-y-1.5">
+          {/* Title + status */}
+          <div className="flex items-start gap-2">
+            <span
+              className={cn(
+                'min-w-0 flex-1 truncate text-body font-medium text-foreground',
+                isDone && 'line-through text-muted-foreground'
+              )}
+            >
+              {task.title}
+            </span>
+            <span
+              className={cn(
+                'shrink-0 rounded-sm px-1.5 py-0.5 text-micro font-medium',
+                task.status === 'done' &&
+                  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+                task.status === 'in_progress' &&
+                  'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                task.status === 'todo' && 'bg-muted text-muted-foreground'
+              )}
+            >
+              {task.status === 'todo' ? '待办' : task.status === 'in_progress' ? '进行中' : '完成'}
+            </span>
           </div>
 
           {/* Meta row */}
-          <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-muted-foreground">
             {task.task_date && (
-              <span>
+              <span className="tabular-nums">
                 {formatDisplayDate(task.task_date)}{' '}
                 {formatWeekday(task.task_date)}
               </span>
             )}
             {task.period && (
-              <span>{PERIOD_LABELS[task.period]}</span>
+              <span
+                className={cn(
+                  PERIOD_CLASS[task.period],
+                  'period-chip rounded-full px-1.5 py-0 text-micro'
+                )}
+              >
+                {PERIOD_LABELS[task.period]}
+              </span>
             )}
             {task.estimated_minutes != null && (
-              <span className="inline-flex items-center gap-0.5">
+              <span className="inline-flex items-center gap-0.5 tabular-nums">
                 <Clock className="h-3 w-3" />
                 {task.estimated_minutes}分钟
               </span>
@@ -69,16 +100,12 @@ export function CategoryTaskCard({ task, onClick, showMoveMenu = false }: Catego
           </div>
 
           {/* Indicators row */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-micro">
             {/* Priority */}
             <span
               className={cn(
-                'inline-flex items-center gap-0.5 text-xs font-medium',
-                task.priority === 'urgent'
-                  ? 'text-red-600 dark:text-red-400'
-                  : task.priority === 'high'
-                    ? 'text-orange-600 dark:text-orange-400'
-                    : 'text-muted-foreground'
+                'inline-flex items-center gap-0.5 font-medium',
+                PRIORITY_COLORS[task.priority]
               )}
             >
               <AlertCircle className="h-3 w-3" />
@@ -87,7 +114,7 @@ export function CategoryTaskCard({ task, onClick, showMoveMenu = false }: Catego
 
             {/* Overdue indicator */}
             {isOverdue && (
-              <span className="text-xs text-red-500 font-medium">已延期</span>
+              <span className="font-medium text-red-500">已延期</span>
             )}
 
             {/* Recurrence */}
@@ -102,7 +129,7 @@ export function CategoryTaskCard({ task, onClick, showMoveMenu = false }: Catego
 
             {/* Subtask progress */}
             {totalSubitems > 0 && (
-              <span className="text-xs text-muted-foreground inline-flex items-center gap-0.5">
+              <span className="inline-flex items-center gap-0.5 tabular-nums text-muted-foreground">
                 <ListChecks className="h-3 w-3" />
                 {doneSubitems}/{totalSubitems}
               </span>
@@ -115,20 +142,6 @@ export function CategoryTaskCard({ task, onClick, showMoveMenu = false }: Catego
               <MoveToCategoryMenu task={task} />
             </div>
           )}
-        </div>
-
-        {/* Status badge */}
-        <div className="shrink-0">
-          <span
-            className={cn(
-              'text-xs px-1.5 py-0.5 rounded font-medium',
-              task.status === 'done' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-              task.status === 'in_progress' && 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-              task.status === 'todo' && 'bg-muted text-muted-foreground'
-            )}
-          >
-            {task.status === 'todo' ? '待办' : task.status === 'in_progress' ? '进行中' : '完成'}
-          </span>
         </div>
       </div>
     </button>

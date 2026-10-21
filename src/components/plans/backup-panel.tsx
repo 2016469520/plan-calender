@@ -120,8 +120,8 @@ export function BackupPanel() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">完整备份</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-section">完整备份</CardTitle>
+        <CardDescription className="text-caption text-muted-foreground">
           导出全部数据为 JSON（含事项、习惯、打卡、评价、倒数日、模板、专注记录），换设备或重装前先备份
         </CardDescription>
       </CardHeader>
@@ -152,17 +152,17 @@ export function BackupPanel() {
             onChange={handleFileChange}
           />
         </div>
-        <p className="text-xs text-muted-foreground flex items-start gap-1.5">
-          <ShieldCheck className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+        <p className="flex items-start gap-1.5 text-caption text-muted-foreground">
+          <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           恢复是「补写」而不是覆盖：已有记录会保留，重复的评价按日期更新。
         </p>
       </CardContent>
 
       <Dialog open={!!pending} onOpenChange={(open) => !open && setPending(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="shadow-[var(--shadow-pop)] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>确认恢复这份备份？</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-section">确认恢复这份备份？</DialogTitle>
+            <DialogDescription className="text-caption text-muted-foreground">
               {pending?.exported_at
                 ? `备份时间：${format(new Date(pending.exported_at), 'yyyy年M月d日 HH:mm')}`
                 : '备份文件没有记录导出时间'}
@@ -170,22 +170,25 @@ export function BackupPanel() {
           </DialogHeader>
 
           {pendingStats && (
-            <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="grid grid-cols-2 gap-2">
               {statsLines(pendingStats).map((row) => (
-                <div key={row.label} className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2">
-                  <span className="text-muted-foreground">{row.label}</span>
-                  <span className="tabular-nums font-medium">{row.value}</span>
+                <div
+                  key={row.label}
+                  className="flex items-center justify-between rounded-md bg-surface-2 px-3 py-2"
+                >
+                  <span className="text-caption text-muted-foreground">{row.label}</span>
+                  <span className="text-body tabular-nums font-medium">{row.value}</span>
                 </div>
               ))}
             </div>
           )}
 
-          <p className="text-xs text-muted-foreground flex items-start gap-1.5">
-            <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" />
+          <p className="flex items-start gap-1.5 text-caption text-muted-foreground">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" aria-hidden="true" />
             建议先导出一份当前数据，避免恢复后重复记录不好清理。
           </p>
 
-          <div className="flex justify-end gap-2">
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
             <Button variant="outline" onClick={() => setPending(null)} disabled={restoring}>
               取消
             </Button>

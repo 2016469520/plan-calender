@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, Plus, LayoutGrid, Clock } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
@@ -82,124 +82,186 @@ export function CalendarHeader({
   }, [goToday, onViewChange, onNewTask])
 
   return (
-    <header className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b">
-      <div className="flex items-center justify-between px-4 py-2 gap-2">
-        {/* Left: Navigation (time mode only) */}
-        <div className="flex items-center gap-1">
-          {presentationMode === 'time' && (
+    <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <div className="flex items-center justify-between gap-2 px-4 py-2 sm:px-6">
+        {/* 一级：日期导航 */}
+        <div className="flex min-w-0 items-center gap-0.5">
+          {presentationMode === 'time' ? (
             <>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goPrev} title="上一页">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0"
+                onClick={goPrev}
+                title="上一页"
+                aria-label="上一页"
+              >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <Button
                 variant="ghost"
-                size="sm"
-                className="text-sm font-medium min-w-[120px]"
+                className="h-8 min-w-0 shrink truncate px-2 text-title font-semibold text-foreground"
                 onClick={goToday}
                 title="回到今天"
+                aria-label={`回到今天，当前 ${displayDate}`}
               >
                 {displayDate}
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goNext} title="下一页">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0"
+                onClick={goNext}
+                title="下一页"
+                aria-label="下一页"
+              >
                 <ChevronRight className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="sm" className="ml-2 h-8" onClick={goToday}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-1 hidden h-7 shrink-0 rounded-full px-2.5 text-caption sm:inline-flex"
+                onClick={goToday}
+              >
                 今天
               </Button>
             </>
+          ) : (
+            <h1 className="min-w-0 truncate px-2 text-title text-foreground">按分类</h1>
           )}
         </div>
 
-        {/* Center: Presentation mode + View toggle */}
-        <div className="flex items-center gap-2">
-          {/* Presentation mode toggle */}
-          <div className="flex items-center gap-0.5 bg-muted rounded-lg p-0.5">
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                'h-7 px-3 text-xs rounded-md transition-all',
-                presentationMode === 'time'
-                  ? 'bg-background shadow-sm text-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
+        {/* 二级：视图切换（桌面） */}
+        <div className="flex shrink-0 items-center gap-2">
+          <SegmentedGroup ariaLabel="展示方式" className="hidden sm:inline-flex">
+            <SegmentedButton
+              active={presentationMode === 'time'}
               onClick={() => onPresentationModeChange('time')}
             >
-              <Clock className="h-3.5 w-3.5 mr-1" />
+              <Clock className="h-3.5 w-3.5" />
               按时间
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                'h-7 px-3 text-xs rounded-md transition-all',
-                presentationMode === 'category'
-                  ? 'bg-background shadow-sm text-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
+            </SegmentedButton>
+            <SegmentedButton
+              active={presentationMode === 'category'}
               onClick={() => onPresentationModeChange('category')}
             >
-              <LayoutGrid className="h-3.5 w-3.5 mr-1" />
+              <LayoutGrid className="h-3.5 w-3.5" />
               按分类
-            </Button>
-          </div>
+            </SegmentedButton>
+          </SegmentedGroup>
 
-          {/* View toggle (time mode only, desktop) */}
           {presentationMode === 'time' && (
-            <div className="hidden sm:flex items-center gap-0.5 bg-muted rounded-lg p-0.5">
+            <SegmentedGroup ariaLabel="日历视图" className="hidden sm:inline-flex">
               {VIEW_OPTIONS.map((opt) => (
-                <Button
+                <SegmentedButton
                   key={opt.value}
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'h-7 px-3 text-xs rounded-md transition-all',
-                    currentView === opt.value
-                      ? 'bg-background shadow-sm text-foreground'
-                      : 'text-muted-foreground hover:text-foreground'
-                  )}
+                  active={currentView === opt.value}
                   onClick={() => onViewChange(opt.value)}
                   title={`${opt.label}视图 (${opt.shortcut})`}
                 >
                   {opt.label}
-                </Button>
+                </SegmentedButton>
               ))}
-            </div>
+            </SegmentedGroup>
           )}
-        </div>
 
-        {/* Right: Actions */}
-        <div className="flex items-center gap-1">
-          <Button variant="default" size="sm" className="h-8" onClick={onNewTask} title="新建事项 (N)">
-            <Plus className="h-4 w-4 mr-1" />
+          <Button
+            variant="default"
+            size="sm"
+            className="h-8 gap-1.5 px-2.5"
+            onClick={onNewTask}
+            title="新建事项 (N)"
+            aria-label="新建事项"
+          >
+            <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">新建</span>
           </Button>
         </div>
       </div>
 
-      {/* Mobile view toggle (time mode only) */}
-      {presentationMode === 'time' && (
-        <div className="sm:hidden flex justify-center pb-2">
-          <div className="inline-flex items-center gap-0.5 bg-muted rounded-lg p-0.5">
+      {/* 二级：视图切换（移动端） */}
+      <div className="flex flex-wrap items-center gap-2 px-4 pb-2 sm:hidden">
+        <SegmentedGroup ariaLabel="展示方式">
+          <SegmentedButton
+            active={presentationMode === 'time'}
+            onClick={() => onPresentationModeChange('time')}
+          >
+            <Clock className="h-3.5 w-3.5" />
+            按时间
+          </SegmentedButton>
+          <SegmentedButton
+            active={presentationMode === 'category'}
+            onClick={() => onPresentationModeChange('category')}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+            按分类
+          </SegmentedButton>
+        </SegmentedGroup>
+
+        {presentationMode === 'time' && (
+          <SegmentedGroup ariaLabel="日历视图">
             {VIEW_OPTIONS.map((opt) => (
-              <Button
+              <SegmentedButton
                 key={opt.value}
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  'h-7 px-4 text-xs rounded-md',
-                  currentView === opt.value
-                    ? 'bg-background shadow-sm text-foreground'
-                    : 'text-muted-foreground'
-                )}
+                active={currentView === opt.value}
                 onClick={() => onViewChange(opt.value)}
+                title={`${opt.label}视图 (${opt.shortcut})`}
               >
                 {opt.label}
-              </Button>
+              </SegmentedButton>
             ))}
-          </div>
-        </div>
-      )}
+          </SegmentedGroup>
+        )}
+      </div>
     </header>
+  )
+}
+
+// ---------- 纯展示：胶囊分段控件 ----------
+
+function SegmentedGroup({
+  ariaLabel,
+  className,
+  children,
+}: {
+  ariaLabel: string
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={ariaLabel}
+      className={cn('inline-flex items-center gap-0.5 rounded-full bg-muted p-0.5', className)}
+    >
+      {children}
+    </div>
+  )
+}
+
+function SegmentedButton({
+  active,
+  onClick,
+  title,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  title?: string
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-pressed={active}
+      className={cn(
+        'inline-flex h-8 select-none items-center justify-center gap-1 whitespace-nowrap rounded-full border border-transparent px-2 text-caption ui-transition',
+        active ? 'acg-pill font-medium' : 'text-muted-foreground hover:text-foreground'
+      )}
+    >
+      {children}
+    </button>
   )
 }

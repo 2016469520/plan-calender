@@ -5,11 +5,9 @@ import { useAuth } from '@/providers/auth-provider'
 import { useRepos } from '@/providers/repo-provider'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
@@ -27,6 +25,7 @@ import { useMediaQuery } from '@/hooks/use-media-query'
 import { PERIOD_LABELS, PRIORITY_LABELS } from '@/lib/constants'
 import { todayStr } from '@/lib/utils/date'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 import {
   Plus,
   Trash2,
@@ -34,6 +33,12 @@ import {
   Play,
 } from 'lucide-react'
 import type { TaskTemplate, Task, Period, Priority } from '@/types'
+
+const PERIOD_TONES: Record<Period, string> = {
+  morning: 'p-morning',
+  afternoon: 'p-afternoon',
+  evening: 'p-evening',
+}
 
 interface TemplateManagerProps {
   onApply?: (template: Partial<Task>) => void
@@ -118,36 +123,45 @@ export function TemplateManager({ onApply }: TemplateManagerProps) {
       }}
       className="space-y-4"
     >
-      <div className="space-y-2">
-        <Label htmlFor="tpl-name">模板名称</Label>
-        <Input
-          id="tpl-name"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          placeholder="如：每日站会、周报"
-          autoFocus
-        />
+      <div className="space-y-3">
+        <div className="space-y-2">
+          <Label htmlFor="tpl-name" className="text-caption text-muted-foreground">
+            模板名称
+          </Label>
+          <Input
+            id="tpl-name"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="如：每日站会、周报"
+            autoFocus
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="tpl-desc" className="text-caption text-muted-foreground">
+            描述（可选）
+          </Label>
+          <Textarea
+            id="tpl-desc"
+            value={newDesc}
+            onChange={(e) => setNewDesc(e.target.value)}
+            placeholder="模板用途说明"
+            rows={2}
+            className="rounded-md"
+          />
+        </div>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="tpl-desc">描述（可选）</Label>
-        <Textarea
-          id="tpl-desc"
-          value={newDesc}
-          onChange={(e) => setNewDesc(e.target.value)}
-          placeholder="模板用途说明"
-          rows={2}
-        />
+      <div className="flex justify-end border-t border-border pt-4">
+        <Button type="submit" disabled={createMutation.isPending || !newName.trim()}>
+          创建模板
+        </Button>
       </div>
-      <Button type="submit" className="w-full" disabled={createMutation.isPending || !newName.trim()}>
-        创建模板
-      </Button>
     </form>
   )
 
   if (isLoading) {
     return (
       <div className="space-y-3">
-        <Skeleton className="h-8 w-24" />
+        <Skeleton className="h-7 w-24" />
         {[1, 2].map((i) => (
           <Skeleton key={i} className="h-16 w-full rounded-lg" />
         ))}
@@ -156,118 +170,122 @@ export function TemplateManager({ onApply }: TemplateManagerProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-medium">事项模板</h3>
+          <FileText className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <h3 className="text-section">事项模板</h3>
           {templates.length > 0 && (
-            <Badge variant="secondary" className="text-[10px]">
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-micro tabular-nums text-secondary-foreground">
               {templates.length}
-            </Badge>
+            </span>
           )}
         </div>
         <Button
           variant="outline"
           size="sm"
-          className="h-7 text-xs"
           onClick={() => setShowCreate(true)}
         >
-          <Plus className="h-3 w-3 mr-1" />
+          <Plus className="h-3.5 w-3.5" aria-hidden="true" />
           新建模板
         </Button>
       </div>
 
       {/* Empty state */}
       {templates.length === 0 && (
-        <div className="text-center py-6 border rounded-lg border-dashed">
-          <FileText className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">暂无模板</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">
-            从常用事项创建模板，快速添加
-          </p>
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border px-3 py-6 text-center">
+          <FileText className="h-7 w-7 text-muted-foreground/60" aria-hidden="true" />
+          <p className="text-body text-muted-foreground">暂无模板</p>
+          <p className="text-caption text-muted-foreground/80">从常用事项创建模板，快速添加</p>
         </div>
       )}
 
       {/* Template list */}
       <div className="space-y-2">
         {templates.map((template) => (
-          <Card key={template.id} className="hover:bg-accent/30 transition-colors">
-            <CardContent className="p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{template.name}</p>
-                  {template.description && (
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">
-                      {template.description}
-                    </p>
-                  )}
-                  {template.template_data.length > 0 && (
-                    <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-                      {template.template_data[0].period && (
-                        <Badge variant="outline" className="text-[10px] h-4">
-                          {PERIOD_LABELS[template.template_data[0].period as Period]}
-                        </Badge>
-                      )}
-                      {template.template_data[0].priority && (
-                        <Badge variant="outline" className="text-[10px] h-4">
-                          {PRIORITY_LABELS[template.template_data[0].priority as Priority]}
-                        </Badge>
-                      )}
-                      {template.template_data[0].estimated_minutes && (
-                        <Badge variant="outline" className="text-[10px] h-4">
-                          {template.template_data[0].estimated_minutes}分钟
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => handleApply(template)}
-                    title="应用模板"
-                  >
-                    <Play className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-destructive hover:text-destructive"
-                    onClick={() => {
-                      if (confirm(`确定删除模板「${template.name}」吗？`)) {
-                        deleteMutation.mutate(template.id)
-                      }
-                    }}
-                    title="删除模板"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
+          <div
+            key={template.id}
+            className="surface surface-interactive p-3"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-body font-medium">{template.name}</p>
+                {template.description && (
+                  <p className="mt-0.5 truncate text-caption text-muted-foreground">
+                    {template.description}
+                  </p>
+                )}
+                {template.template_data.length > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    {template.template_data[0].period && (
+                      <span
+                        className={cn(
+                          'period-chip rounded-full px-2 py-0.5 text-micro',
+                          PERIOD_TONES[template.template_data[0].period as Period]
+                        )}
+                      >
+                        {PERIOD_LABELS[template.template_data[0].period as Period]}
+                      </span>
+                    )}
+                    {template.template_data[0].priority && (
+                      <span className="rounded-full border border-border px-2 py-0.5 text-micro text-muted-foreground">
+                        {PRIORITY_LABELS[template.template_data[0].priority as Priority]}
+                      </span>
+                    )}
+                    {template.template_data[0].estimated_minutes && (
+                      <span className="rounded-full border border-border px-2 py-0.5 text-micro tabular-nums text-muted-foreground">
+                        {template.template_data[0].estimated_minutes} 分钟
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
+              <div className="flex shrink-0 items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => handleApply(template)}
+                  title="应用模板"
+                  aria-label={`应用模板 ${template.name}`}
+                >
+                  <Play className="h-3.5 w-3.5" aria-hidden="true" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-muted-foreground hover:text-destructive"
+                  onClick={() => {
+                    if (confirm(`确定删除模板「${template.name}」吗？`)) {
+                      deleteMutation.mutate(template.id)
+                    }
+                  }}
+                  title="删除模板"
+                  aria-label={`删除模板 ${template.name}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                </Button>
+              </div>
+            </div>
+          </div>
         ))}
       </div>
 
       {/* Create dialog */}
       {isDesktop ? (
         <Dialog open={showCreate} onOpenChange={setShowCreate}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="shadow-[var(--shadow-pop)] sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>新建模板</DialogTitle>
+              <DialogTitle className="text-section">新建模板</DialogTitle>
             </DialogHeader>
             {createFormContent}
           </DialogContent>
         </Dialog>
       ) : (
         <Drawer open={showCreate} onOpenChange={setShowCreate}>
-          <DrawerContent>
+          <DrawerContent className="shadow-[var(--shadow-pop)]">
             <DrawerHeader>
-              <DrawerTitle>新建模板</DrawerTitle>
+              <DrawerTitle className="text-section">新建模板</DrawerTitle>
             </DrawerHeader>
             <div className="px-4 pb-4">{createFormContent}</div>
           </DrawerContent>

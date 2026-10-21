@@ -34,6 +34,15 @@ const WEEKDAY_OPTIONS = [
   { value: 7, label: '周日' },
 ]
 
+/** 胶囊分段项：选中用 acg-pill，未选中为幽灵文字 */
+const pillClass = (selected: boolean) =>
+  cn(
+    'h-7 rounded-full px-2.5 text-caption ui-transition',
+    selected
+      ? 'acg-pill font-semibold'
+      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+  )
+
 interface RecurrenceEditorProps {
   value: RecurrenceRule | null | undefined
   onChange: (rule: RecurrenceRule | null) => void
@@ -118,15 +127,15 @@ export function RecurrenceEditor({ value, onChange }: RecurrenceEditorProps) {
   if (!value) {
     return (
       <div className="space-y-2">
-        <Label>重复</Label>
+        <Label className="text-caption text-muted-foreground">重复</Label>
         <Select value="none" onValueChange={handleFrequencyChange}>
-          <SelectTrigger>
+          <SelectTrigger className="w-full rounded-md">
             <SelectValue placeholder="不重复" />
           </SelectTrigger>
           <SelectContent>
             {Object.entries(FREQUENCY_LABELS).map(([key, label]) => (
               <SelectItem key={key} value={key}>
-                {key !== 'none' && <RefreshCw className="h-3.5 w-3.5 inline mr-1.5" />}
+                {key !== 'none' && <RefreshCw className="mr-1.5 inline h-3.5 w-3.5" aria-hidden="true" />}
                 {label}
               </SelectItem>
             ))}
@@ -137,83 +146,77 @@ export function RecurrenceEditor({ value, onChange }: RecurrenceEditorProps) {
   }
 
   return (
-    <div className="space-y-3 border rounded-lg p-3">
-      <div className="flex items-center justify-between">
-        <Label className="flex items-center gap-1.5">
-          <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
+    <div className="space-y-3 rounded-lg border border-border bg-surface-2 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-1.5 text-caption text-muted-foreground">
+          <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
           重复规则
-        </Label>
+        </span>
         <Button
           variant="ghost"
           size="sm"
-          className="h-6 text-xs text-muted-foreground"
+          className="h-6 px-1.5 text-caption text-muted-foreground"
           onClick={() => onChange(null)}
         >
-          <X className="h-3 w-3 mr-1" />移除
+          <X className="h-3 w-3" aria-hidden="true" />
+          移除
         </Button>
       </div>
 
       {/* Frequency */}
-      <div className="space-y-1.5">
-        <Select value={frequency} onValueChange={handleFrequencyChange}>
-          <SelectTrigger className="h-8 text-sm">
-            <SelectValue>
-              {FREQUENCY_LABELS[frequency] || frequency}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {Object.entries(FREQUENCY_LABELS)
-              .filter(([key]) => key !== 'none')
-              .map(([key, label]) => (
-                <SelectItem key={key} value={key}>
-                  {label}
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <Select value={frequency} onValueChange={handleFrequencyChange}>
+        <SelectTrigger className="w-full rounded-md">
+          <SelectValue>{FREQUENCY_LABELS[frequency] || frequency}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          {Object.entries(FREQUENCY_LABELS)
+            .filter(([key]) => key !== 'none')
+            .map(([key, label]) => (
+              <SelectItem key={key} value={key}>
+                {label}
+              </SelectItem>
+            ))}
+        </SelectContent>
+      </Select>
 
       {/* Interval */}
       <div className="flex items-center gap-3">
-        <Label className="text-xs shrink-0">间隔</Label>
+        <Label className="shrink-0 text-caption text-muted-foreground">间隔</Label>
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-muted-foreground">每</span>
+          <span className="text-caption text-muted-foreground">每</span>
           <Input
             type="number"
             min={1}
             max={99}
             value={value.interval || 1}
             onChange={(e) => handleIntervalChange(parseInt(e.target.value) || 1)}
-            className="h-7 w-16 text-sm text-center"
+            className="w-16 text-center tabular-nums"
+            aria-label="重复间隔"
           />
-          <span className="text-xs text-muted-foreground">
+          <span className="text-caption text-muted-foreground">
             {frequency === 'daily' || frequency === 'weekdays'
               ? '天'
               : frequency === 'weekly'
-              ? '周'
-              : frequency === 'monthly'
-              ? '月'
-              : '年'}
+                ? '周'
+                : frequency === 'monthly'
+                  ? '月'
+                  : '年'}
           </span>
         </div>
       </div>
 
       {/* Weekly: day selection */}
       {frequency === 'weekly' && (
-        <div className="space-y-1.5">
-          <Label className="text-xs">重复日</Label>
-          <div className="flex gap-1 flex-wrap">
+        <div className="space-y-2">
+          <Label className="text-caption text-muted-foreground">重复日</Label>
+          <div className="flex flex-wrap gap-1">
             {WEEKDAY_OPTIONS.map(({ value: day, label }) => (
               <button
                 key={day}
                 type="button"
                 onClick={() => handleWeekdayToggle(day)}
-                className={cn(
-                  'px-2 py-1 text-xs rounded-md border transition-colors',
-                  (value.byWeekday || []).includes(day)
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-background hover:bg-accent border-border'
-                )}
+                aria-pressed={(value.byWeekday || []).includes(day)}
+                className={pillClass((value.byWeekday || []).includes(day))}
               >
                 {label}
               </button>
@@ -226,27 +229,28 @@ export function RecurrenceEditor({ value, onChange }: RecurrenceEditorProps) {
       {frequency === 'monthly' && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <Label className="text-xs shrink-0">每月</Label>
+            <Label className="shrink-0 text-caption text-muted-foreground">每月</Label>
             <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground">第</span>
+              <span className="text-caption text-muted-foreground">第</span>
               <Input
                 type="number"
                 min={1}
                 max={31}
                 value={value.byMonthDay || 1}
                 onChange={(e) => handleMonthDayChange(parseInt(e.target.value) || 1)}
-                className="h-7 w-14 text-sm text-center"
+                className="w-14 text-center tabular-nums"
+                aria-label="每月第几天"
               />
-              <span className="text-xs text-muted-foreground">天</span>
+              <span className="text-caption text-muted-foreground">天</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">或</span>
+            <span className="text-caption text-muted-foreground">或</span>
             <Select
               value={value.bySetPos ? String(value.bySetPos) : ''}
               onValueChange={(v) => handleSetPosChange(v ? parseInt(v) : 0)}
             >
-              <SelectTrigger className="h-8 text-xs w-36">
+              <SelectTrigger className="w-36 rounded-md">
                 <SelectValue placeholder="选择第几个星期几" />
               </SelectTrigger>
               <SelectContent>
@@ -263,13 +267,13 @@ export function RecurrenceEditor({ value, onChange }: RecurrenceEditorProps) {
       )}
 
       {/* End condition */}
-      <div className="space-y-2 pt-1 border-t">
-        <Label className="text-xs">结束条件</Label>
-        <div className="flex gap-2">
-          <Button
-            variant={endType === 'none' ? 'default' : 'outline'}
-            size="sm"
-            className="h-7 text-xs"
+      <div className="space-y-2 border-t border-border pt-3">
+        <Label className="text-caption text-muted-foreground">结束条件</Label>
+        <div className="inline-flex items-center gap-0.5 rounded-full border border-border bg-surface p-0.5">
+          <button
+            type="button"
+            aria-pressed={endType === 'none'}
+            className={pillClass(endType === 'none')}
             onClick={() => {
               setEndType('none')
               const next = { ...value }
@@ -279,49 +283,56 @@ export function RecurrenceEditor({ value, onChange }: RecurrenceEditorProps) {
             }}
           >
             永不
-          </Button>
-          <Button
-            variant={endType === 'count' ? 'default' : 'outline'}
-            size="sm"
-            className="h-7 text-xs"
+          </button>
+          <button
+            type="button"
+            aria-pressed={endType === 'count'}
+            className={pillClass(endType === 'count')}
             onClick={() => setEndType('count')}
           >
-            <Hash className="h-3 w-3 mr-1" />次数
-          </Button>
-          <Button
-            variant={endType === 'date' ? 'default' : 'outline'}
-            size="sm"
-            className="h-7 text-xs"
+            <span className="flex items-center gap-1">
+              <Hash className="h-3 w-3" aria-hidden="true" />
+              次数
+            </span>
+          </button>
+          <button
+            type="button"
+            aria-pressed={endType === 'date'}
+            className={pillClass(endType === 'date')}
             onClick={() => setEndType('date')}
           >
-            <Calendar className="h-3 w-3 mr-1" />日期
-          </Button>
+            <span className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" aria-hidden="true" />
+              日期
+            </span>
+          </button>
         </div>
 
         {endType === 'count' && (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">重复</span>
+            <span className="text-caption text-muted-foreground">重复</span>
             <Input
               type="number"
               min={1}
               max={999}
               value={value.count != null ? value.count : ''}
               onChange={(e) => handleEndCount(parseInt(e.target.value) || 0)}
-              className="h-7 w-20 text-sm text-center"
+              className="w-20 text-center tabular-nums"
               placeholder="次数"
+              aria-label="重复次数"
             />
-            <span className="text-xs text-muted-foreground">次</span>
+            <span className="text-caption text-muted-foreground">次</span>
           </div>
         )}
 
         {endType === 'date' && (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">截止</span>
+            <span className="text-caption text-muted-foreground">截止</span>
             <Input
               type="date"
               value={value.endDate || ''}
               onChange={(e) => handleEndDate(e.target.value)}
-              className="h-7 text-xs"
+              aria-label="重复截止日期"
             />
           </div>
         )}

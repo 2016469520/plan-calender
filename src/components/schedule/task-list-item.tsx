@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils'
 import { PERIOD_LABELS, PRIORITY_LABELS } from '@/lib/constants'
-import type { Task, Tag } from '@/types'
+import type { Task, Tag, Period } from '@/types'
 import { useRepos } from '@/providers/repo-provider'
 import { useAuth } from '@/providers/auth-provider'
 import { useQueryClient } from '@tanstack/react-query'
@@ -24,6 +24,12 @@ interface TaskListItemProps {
   isActive?: boolean
   isFocus?: boolean
   onClick: () => void
+}
+
+const PERIOD_CLASS: Record<Period, string> = {
+  morning: 'p-morning',
+  afternoon: 'p-afternoon',
+  evening: 'p-evening',
 }
 
 export function TaskListItem({ task, tags, isActive, isFocus, onClick }: TaskListItemProps) {
@@ -64,10 +70,10 @@ export function TaskListItem({ task, tags, isActive, isFocus, onClick }: TaskLis
       data-task-id={task.id}
       onClick={onClick}
       className={cn(
-        'group flex items-start gap-3 p-3 rounded-lg border border-transparent bg-card cursor-pointer transition-all',
-        'hover:border-border hover:shadow-sm',
-        isActive && 'border-primary/30 bg-primary/5 ring-1 ring-primary/20',
-        isFocus && 'ring-1 ring-amber-400/30 bg-amber-50/30 dark:bg-amber-950/10',
+        'group surface-interactive flex cursor-pointer items-start gap-3 rounded-md border border-transparent px-2 py-2',
+        'hover:border-border hover:bg-surface-2',
+        isActive && 'border-primary/30 bg-primary/[0.05]',
+        isFocus && 'border-warning/25 bg-warning/[0.06]',
         isDone && 'opacity-60'
       )}
     >
@@ -76,11 +82,13 @@ export function TaskListItem({ task, tags, isActive, isFocus, onClick }: TaskLis
         data-testid="task-toggle-complete"
         onClick={handleToggle}
         disabled={toggling}
+        aria-label={isDone ? '标记为未完成' : '标记为已完成'}
         className={cn(
-          'mt-0.5 h-5 w-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all',
+          'relative mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ui-transition',
+          'after:absolute after:-inset-1.5 after:content-[""]',
           isDone
-            ? 'bg-emerald-500 border-emerald-500 text-white'
-            : 'border-muted-foreground/30 hover:border-emerald-400 group-hover:border-emerald-400'
+            ? 'border-success bg-success text-background'
+            : 'border-border-strong group-hover:border-success/60 hover:border-success/60'
         )}
       >
         {toggling ? (
@@ -91,19 +99,25 @@ export function TaskListItem({ task, tags, isActive, isFocus, onClick }: TaskLis
       </button>
 
       {/* Content */}
-      <div className="min-w-0 flex-1 space-y-1">
+      <div className="min-w-0 flex-1 space-y-0.5">
         {/* Title */}
-        <div className={cn('text-sm font-medium', isDone && 'line-through text-muted-foreground')}>
+        <div
+          className={
+            isDone
+              ? 'text-body font-medium text-muted-foreground line-through'
+              : 'text-body font-medium'
+          }
+        >
           {task.title}
         </div>
 
         {/* Meta row */}
-        <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-caption text-muted-foreground">
           {/* Tag */}
           {tag && (
             <span className="inline-flex items-center gap-1">
               <span
-                className="h-2 w-2 rounded-full inline-block"
+                className="inline-block h-2 w-2 rounded-full"
                 style={{ backgroundColor: tag.color }}
               />
               {tag.name}
@@ -112,8 +126,8 @@ export function TaskListItem({ task, tags, isActive, isFocus, onClick }: TaskLis
 
           {/* Time */}
           {task.start_time && (
-            <span className="inline-flex items-center gap-0.5">
-              <Clock className="h-3 w-3" />
+            <span className="inline-flex items-center gap-0.5 tabular-nums">
+              <Clock className="h-3 w-3" aria-hidden="true" />
               {task.start_time}
               {task.end_time && ` - ${task.end_time}`}
             </span>
@@ -121,8 +135,8 @@ export function TaskListItem({ task, tags, isActive, isFocus, onClick }: TaskLis
 
           {/* Estimated time */}
           {task.estimated_minutes != null && !task.start_time && (
-            <span className="inline-flex items-center gap-0.5">
-              <Clock className="h-3 w-3" />
+            <span className="inline-flex items-center gap-0.5 tabular-nums">
+              <Clock className="h-3 w-3" aria-hidden="true" />
               {task.estimated_minutes}分钟
             </span>
           )}
@@ -132,32 +146,39 @@ export function TaskListItem({ task, tags, isActive, isFocus, onClick }: TaskLis
             <span
               className={cn(
                 'inline-flex items-center gap-0.5 font-medium',
-                task.priority === 'urgent' ? 'text-red-500' : 'text-orange-500'
+                task.priority === 'urgent' ? 'text-destructive' : 'text-warning'
               )}
             >
-              <AlertCircle className="h-3 w-3" />
+              <AlertCircle className="h-3 w-3" aria-hidden="true" />
               {PRIORITY_LABELS[task.priority]}
             </span>
           )}
         </div>
 
         {/* Indicators row */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {task.recurrence_rule && <Repeat className="h-3 w-3" />}
-          {task.reminder_at && <Bell className="h-3 w-3" />}
-          {totalSubitems > 0 && (
-            <span className="inline-flex items-center gap-0.5">
-              <ListChecks className="h-3 w-3" />
-              {doneSubitems}/{totalSubitems}
-            </span>
-          )}
-        </div>
+        {(task.recurrence_rule || task.reminder_at || totalSubitems > 0) && (
+          <div className="flex items-center gap-2 text-caption text-muted-foreground">
+            {task.recurrence_rule && <Repeat className="h-3 w-3" aria-label="重复" />}
+            {task.reminder_at && <Bell className="h-3 w-3" aria-label="提醒" />}
+            {totalSubitems > 0 && (
+              <span className="inline-flex items-center gap-0.5 tabular-nums">
+                <ListChecks className="h-3 w-3" aria-hidden="true" />
+                {doneSubitems}/{totalSubitems}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Right: period badge（无日期的事项不显示时段） */}
       {task.task_date && (
-        <div className="shrink-0 text-right">
-          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+        <div className="shrink-0 pt-0.5">
+          <span
+            className={cn(
+              'period-chip whitespace-nowrap rounded-full px-2 py-0.5 text-micro',
+              PERIOD_CLASS[task.period]
+            )}
+          >
             {PERIOD_LABELS[task.period]}
           </span>
         </div>

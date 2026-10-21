@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getMonthRange, todayStr } from '@/lib/utils/date'
+import { cn } from '@/lib/utils'
 import type { Task } from '@/types'
 import {
   ChevronDown,
@@ -80,7 +81,7 @@ export function CategoryView({ onEditTask, onNewTask }: CategoryViewProps) {
 
   if (tasksLoading) {
     return (
-      <div className="space-y-3 p-4">
+      <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
           <Skeleton key={i} className="h-40" />
         ))}
@@ -90,11 +91,14 @@ export function CategoryView({ onEditTask, onNewTask }: CategoryViewProps) {
 
   if (groups.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground space-y-3">
-        <FolderOpen className="h-10 w-10 opacity-40" />
-        <p className="text-sm">没有事项</p>
-        <Button size="sm" onClick={() => onNewTask()}>
-          <Plus className="h-4 w-4 mr-1" />
+      <div className="flex h-full flex-col items-center justify-center gap-2 px-6 py-16 text-center">
+        <FolderOpen className="h-7 w-7 text-muted-foreground/60" />
+        <p className="text-body text-muted-foreground">还没有事项</p>
+        <p className="text-caption text-muted-foreground/70">
+          按分类整理你的计划，创建第一条事项开始记录
+        </p>
+        <Button size="sm" className="mt-1" onClick={() => onNewTask()}>
+          <Plus className="h-4 w-4" />
           新建事项
         </Button>
       </div>
@@ -104,14 +108,14 @@ export function CategoryView({ onEditTask, onNewTask }: CategoryViewProps) {
   return (
     <div className="flex-1 overflow-auto p-4">
       {/* Controls */}
-      <div className="flex items-center gap-4 mb-4 flex-wrap">
+      <div className="mb-4 flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2">
           <Switch
             id="hide-empty"
             checked={hideEmpty}
             onCheckedChange={setHideEmpty}
           />
-          <Label htmlFor="hide-empty" className="text-xs">
+          <Label htmlFor="hide-empty" className="text-caption">
             隐藏空分类
           </Label>
         </div>
@@ -121,14 +125,14 @@ export function CategoryView({ onEditTask, onNewTask }: CategoryViewProps) {
             checked={hideDoneTasks}
             onCheckedChange={setHideDoneTasks}
           />
-          <Label htmlFor="hide-done" className="text-xs">
+          <Label htmlFor="hide-done" className="text-caption">
             隐藏已完成
           </Label>
         </div>
       </div>
 
       {/* Category cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
         {groups.map((group) => {
           const catKey = group.tagId ?? '__uncategorized__'
           const isCollapsed = collapsedCategories.has(catKey)
@@ -137,52 +141,58 @@ export function CategoryView({ onEditTask, onNewTask }: CategoryViewProps) {
           return (
             <div
               key={catKey}
-              className="border border-border rounded-lg bg-card overflow-hidden"
+              className="surface overflow-hidden"
             >
-              {/* Category header */}
-              <div className="p-3 flex items-center justify-between border-b border-border/50">
+              {/* Category header：色点 + 名称 + 数量 */}
+              <div
+                className={cn(
+                  'flex items-center gap-2 px-3 py-2.5',
+                  !isCollapsed && 'border-b border-border'
+                )}
+              >
                 <button
                   onClick={() => toggleCategory(group.tagId)}
-                  className="flex items-center gap-2 min-w-0 flex-1"
+                  className="flex min-w-0 flex-1 items-center gap-2 rounded-md py-0.5 text-left text-foreground ui-transition hover:text-primary"
                 >
                   {isCollapsed ? (
                     <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                   ) : (
                     <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
                   )}
-                  <div
-                    className="h-3 w-3 rounded-full shrink-0"
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
                     style={{ backgroundColor: group.tagColor }}
                   />
-                  <span className="font-medium text-sm truncate">
+                  <span className="min-w-0 truncate text-body font-medium">
                     {group.tagName}
                   </span>
-                  <span className="text-xs text-muted-foreground shrink-0">
+                  <span className="shrink-0 text-micro tabular-nums text-muted-foreground">
                     {group.done}/{group.total}
                   </span>
                   {/* Mini progress bar */}
                   {group.total > 0 && (
-                    <div className="w-12 h-1 bg-muted rounded-full overflow-hidden shrink-0">
-                      <div
-                        className="h-full bg-emerald-500 rounded-full transition-all"
+                    <span className="ml-1 h-1 w-10 shrink-0 overflow-hidden rounded-full bg-muted">
+                      <span
+                        className="block h-full rounded-full bg-success transition-all"
                         style={{ width: `${Math.round(group.completionRate * 100)}%` }}
                       />
-                    </div>
+                    </span>
                   )}
                 </button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 shrink-0"
+                  className="shrink-0"
                   onClick={() => handleNewInCategory(group.tagId)}
+                  aria-label={`在「${group.tagName}」中新建事项`}
                 >
-                  <Plus className="h-3.5 w-3.5" />
+                  <Plus className="h-4 w-4" />
                 </Button>
               </div>
 
               {/* Category body */}
               {!isCollapsed && (
-                <div className="divide-y divide-border/30">
+                <div className="divide-y divide-border/60 bg-surface-2/50">
                   {TIME_BUCKET_ORDER.map((bucket) => {
                     const bucketTasks = group.buckets[bucket]
                     if (bucketTasks.length === 0) return null
@@ -193,10 +203,10 @@ export function CategoryView({ onEditTask, onNewTask }: CategoryViewProps) {
 
                     return (
                       <div key={bucket} className="px-3 py-2">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-medium text-muted-foreground">
+                        <div className="mb-1.5 flex items-center justify-between gap-2">
+                          <span className="text-caption font-medium text-muted-foreground">
                             {TIME_BUCKET_LABELS[bucket]}
-                            <span className="ml-1 text-muted-foreground/60">
+                            <span className="ml-1 text-micro tabular-nums text-muted-foreground/70">
                               ({bucketTasks.length})
                             </span>
                           </span>
@@ -204,7 +214,7 @@ export function CategoryView({ onEditTask, onNewTask }: CategoryViewProps) {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-6 text-xs"
+                              className="h-6 px-1.5 text-caption"
                               onClick={() => toggleDone(group.tagId)}
                             >
                               {isDoneCollapsed ? '展开' : '收起'}

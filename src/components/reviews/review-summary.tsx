@@ -1,6 +1,5 @@
 'use client'
 
-import { Card, CardContent } from '@/components/ui/card'
 import { calculateMonthlyReviewSummary } from '@/lib/utils/review-stats'
 import type { DailyReview } from '@/types'
 import { Star, Smile, Zap, TrendingUp, Flame, CalendarCheck } from 'lucide-react'
@@ -9,6 +8,39 @@ interface ReviewSummaryProps {
   reviews: DailyReview[]
   year: number
   month: number
+}
+
+/** 0~max 的横向分段细条 */
+function SegmentMeter({ value, max, label }: { value: number; max: number; label: string }) {
+  const filled = Math.round(Math.min(Math.max(value, 0), max))
+  return (
+    <div
+      className="flex h-1.5 items-center gap-0.5"
+      role="img"
+      aria-label={`${label} ${filled}/${max}`}
+    >
+      {Array.from({ length: max }).map((_, i) => (
+        <span
+          key={i}
+          className={`h-1.5 flex-1 rounded-full ${i < filled ? 'bg-primary' : 'bg-muted'}`}
+        />
+      ))}
+    </div>
+  )
+}
+
+/** 0~100 的连续细条 */
+function BarMeter({ value, max, label }: { value: number; max: number; label: string }) {
+  const pct = Math.round(Math.min(Math.max((value / max) * 100, 0), 100))
+  return (
+    <div
+      className="h-1.5 overflow-hidden rounded-full bg-muted"
+      role="img"
+      aria-label={`${label} ${pct}%`}
+    >
+      <div className="h-full rounded-full bg-primary ui-transition" style={{ width: `${pct}%` }} />
+    </div>
+  )
 }
 
 export function ReviewSummary({ reviews, year, month }: ReviewSummaryProps) {
@@ -20,28 +52,36 @@ export function ReviewSummary({ reviews, year, month }: ReviewSummaryProps) {
       value: `${summary.reviewedDays}/${summary.totalDays}`,
       sub: '天',
       icon: CalendarCheck,
-      color: 'text-blue-600 dark:text-blue-400',
+      meter: (
+        <BarMeter
+          value={summary.reviewedDays}
+          max={Math.max(summary.totalDays, 1)}
+          label="已评价天数"
+        />
+      ),
     },
     {
       label: '平均评分',
       value: summary.avgScore != null ? summary.avgScore.toFixed(1) : '—',
       sub: '/10',
       icon: Star,
-      color: 'text-amber-500',
+      meter: (
+        <SegmentMeter value={summary.avgScore ?? 0} max={10} label="平均评分" />
+      ),
     },
     {
       label: '平均完成度',
       value: summary.avgCompletion != null ? `${Math.round(summary.avgCompletion)}%` : '—',
       sub: '',
       icon: TrendingUp,
-      color: 'text-emerald-500',
+      meter: <BarMeter value={summary.avgCompletion ?? 0} max={100} label="平均完成度" />,
     },
     {
       label: '平均心情',
       value: summary.avgMood != null ? summary.avgMood.toFixed(1) : '—',
       sub: '/5',
       icon: Smile,
-      color: 'text-rose-500',
+      meter: <SegmentMeter value={summary.avgMood ?? 0} max={5} label="平均心情" />,
     },
   ]
 
@@ -50,41 +90,39 @@ export function ReviewSummary({ reviews, year, month }: ReviewSummaryProps) {
       label: '当前连续',
       value: summary.currentStreak,
       icon: Flame,
-      color: 'text-orange-500',
     },
     {
       label: '最长连续',
       value: summary.longestStreak,
       icon: Zap,
-      color: 'text-violet-500',
     },
   ]
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {stats.map((s) => (
-          <Card key={s.label} className="shadow-none">
-            <CardContent className="p-3 flex items-center gap-3">
-              <s.icon className={`h-5 w-5 shrink-0 ${s.color}`} />
-              <div className="min-w-0">
-                <div className="text-xs text-muted-foreground">{s.label}</div>
-                <div className="text-lg font-bold tabular-nums">
-                  {s.value}
-                  {s.sub && <span className="text-xs font-normal text-muted-foreground ml-0.5">{s.sub}</span>}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div key={s.label} className="surface p-4">
+            <div className="flex items-center justify-between gap-2">
+              <span className="truncate text-caption text-muted-foreground">{s.label}</span>
+              <s.icon className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+            </div>
+            <div className="mt-1 flex items-baseline gap-1">
+              <span className="text-display tabular-nums">{s.value}</span>
+              {s.sub && <span className="text-micro text-muted-foreground">{s.sub}</span>}
+            </div>
+            <div className="mt-2">{s.meter}</div>
+          </div>
         ))}
       </div>
-      <div className="flex gap-4 text-xs text-muted-foreground">
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md bg-surface-2 px-3 py-2">
         {streakStats.map((s) => (
           <div key={s.label} className="flex items-center gap-1.5">
-            <s.icon className={`h-4 w-4 ${s.color}`} />
-            <span>{s.label}</span>
-            <span className="font-semibold tabular-nums text-foreground">{s.value}</span>
-            <span>天</span>
+            <s.icon className="h-3.5 w-3.5 text-primary/70" />
+            <span className="text-caption text-foreground/70">{s.label}</span>
+            <span className="text-caption font-semibold tabular-nums text-foreground">{s.value}</span>
+            <span className="text-caption text-foreground/60">天</span>
           </div>
         ))}
       </div>

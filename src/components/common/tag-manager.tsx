@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Pencil, Trash2, Plus } from 'lucide-react'
+import { Pencil, Trash2, Plus, Tag as TagIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import type { Tag } from '@/types'
@@ -153,10 +153,10 @@ export function TagManager() {
   if (isLoading) {
     return (
       <Card>
-        <CardHeader><CardTitle className="text-base">标签管理</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-section">标签管理</CardTitle></CardHeader>
         <CardContent className="space-y-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-10 w-full" />
+            <Skeleton key={i} className="h-9 w-full" />
           ))}
         </CardContent>
       </Card>
@@ -168,21 +168,22 @@ export function TagManager() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base">标签管理</CardTitle>
+        <CardTitle className="text-section">标签管理</CardTitle>
         <Button variant="outline" size="sm" onClick={() => setShowNewForm(!showNewForm)}>
-          <Plus className="h-3.5 w-3.5 mr-1" />
+          <Plus className="h-3.5 w-3.5" aria-hidden="true" />
           新建
         </Button>
       </CardHeader>
       <CardContent className="space-y-2">
         {/* New tag form */}
         {showNewForm && (
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-surface-2 p-2">
             <Input
               placeholder="标签名称"
               value={newTagName}
               onChange={(e) => setNewTagName(e.target.value)}
-              className="h-8 text-sm flex-1"
+              className="min-w-32 flex-1"
+              aria-label="新标签名称"
             />
             <div className="flex gap-1">
               {PRESET_COLORS.slice(0, 5).map((c) => (
@@ -190,15 +191,17 @@ export function TagManager() {
                   key={c}
                   type="button"
                   onClick={() => setNewTagColor(c)}
+                  aria-label={`选择颜色 ${c}`}
+                  aria-pressed={newTagColor === c}
                   className={cn(
-                    'w-5 h-5 rounded-full border-2 transition-all',
-                    newTagColor === c ? 'border-foreground scale-110' : 'border-transparent'
+                    'h-5 w-5 rounded-full border-2 ui-transition',
+                    newTagColor === c ? 'scale-110 border-foreground' : 'border-transparent'
                   )}
                   style={{ backgroundColor: c }}
                 />
               ))}
             </div>
-            <Button size="sm" className="h-8" onClick={handleCreate} disabled={createMutation.isPending}>
+            <Button size="sm" onClick={handleCreate} disabled={createMutation.isPending}>
               添加
             </Button>
           </div>
@@ -208,60 +211,68 @@ export function TagManager() {
         {tagList.map((tag) => (
           <div
             key={tag.id}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-accent/50 transition-colors group"
+            className="group flex min-h-9 items-center gap-2.5 rounded-md px-2.5 py-2 ui-transition hover:bg-accent/60"
           >
             <span
-              className="w-3.5 h-3.5 rounded-full shrink-0"
+              className="h-3 w-3 shrink-0 rounded-full"
               style={{ backgroundColor: tag.color }}
+              aria-hidden="true"
             />
-            <span className="flex-1 text-sm">{tag.name}</span>
+            <span className="flex-1 truncate text-body">{tag.name}</span>
             {tag.is_default && (
-              <Badge variant="secondary" className="text-[10px] h-4 px-1.5">默认</Badge>
+              <Badge variant="secondary" className="h-5 px-2 text-micro">默认</Badge>
             )}
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-0.5 opacity-100 ui-transition focus-within:opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
               <Button
                 variant="ghost"
-                size="icon"
-                className="h-7 w-7"
+                size="icon-sm"
+                className="text-muted-foreground hover:text-foreground"
                 onClick={() => setEditingTag({ id: tag.id, name: tag.name, color: tag.color })}
                 title="编辑标签"
+                aria-label={`编辑标签 ${tag.name}`}
               >
-                <Pencil className="h-3.5 w-3.5" />
+                <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
               </Button>
               <Button
                 variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-destructive"
+                size="icon-sm"
+                className="text-muted-foreground hover:text-destructive"
                 onClick={() => openDeleteDialog(tag)}
                 title="删除标签"
+                aria-label={`删除标签 ${tag.name}`}
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
               </Button>
             </div>
           </div>
         ))}
 
         {tagList.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-4">暂无标签</p>
+          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border px-3 py-5 text-center">
+            <TagIcon className="h-7 w-7 text-muted-foreground/60" aria-hidden="true" />
+            <p className="text-body text-muted-foreground">暂无标签</p>
+            <p className="text-caption text-muted-foreground/80">新建标签，给事项分类</p>
+          </div>
         )}
 
         {/* Edit dialog */}
         {editingTag && (
           <Dialog open={!!editingTag} onOpenChange={(o) => !o && setEditingTag(null)}>
-            <DialogContent className="sm:max-w-sm">
+            <DialogContent className="shadow-[var(--shadow-pop)] sm:max-w-sm">
               <DialogHeader>
-                <DialogTitle>编辑标签</DialogTitle>
+                <DialogTitle className="text-section">编辑标签</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>标签名称</Label>
+                  <Label className="text-caption text-muted-foreground">标签名称</Label>
                   <Input
                     value={editingTag.name}
                     onChange={(e) => setEditingTag({ ...editingTag, name: e.target.value })}
+                    aria-label="标签名称"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>颜色</Label>
+                  <Label className="text-caption text-muted-foreground">颜色</Label>
                   <div className="flex flex-wrap gap-2">
                     {PRESET_COLORS.map((c) => (
                       <button
@@ -269,17 +280,19 @@ export function TagManager() {
                         type="button"
                         onClick={() => setEditingTag({ ...editingTag, color: c })}
                         className={cn(
-                          'w-8 h-8 rounded-full border-2 transition-all',
-                          editingTag.color === c ? 'border-foreground scale-110' : 'border-transparent'
+                          'h-8 w-8 rounded-full border-2 ui-transition',
+                          editingTag.color === c ? 'scale-110 border-foreground' : 'border-transparent'
                         )}
                         style={{ backgroundColor: c }}
                         title={c}
+                        aria-label={`选择颜色 ${c}`}
+                        aria-pressed={editingTag.color === c}
                       />
                     ))}
                   </div>
                 </div>
               </div>
-              <DialogFooter>
+              <DialogFooter className="gap-2">
                 <Button variant="outline" onClick={() => setEditingTag(null)}>取消</Button>
                 <Button
                   onClick={() => updateMutation.mutate(editingTag)}
@@ -294,50 +307,57 @@ export function TagManager() {
 
         {/* Delete confirmation dialog */}
         <Dialog open={!!deletingTag} onOpenChange={(o) => !o && setDeletingTag(null)}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="shadow-[var(--shadow-pop)] sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>删除标签</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-section">删除标签</DialogTitle>
+              <DialogDescription className="text-caption text-muted-foreground">
                 确定要删除标签「{deletingTag?.name}」吗？
               </DialogDescription>
             </DialogHeader>
 
             {isLoadingUsage ? (
-              <div className="py-4 text-center text-sm text-muted-foreground">检查标签使用情况...</div>
+              <div className="py-4 text-center text-body text-muted-foreground">检查标签使用情况…</div>
             ) : tagUsageCount === 0 ? (
-              <div className="py-2">
-                <p className="text-sm text-muted-foreground">该标签未被任何事项使用，可以安全删除。</p>
+              <div className="rounded-md bg-surface-2 px-3 py-2">
+                <p className="text-caption text-muted-foreground">该标签未被任何事项使用，可以安全删除。</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                <p className="text-sm">
-                  该标签正被 <strong>{tagUsageCount}</strong> 个事项使用。
+              <div className="space-y-3">
+                <p className="text-body">
+                  该标签正被 <strong className="tabular-nums">{tagUsageCount}</strong> 个事项使用，
                   请选择如何处理这些事项：
                 </p>
 
                 <div className="space-y-2">
-                  <label className="flex items-start gap-2 cursor-pointer">
+                  <label
+                    className={cn(
+                      'flex cursor-pointer items-start gap-2.5 rounded-md border p-3 ui-transition',
+                      deleteAction === 'migrate'
+                        ? 'border-primary/40 bg-accent/60'
+                        : 'border-border hover:bg-accent/40'
+                    )}
+                  >
                     <input
                       type="radio"
                       name="deleteAction"
                       value="migrate"
                       checked={deleteAction === 'migrate'}
                       onChange={() => setDeleteAction('migrate')}
-                      className="mt-1"
+                      className="mt-0.5 h-4 w-4 accent-primary"
                     />
                     <div className="flex-1">
-                      <span className="text-sm font-medium">迁移到其他标签</span>
+                      <span className="text-body font-medium">迁移到其他标签</span>
                       {deleteAction === 'migrate' && (
-                        <div className="mt-1">
+                        <div className="mt-2">
                           <Select value={migrateTargetId} onValueChange={(v) => setMigrateTargetId(v ?? '')}>
-                            <SelectTrigger className="h-8 text-sm">
+                            <SelectTrigger className="w-full rounded-md">
                               <SelectValue placeholder="选择目标标签" />
                             </SelectTrigger>
                             <SelectContent>
                               {availableTargets.map((t) => (
                                 <SelectItem key={t.id} value={t.id}>
                                   <span className="flex items-center gap-1.5">
-                                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: t.color }} />
+                                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: t.color }} />
                                     {t.name}
                                   </span>
                                 </SelectItem>
@@ -349,16 +369,23 @@ export function TagManager() {
                     </div>
                   </label>
 
-                  <label className="flex items-start gap-2 cursor-pointer">
+                  <label
+                    className={cn(
+                      'flex cursor-pointer items-start gap-2.5 rounded-md border p-3 ui-transition',
+                      deleteAction === 'clear'
+                        ? 'border-primary/40 bg-accent/60'
+                        : 'border-border hover:bg-accent/40'
+                    )}
+                  >
                     <input
                       type="radio"
                       name="deleteAction"
                       value="clear"
                       checked={deleteAction === 'clear'}
                       onChange={() => { setDeleteAction('clear'); setMigrateTargetId('') }}
-                      className="mt-1"
+                      className="mt-0.5 h-4 w-4 accent-primary"
                     />
-                    <span className="text-sm font-medium">清除关联，保留事项</span>
+                    <span className="text-body font-medium">清除关联，保留事项</span>
                   </label>
                 </div>
               </div>
@@ -371,7 +398,7 @@ export function TagManager() {
                 onClick={handleConfirmDelete}
                 disabled={deleteMutation.isPending || (tagUsageCount > 0 && deleteAction === null)}
               >
-                {deleteMutation.isPending ? '删除中...' : '确认删除'}
+                {deleteMutation.isPending ? '删除中…' : '确认删除'}
               </Button>
             </DialogFooter>
           </DialogContent>

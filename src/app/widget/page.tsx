@@ -29,30 +29,45 @@ import type { Period, Task } from '@/types'
 
 const PERIOD_ORDER: Period[] = ['morning', 'afternoon', 'evening']
 
-function MiniProgress({ rate, size = 26 }: { rate: number; size?: number }) {
+/** 时段色类名必须是静态字面量，Tailwind 才能扫描到 */
+const PERIOD_CLASS: Record<Period, string> = {
+  morning: 'p-morning',
+  afternoon: 'p-afternoon',
+  evening: 'p-evening',
+}
+
+function MiniProgress({ rate, size = 28 }: { rate: number; size?: number }) {
   const stroke = 3
   const radius = (size - stroke) / 2
   const circumference = 2 * Math.PI * radius
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-      <defs>
-        <linearGradient id="mini-ring" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#a78bfa" />
-          <stop offset="100%" stopColor="#22d3ee" />
-        </linearGradient>
-      </defs>
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" strokeWidth={stroke} className="text-violet-200 dark:text-violet-500/30" />
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      className="-rotate-90"
+      aria-hidden
+    >
       <circle
         cx={size / 2}
         cy={size / 2}
         r={radius}
         fill="none"
-        stroke="url(#mini-ring)"
+        stroke="currentColor"
+        strokeWidth={stroke}
+        className="text-border"
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="currentColor"
         strokeWidth={stroke}
         strokeLinecap="round"
         strokeDasharray={circumference}
         strokeDashoffset={circumference * (1 - Math.min(1, Math.max(0, rate)))}
-        className="transition-[stroke-dashoffset] duration-500"
+        className="text-primary transition-[stroke-dashoffset] duration-[var(--motion-slow)]"
       />
     </svg>
   )
@@ -210,189 +225,193 @@ export default function WidgetPage() {
 
   if (!user) {
     return (
-      <div className="flex h-screen items-center justify-center text-sm text-muted-foreground">
+      <div className="flex h-screen items-center justify-center bg-card text-caption text-muted-foreground">
         加载中…
       </div>
     )
   }
 
   return (
-    <div className="h-screen w-screen bg-card">
-      <div className="acg-surface flex h-full w-full flex-col overflow-hidden bg-card ring-1 ring-inset ring-violet-300/50 dark:ring-violet-500/30">
-          {/* 标题栏（可拖拽） */}
-          <header className="app-drag flex items-center gap-2 border-b border-violet-200/40 bg-background/40 px-3 py-2 select-none dark:border-violet-500/20">
-            <span className="relative flex h-2 w-2 shrink-0">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-70 acg-breathe" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-gradient-to-br from-violet-500 to-cyan-400" />
-            </span>
-            <span className="text-xs font-semibold tracking-wide">时格</span>
-            <span className="text-[11px] text-muted-foreground tabular-nums">
-              {format(parseISO(today), 'M月d日')} {formatWeekday(today)}
-            </span>
-            <div className="app-no-drag ml-auto flex items-center gap-0.5">
-              <button
-                type="button"
-                title={pinned ? '取消置顶' : '置顶'}
-                aria-label={pinned ? '取消置顶' : '置顶'}
-                onClick={async () => {
-                  if (!bridge) return
-                  setPinned(await bridge.togglePin())
-                }}
-                className={cn(
-                  'flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground',
-                  pinned && 'text-violet-500'
-                )}
-              >
-                {pinned ? <Pin className="h-3.5 w-3.5" /> : <PinOff className="h-3.5 w-3.5" />}
-              </button>
-              <button
-                type="button"
-                title="打开主窗口"
-                aria-label="打开主窗口"
-                onClick={() => bridge?.openMain()}
-                className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              >
-                <Maximize2 className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                title="关闭浮窗"
-                aria-label="关闭浮窗"
-                onClick={() => bridge?.hideWidget()}
-                className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </header>
-
-          {/* 标签页 */}
-          <div className="flex gap-1 px-2 pt-2">
-            {(
-              [
-                { key: 'list', label: '清单', icon: ListTodo },
-                { key: 'focus', label: '专注', icon: Sparkles },
-              ] as const
-            ).map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                data-testid={`widget-tab-${item.key}`}
-                onClick={() => setTab(item.key)}
-                className={cn(
-                  'flex flex-1 items-center justify-center gap-1 rounded-full py-1 text-[11px] transition-all',
-                  tab === item.key
-                    ? 'bg-gradient-to-r from-violet-500 to-cyan-500 font-medium text-white shadow-sm'
-                    : 'bg-muted/60 text-muted-foreground hover:text-foreground'
-                )}
-              >
-                <item.icon className="h-3 w-3" />
-                {item.label}
-              </button>
-            ))}
+    <div className="h-screen w-full overflow-hidden bg-card">
+      <div className="relative flex h-full w-full flex-col overflow-hidden bg-card ring-1 ring-inset ring-border">
+        {/* 标题栏（可拖拽） */}
+        <header className="app-drag flex h-11 shrink-0 items-center gap-2 border-b border-border bg-surface-2/50 px-3 select-none">
+          <span className="shrink-0 text-section">时格</span>
+          <span className="min-w-0 flex-1 truncate text-micro text-muted-foreground tabular-nums">
+            {format(parseISO(today), 'M月d日')} {formatWeekday(today)}
+          </span>
+          <div className="app-no-drag flex shrink-0 items-center gap-0.5">
+            <button
+              type="button"
+              title={pinned ? '取消置顶' : '置顶'}
+              aria-label={pinned ? '取消置顶' : '置顶'}
+              onClick={async () => {
+                if (!bridge) return
+                setPinned(await bridge.togglePin())
+              }}
+              className={cn(
+                'flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground ui-transition hover:bg-accent hover:text-foreground',
+                pinned && 'text-primary'
+              )}
+            >
+              {pinned ? <Pin className="h-3.5 w-3.5" /> : <PinOff className="h-3.5 w-3.5" />}
+            </button>
+            <button
+              type="button"
+              title="打开主窗口"
+              aria-label="打开主窗口"
+              onClick={() => bridge?.openMain()}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground ui-transition hover:bg-accent hover:text-foreground"
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              title="关闭浮窗"
+              aria-label="关闭浮窗"
+              onClick={() => bridge?.hideWidget()}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground ui-transition hover:bg-destructive/10 hover:text-destructive"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           </div>
+        </header>
 
-          {tab === 'focus' ? (
-            <div className="flex-1 overflow-y-auto px-2 py-2">
-              <HomeFocusTimer variant="widget" />
+        {/* 标签页 */}
+        <div className="grid shrink-0 grid-cols-2 gap-1 px-3 pt-3">
+          {(
+            [
+              { key: 'list', label: '清单', icon: ListTodo },
+              { key: 'focus', label: '专注', icon: Sparkles },
+            ] as const
+          ).map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              data-testid={`widget-tab-${item.key}`}
+              onClick={() => setTab(item.key)}
+              className={`flex h-8 items-center justify-center gap-1 rounded-md text-caption ui-transition ${
+                tab === item.key
+                  ? 'bg-primary font-medium text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              }`}
+            >
+              <item.icon className="h-3.5 w-3.5" />
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'focus' ? (
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+            <HomeFocusTimer variant="widget" />
+          </div>
+        ) : (
+          <>
+            {/* 今日进度 */}
+            <div className="flex shrink-0 items-center gap-2.5 px-3 pt-3 pb-2">
+              <MiniProgress rate={rate} />
+              <div className="min-w-0 flex-1">
+                <p className="text-caption text-muted-foreground">
+                  今日完成{' '}
+                  <span className="font-medium text-foreground tabular-nums">{doneCount}</span>
+                  <span className="tabular-nums"> / {totalCount}</span>
+                </p>
+                <div className="mt-1 h-1 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary ui-transition"
+                    style={{ width: `${Math.round(rate * 100)}%` }}
+                  />
+                </div>
+              </div>
+              <span className="shrink-0 text-micro text-muted-foreground tabular-nums">
+                {Math.round(rate * 100)}%
+              </span>
             </div>
-          ) : (
-            <>
-              {/* 今日进度 */}
-              <div className="flex items-center gap-2 px-3 pt-2.5 pb-1.5">
-                <MiniProgress rate={rate} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] text-muted-foreground">
-                    今日完成{' '}
-                    <span className="font-semibold text-foreground tabular-nums">{doneCount}</span>
-                    <span className="tabular-nums"> / {totalCount}</span>
-                  </p>
-                  <div className="mt-1 h-1 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-violet-400 to-cyan-400 transition-all"
-                      style={{ width: `${Math.round(rate * 100)}%` }}
-                    />
+
+            {/* 快速添加 + 详细新建 */}
+            <div className="flex shrink-0 items-center gap-1.5 px-3 pb-3">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  handleQuickAdd()
+                }}
+                className="flex h-9 min-w-0 flex-1 items-center gap-1 rounded-md border border-input bg-background pr-2 pl-0.5 ui-transition focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/35 dark:bg-input/25"
+              >
+                <button
+                  type="submit"
+                  data-testid="widget-quick-add"
+                  aria-label="添加事项"
+                  disabled={!draft.trim() || saving}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-primary ui-transition hover:bg-accent disabled:opacity-40"
+                >
+                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                </button>
+                <input
+                  data-testid="widget-add-input"
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder="加一件今天的事，回车即可"
+                  className="min-w-0 flex-1 bg-transparent text-caption outline-none placeholder:text-muted-foreground/80"
+                />
+              </form>
+              <button
+                type="button"
+                data-testid="widget-add-detail"
+                onClick={() => setForm({ mode: 'create' })}
+                title="新建事项（可选时段、标签、时间）"
+                aria-label="新建事项"
+                className="flex h-9 shrink-0 items-center gap-0.5 rounded-md border border-border px-2 text-caption text-foreground ui-transition hover:border-border-strong hover:bg-accent"
+              >
+                <Plus className="h-3 w-3" />
+                新建
+              </button>
+            </div>
+
+            {/* 今日清单 */}
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 pb-3">
+              {isLoading ? (
+                <div className="space-y-1.5">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="h-7 animate-pulse rounded-md bg-muted/80" />
+                  ))}
+                </div>
+              ) : grouped.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+                  <Sparkles className="h-6 w-6 text-muted-foreground/60" />
+                  <div className="space-y-0.5">
+                    <p className="text-body text-foreground">今天还是空白页</p>
+                    <p className="text-caption text-muted-foreground">写下一件小事，就从它开始</p>
                   </div>
                 </div>
-                <span className="text-[11px] tabular-nums text-muted-foreground">
-                  {Math.round(rate * 100)}%
-                </span>
-              </div>
-
-              {/* 快速添加 + 详细新建 */}
-              <div className="flex items-center gap-1 px-3 pb-2">
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    handleQuickAdd()
-                  }}
-                  className="flex min-w-0 flex-1 items-center gap-1 rounded-lg border border-violet-200/70 bg-background/60 px-1 py-1 transition-shadow focus-within:border-violet-400 focus-within:ring-1 focus-within:ring-violet-300/50 dark:border-violet-500/25"
-                >
-                  <button
-                    type="submit"
-                    data-testid="widget-quick-add"
-                    aria-label="添加事项"
-                    disabled={!draft.trim() || saving}
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-violet-500 transition-colors hover:bg-violet-100 disabled:opacity-40 dark:hover:bg-violet-950/50"
-                  >
-                    {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                  </button>
-                  <input
-                    data-testid="widget-add-input"
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    placeholder="加一件今天的事，回车即可"
-                    className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground/70"
-                  />
-                </form>
-                <button
-                  type="button"
-                  data-testid="widget-add-detail"
-                  onClick={() => setForm({ mode: 'create' })}
-                  title="新建事项（可选时段、标签、时间）"
-                  aria-label="新建事项"
-                  className="flex h-7 shrink-0 items-center gap-0.5 rounded-lg border border-violet-200/70 px-1.5 text-[11px] text-violet-600 transition-colors hover:bg-violet-50 dark:border-violet-500/25 dark:text-violet-300 dark:hover:bg-violet-950/40"
-                >
-                  <Plus className="h-3 w-3" />
-                  新建
-                </button>
-              </div>
-
-              {/* 今日清单 */}
-              <div className="flex-1 space-y-2 overflow-y-auto px-2 pb-2">
-                {isLoading ? (
-                  <div className="space-y-1.5 p-1">
-                    {Array.from({ length: 4 }).map((_, i) => (
-                      <div key={i} className="h-6 animate-pulse rounded bg-muted" />
-                    ))}
-                  </div>
-                ) : grouped.length === 0 ? (
-                  <div className="flex h-full flex-col items-center justify-center gap-1.5 px-4 text-center">
-                    <Sparkles className="h-7 w-7 text-violet-300 acg-float dark:text-violet-500/60" />
-                    <p className="text-xs text-muted-foreground">今天还是空白页</p>
-                    <p className="text-[11px] text-muted-foreground/70">写下一件小事，就从它开始</p>
-                  </div>
-                ) : (
-                  grouped.map((group) => (
-                    <div key={group.period} className="space-y-0.5">
-                      <div className="flex items-center gap-1 px-1">
-                        <span className="h-1 w-1 rounded-full bg-violet-400/70" />
-                        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">
-                          {PERIOD_LABELS[group.period]}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground/60 tabular-nums">
-                          {group.tasks.length}
-                        </span>
-                      </div>
+              ) : (
+                grouped.map((group) => (
+                  <div key={group.period} className="space-y-1">
+                    <div className="flex items-center gap-1.5 px-0.5">
+                      <span
+                        className={cn(
+                          'h-1.5 w-1.5 shrink-0 rounded-full period-dot',
+                          PERIOD_CLASS[group.period]
+                        )}
+                      />
+                      <span className="text-micro font-medium text-muted-foreground">
+                        {PERIOD_LABELS[group.period]}
+                      </span>
+                      <span className="text-micro text-muted-foreground/70 tabular-nums">
+                        {group.tasks.length}
+                      </span>
+                    </div>
+                    <div className={cn('period-rail space-y-0.5 pl-2', PERIOD_CLASS[group.period])}>
                       {group.tasks.map((task) => {
                         const isDone = task.status === 'done'
                         const color = tagColor(task.tag_id)
+                        const name = tagName(task.tag_id)
                         return (
                           <div
                             key={task.id}
                             className={cn(
-                              'group flex items-start gap-1.5 rounded-lg px-1.5 py-1.5 transition-colors',
-                              isDone ? 'opacity-60' : 'hover:bg-violet-50/70 dark:hover:bg-violet-950/30'
+                              'group/row flex items-start gap-1 rounded-md px-1 py-1 ui-transition',
+                              isDone ? 'opacity-60' : 'hover:bg-accent/70'
                             )}
                           >
                             <button
@@ -400,14 +419,18 @@ export default function WidgetPage() {
                               onClick={() => handleToggle(task)}
                               disabled={busyId === task.id}
                               aria-label={isDone ? '标记为未完成' : '标记为完成'}
-                              className={cn(
-                                'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-all',
-                                isDone
-                                  ? 'border-transparent bg-gradient-to-br from-violet-500 to-cyan-500 text-white'
-                                  : 'border-muted-foreground/40 hover:border-violet-400'
-                              )}
+                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full disabled:cursor-default"
                             >
-                              {isDone && <Check className="h-2.5 w-2.5" />}
+                              <span
+                                className={cn(
+                                  'flex h-4 w-4 items-center justify-center rounded-full border ui-transition',
+                                  isDone
+                                    ? 'border-primary bg-primary text-primary-foreground'
+                                    : 'border-muted-foreground/40 group-hover/row:border-primary'
+                                )}
+                              >
+                                {isDone && <Check className="h-2.5 w-2.5" />}
+                              </span>
                             </button>
                             {/* 点标题进编辑 */}
                             <button
@@ -418,23 +441,25 @@ export default function WidgetPage() {
                               className="min-w-0 flex-1 text-left"
                             >
                               <span
-                                className={cn(
-                                  'block truncate text-xs leading-5',
-                                  isDone && 'text-muted-foreground line-through'
-                                )}
+                                title={task.title}
+                                className={`block truncate text-caption leading-5 ${
+                                  isDone ? 'text-muted-foreground line-through' : ''
+                                }`}
                               >
                                 {task.title}
                               </span>
-                              {(tagName(task.tag_id) || task.start_time) && (
-                                <span className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+                              {(name || task.start_time) && (
+                                <span className="mt-0.5 flex min-w-0 items-center gap-1 text-micro text-muted-foreground">
                                   {color && (
                                     <span
-                                      className="h-1.5 w-1.5 rounded-full"
+                                      className="h-1.5 w-1.5 shrink-0 rounded-full"
                                       style={{ backgroundColor: color }}
                                     />
                                   )}
-                                  {tagName(task.tag_id)}
-                                  {task.start_time && <span className="tabular-nums">{task.start_time}</span>}
+                                  {name && <span className="truncate">{name}</span>}
+                                  {task.start_time && (
+                                    <span className="shrink-0 tabular-nums">{task.start_time}</span>
+                                  )}
                                 </span>
                               )}
                             </button>
@@ -442,63 +467,64 @@ export default function WidgetPage() {
                         )
                       })}
                     </div>
-                  ))
-                )}
-              </div>
-            </>
-          )}
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        )}
 
-          {/* 底部 */}
-          <footer className="flex items-center justify-between border-t border-violet-200/40 bg-background/40 px-3 py-1.5 dark:border-violet-500/20">
-            <span className="text-[10px] text-muted-foreground">
-              {totalCount === 0
-                ? '空的一天'
-                : doneCount === totalCount
-                  ? '今天全部完成 🎉'
-                  : `还有 ${totalCount - doneCount} 项`}
-            </span>
-            <button
-              type="button"
-              onClick={() => bridge?.openMain()}
-              className="text-[11px] text-violet-600 hover:underline dark:text-violet-300"
-            >
-              打开主窗口
-            </button>
-          </footer>
+        {/* 底部 */}
+        <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-border bg-surface-2/50 px-3 py-2">
+          <span className="min-w-0 truncate text-micro text-muted-foreground">
+            {totalCount === 0
+              ? '空的一天'
+              : doneCount === totalCount
+                ? '今天全部完成 🎉'
+                : `还有 ${totalCount - doneCount} 项`}
+          </span>
+          <button
+            type="button"
+            onClick={() => bridge?.openMain()}
+            className="shrink-0 text-caption font-medium text-foreground ui-transition hover:text-primary hover:underline"
+          >
+            打开主窗口
+          </button>
+        </footer>
 
-          {/* 新建 / 编辑面板 */}
-          {form && (
-            <WidgetTaskForm
-              mode={form.mode}
-              tags={tags}
-              saving={savingForm}
-              isDone={form.task?.status === 'done'}
-              initial={
-                form.task
-                  ? {
-                      title: form.task.title,
-                      period: form.task.period,
-                      tag_id: form.task.tag_id ?? '',
-                      start_time: form.task.start_time ?? '',
-                      end_time: form.task.end_time ?? '',
-                    }
-                  : undefined
-              }
-              onCancel={() => setForm(null)}
-              onSave={handleSaveForm}
-              onDelete={form.mode === 'edit' ? handleDeleteForm : undefined}
-              onToggleDone={
-                form.mode === 'edit' && form.task
-                  ? () => {
-                      const task = form.task
-                      if (!task) return
-                      handleToggle(task)
-                      setForm(null)
-                    }
-                  : undefined
-              }
-            />
-          )}
+        {/* 新建 / 编辑面板 */}
+        {form && (
+          <WidgetTaskForm
+            mode={form.mode}
+            tags={tags}
+            saving={savingForm}
+            isDone={form.task?.status === 'done'}
+            initial={
+              form.task
+                ? {
+                    title: form.task.title,
+                    period: form.task.period,
+                    tag_id: form.task.tag_id ?? '',
+                    start_time: form.task.start_time ?? '',
+                    end_time: form.task.end_time ?? '',
+                  }
+                : undefined
+            }
+            onCancel={() => setForm(null)}
+            onSave={handleSaveForm}
+            onDelete={form.mode === 'edit' ? handleDeleteForm : undefined}
+            onToggleDone={
+              form.mode === 'edit' && form.task
+                ? () => {
+                    const task = form.task
+                    if (!task) return
+                    handleToggle(task)
+                    setForm(null)
+                  }
+                : undefined
+            }
+          />
+        )}
       </div>
     </div>
   )

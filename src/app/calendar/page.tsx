@@ -87,8 +87,8 @@ export default function CalendarPage() {
   if (!user) return null
 
   return (
-    <div className="flex h-full">
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+    <div className="flex h-full bg-background">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <CalendarHeader
           currentView={currentView}
           currentDate={currentDate}
@@ -99,7 +99,7 @@ export default function CalendarPage() {
           onPresentationModeChange={handlePresentationModeChange}
         />
 
-        <div className="flex-1 overflow-hidden">
+        <div className="min-h-0 flex-1 overflow-hidden">
           {presentationMode === 'time' && (
             <>
               {currentView === 'month' && (

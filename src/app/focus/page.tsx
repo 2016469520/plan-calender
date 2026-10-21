@@ -5,10 +5,28 @@ import { useAuth } from '@/providers/auth-provider'
 import { useRepos } from '@/providers/repo-provider'
 import { useQuery } from '@tanstack/react-query'
 import { HomeFocusTimer } from '@/components/focus/focus-timer'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { todayStr, toDateStr } from '@/lib/utils/date'
-import { Timer, Flame, TrendingUp, Target, Clock, Calendar } from 'lucide-react'
+import { Timer, Flame, TrendingUp, Target, Clock } from 'lucide-react'
+
+/** 统一的空状态 */
+function EmptyState({
+  icon: Icon,
+  title,
+  hint,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  title: string
+  hint?: string
+}) {
+  return (
+    <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
+      <Icon className="h-6 w-6 text-muted-foreground/60" />
+      <p className="text-body">{title}</p>
+      {hint && <p className="text-caption text-muted-foreground">{hint}</p>}
+    </div>
+  )
+}
 
 export default function FocusPage() {
   const { user } = useAuth()
@@ -100,31 +118,34 @@ export default function FocusPage() {
   }, [sessions])
 
   const maxTrendMin = Math.max(...trend.map((d) => d.minutes), 1)
+  const weekTrendTotal = trend.reduce((sum, d) => sum + d.minutes, 0)
 
   if (!user) return null
 
+  const completedList = sessions.filter((s) => s.status === 'completed')
+
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">专注</h1>
-        <p className="text-sm text-muted-foreground mt-1">番茄钟计时与专注统计</p>
+    <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
+      <div className="min-w-0">
+        <h1 className="text-display">专注</h1>
+        <p className="mt-1 text-caption text-muted-foreground">番茄钟计时与专注统计</p>
       </div>
 
       {/* Timer section */}
-      <div className="max-w-md mx-auto">
+      <div className="mx-auto max-w-md">
         <HomeFocusTimer />
       </div>
 
       {/* Stats overview */}
       {isLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-24" />
+            <Skeleton key={i} className="h-28" />
           ))}
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <StatCard
               icon={Timer}
               label="今日专注"
@@ -150,76 +171,85 @@ export default function FocusPage() {
           </div>
 
           {/* 7-day trend */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                最近 7 天趋势
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-end gap-2 h-32">
+          <div className="surface p-4">
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 className="text-section">最近 7 天趋势</h2>
+              <span className="text-micro tabular-nums text-muted-foreground">
+                {weekTrendTotal} 分钟
+              </span>
+            </div>
+
+            {weekTrendTotal === 0 ? (
+              <EmptyState
+                icon={Timer}
+                title="最近 7 天还没有专注"
+                hint="完成一次专注后，这里会出现趋势"
+              />
+            ) : (
+              <div className="mt-4 flex h-32 items-end gap-2">
                 {trend.map((day) => {
                   const height = maxTrendMin > 0 ? (day.minutes / maxTrendMin) * 100 : 0
                   const d = new Date(day.date + 'T00:00:00')
                   const dayLabel = `${d.getMonth() + 1}/${d.getDate()}`
                   return (
-                    <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
-                      <span className="text-[10px] text-muted-foreground">
+                    <div key={day.date} className="flex h-full flex-1 flex-col items-center gap-1">
+                      <span className="text-micro tabular-nums text-muted-foreground">
                         {day.minutes > 0 ? `${day.minutes}分` : ''}
                       </span>
-                      <div
-                        className="w-full rounded-t-sm bg-gradient-to-t from-violet-500/70 to-cyan-400/70 transition-all min-h-[4px]"
-                        style={{ height: `${Math.max(height, 4)}%` }}
-                      />
-                      <span className="text-[10px] text-muted-foreground mt-1">{dayLabel}</span>
+                      <div className="flex w-full flex-1 items-end">
+                        <div
+                          className="w-full min-h-1 rounded-t-sm bg-gradient-to-t from-primary/70 via-primary/50 to-period-afternoon/40 ui-transition"
+                          style={{ height: `${Math.max(height, 4)}%` }}
+                          title={`${day.date}：${day.minutes} 分钟`}
+                        />
+                      </div>
+                      <span className="text-micro tabular-nums text-muted-foreground">
+                        {dayLabel}
+                      </span>
                     </div>
                   )
                 })}
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </div>
 
           {/* Recent sessions */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                最近专注记录
-              </CardTitle>
-              <CardDescription>
-                累计 {stats.totalCount} 次，共 {stats.totalMinutes} 分钟
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {sessions.filter((s) => s.status === 'completed').length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">还没有专注记录</p>
-              ) : (
-                <div className="space-y-1">
-                  {sessions
-                    .filter((s) => s.status === 'completed')
-                    .slice(0, 10)
-                    .map((s) => (
-                      <div
-                        key={s.id}
-                        className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/30 text-sm"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Timer className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                          <span className="truncate">
-                            {s.title || (s.mode === 'short_break' ? '短休息' : s.mode === 'long_break' ? '长休息' : '专注')}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground shrink-0">
-                          <span>{Math.floor(s.actual_seconds / 60)} 分钟</span>
-                          <span>{s.completed_at ? new Date(s.completed_at).toLocaleDateString('zh-CN') : ''}</span>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <div className="surface p-4">
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 className="text-section">最近专注记录</h2>
+              <span className="text-micro tabular-nums text-muted-foreground">
+                累计 {stats.totalCount} 次 · {stats.totalMinutes} 分钟
+              </span>
+            </div>
+
+            {completedList.length === 0 ? (
+              <EmptyState
+                icon={Clock}
+                title="还没有专注记录"
+                hint="开始第一次专注，记录你的时间"
+              />
+            ) : (
+              <div className="mt-3 space-y-1.5">
+                {completedList.slice(0, 10).map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex items-center justify-between gap-3 rounded-md bg-surface-2 px-3 py-2"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Timer className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <span className="truncate text-caption">
+                        {s.title || (s.mode === 'short_break' ? '短休息' : s.mode === 'long_break' ? '长休息' : '专注')}
+                      </span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3 text-micro tabular-nums text-muted-foreground">
+                      <span>{Math.floor(s.actual_seconds / 60)} 分钟</span>
+                      <span>{s.completed_at ? new Date(s.completed_at).toLocaleDateString('zh-CN') : ''}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>
@@ -238,15 +268,13 @@ function StatCard({
   sub?: string
 }) {
   return (
-    <Card className="acg-surface shadow-none">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Icon className="h-4 w-4 text-violet-500" />
-          <span className="text-xs text-muted-foreground">{label}</span>
-        </div>
-        <div className="text-xl font-bold tabular-nums">{value}</div>
-        {sub && <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>}
-      </CardContent>
-    </Card>
+    <div className="surface p-4">
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate text-caption text-muted-foreground">{label}</span>
+        <Icon className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+      </div>
+      <div className="mt-2 text-display tabular-nums">{value}</div>
+      {sub && <p className="mt-0.5 text-micro text-muted-foreground">{sub}</p>}
+    </div>
   )
 }

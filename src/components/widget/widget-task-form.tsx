@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import type { Period, Tag } from '@/types'
 import { PERIOD_LABELS } from '@/lib/constants'
-import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Check, Loader2, Trash2, X } from 'lucide-react'
 
 export interface WidgetTaskDraft {
@@ -28,6 +28,13 @@ interface WidgetTaskFormProps {
 }
 
 const PERIODS: Period[] = ['morning', 'afternoon', 'evening']
+
+/** 时段色类名必须是静态字面量，Tailwind 才能扫描到 */
+const PERIOD_CLASS: Record<Period, string> = {
+  morning: 'p-morning',
+  afternoon: 'p-afternoon',
+  evening: 'p-evening',
+}
 
 /**
  * 浮窗内的任务表单：标题 + 时段 + 标签 + 起止时间。
@@ -64,51 +71,55 @@ export function WidgetTaskForm({
   }
 
   return (
-    <div className="absolute inset-0 z-20 flex flex-col rounded-[inherit] bg-card/98 backdrop-blur">
-      <div className="app-drag flex items-center gap-2 border-b px-3 py-2">
-        <span className="text-xs font-semibold">{mode === 'create' ? '新建事项' : '编辑事项'}</span>
+    <div className="absolute inset-0 z-20 flex flex-col bg-card">
+      <div className="app-drag flex h-11 shrink-0 items-center gap-2 border-b border-border bg-surface-2/50 px-3 select-none">
+        <span className="text-section">{mode === 'create' ? '新建事项' : '编辑事项'}</span>
         <button
           type="button"
           onClick={onCancel}
           aria-label="取消"
-          className="app-no-drag ml-auto flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+          className="app-no-drag ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground ui-transition hover:bg-accent hover:text-foreground"
         >
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
 
-      <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-2.5">
-        <input
-          data-testid="widget-form-title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              submit()
-            }
-          }}
-          placeholder="要做的事…"
-          autoFocus
-          className="w-full rounded-lg border border-violet-200/70 bg-background/70 px-2 py-1.5 text-xs outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-300/50 dark:border-violet-500/25"
-        />
+      <div className="flex-1 space-y-3 overflow-y-auto px-3 py-3">
+        <div className="space-y-2">
+          <p className="text-micro text-muted-foreground">标题</p>
+          <Input
+            data-testid="widget-form-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                submit()
+              }
+            }}
+            placeholder="要做的事…"
+            autoFocus
+            className="h-9 text-body"
+          />
+        </div>
 
         {/* 时段 */}
-        <div className="space-y-1">
-          <p className="text-[10px] text-muted-foreground">时段</p>
-          <div className="flex gap-1">
+        <div className="space-y-2">
+          <p className="text-micro text-muted-foreground">时段</p>
+          <div className="grid grid-cols-3 gap-1.5">
             {PERIODS.map((item) => (
               <button
                 key={item}
                 type="button"
                 data-testid={`widget-period-${item}`}
                 onClick={() => setPeriod(item)}
-                className={cn(
-                  'flex-1 rounded-full py-1 text-[11px] transition-all',
+                className={`flex h-8 items-center justify-center rounded-md text-caption ui-transition ${
+                  PERIOD_CLASS[item]
+                } ${
                   period === item
-                    ? 'bg-gradient-to-r from-violet-500 to-cyan-500 font-medium text-white'
-                    : 'bg-muted/60 text-muted-foreground hover:text-foreground'
-                )}
+                    ? 'period-chip font-medium'
+                    : 'bg-muted/60 text-muted-foreground hover:bg-accent hover:text-foreground'
+                }`}
               >
                 {PERIOD_LABELS[item]}
               </button>
@@ -117,13 +128,13 @@ export function WidgetTaskForm({
         </div>
 
         {/* 标签 */}
-        <div className="space-y-1">
-          <p className="text-[10px] text-muted-foreground">标签</p>
+        <div className="space-y-2">
+          <p className="text-micro text-muted-foreground">标签</p>
           <select
             data-testid="widget-form-tag"
             value={tagId}
             onChange={(e) => setTagId(e.target.value)}
-            className="w-full rounded-lg border border-violet-200/70 bg-background/70 px-2 py-1.5 text-xs outline-none focus:border-violet-400 dark:border-violet-500/25"
+            className="h-9 w-full rounded-md border border-input bg-background px-2.5 text-body text-foreground ui-transition outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/35 dark:bg-input/25"
           >
             <option value="">未分类</option>
             {tags.map((tag) => (
@@ -135,36 +146,36 @@ export function WidgetTaskForm({
         </div>
 
         {/* 时间 */}
-        <div className="space-y-1">
-          <p className="text-[10px] text-muted-foreground">时间（可选）</p>
+        <div className="space-y-2">
+          <p className="text-micro text-muted-foreground">时间（可选）</p>
           <div className="flex items-center gap-1.5">
             <input
               type="time"
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
               aria-label="开始时间"
-              className="min-w-0 flex-1 rounded-lg border border-violet-200/70 bg-background/70 px-1.5 py-1 text-xs tabular-nums outline-none focus:border-violet-400 dark:border-violet-500/25"
+              className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-caption tabular-nums ui-transition outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/35 dark:bg-input/25"
             />
-            <span className="text-[10px] text-muted-foreground">→</span>
+            <span className="shrink-0 text-micro text-muted-foreground">→</span>
             <input
               type="time"
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
               aria-label="结束时间"
-              className="min-w-0 flex-1 rounded-lg border border-violet-200/70 bg-background/70 px-1.5 py-1 text-xs tabular-nums outline-none focus:border-violet-400 dark:border-violet-500/25"
+              className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-caption tabular-nums ui-transition outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/35 dark:bg-input/25"
             />
           </div>
         </div>
       </div>
 
-      <div className="space-y-1.5 border-t px-3 py-2">
+      <div className="shrink-0 space-y-2 border-t border-border bg-surface-2/50 px-3 py-3">
         <Button
           data-testid="widget-form-save"
           onClick={submit}
           disabled={!canSave}
-          className="h-7 w-full bg-gradient-to-r from-violet-500 to-cyan-500 text-xs text-white hover:opacity-90"
+          className="h-9 w-full"
         >
-          {saving ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+          {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
           {mode === 'create' ? '添加' : '保存'}
         </Button>
         {mode === 'edit' && (
@@ -172,7 +183,7 @@ export function WidgetTaskForm({
             <Button
               variant="outline"
               onClick={onToggleDone}
-              className="h-6 flex-1 text-[11px]"
+              className="h-8 flex-1 text-caption"
             >
               <Check className="mr-1 h-3 w-3" />
               {isDone ? '标记未完成' : '标记完成'}
@@ -180,7 +191,7 @@ export function WidgetTaskForm({
             <Button
               variant="outline"
               onClick={onDelete}
-              className="h-6 text-[11px] text-destructive hover:bg-destructive/10"
+              className="h-8 text-caption text-destructive hover:bg-destructive/10"
             >
               <Trash2 className="mr-1 h-3 w-3" />
               删除

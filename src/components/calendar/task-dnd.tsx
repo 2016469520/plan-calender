@@ -53,7 +53,7 @@ export function SortableTaskItem({ task, children }: SortableTaskItemProps) {
 
   const dragHandle = (
     <button
-      className="flex items-center justify-center w-5 h-full cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground transition-colors shrink-0"
+      className="flex h-full w-5 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground/50 transition-colors hover:bg-muted hover:text-muted-foreground active:cursor-grabbing"
       {...attributes}
       {...listeners}
       tabIndex={-1}
@@ -92,8 +92,8 @@ export function PeriodDropZone({
       <div
         data-droppable-period={period}
         className={cn(
-          'transition-colors rounded-lg',
-          isOver && 'bg-primary/5 ring-1 ring-primary/20'
+          'rounded-lg transition-colors',
+          isOver && 'bg-primary/5 ring-1 ring-primary/25'
         )}
       >
         <div className={cn('space-y-1.5', className)}>
@@ -147,13 +147,13 @@ export function TaskDragOverlay({ task }: { task: Task }) {
   return (
     <div
       className={cn(
-        'flex items-center gap-3 px-3 py-2.5 rounded-lg border shadow-lg bg-card',
+        'surface acg-shadow flex items-center gap-2.5 px-3 py-2.5',
         task.status === 'done' ? 'opacity-70' : ''
       )}
     >
       <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
       <span className={cn(
-        'text-sm font-medium truncate',
+        'truncate text-body font-medium',
         task.status === 'done' && 'line-through text-muted-foreground'
       )}>
         {task.title}
