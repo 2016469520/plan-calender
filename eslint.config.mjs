@@ -14,6 +14,11 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "playwright-report/**",
     "test-results/**",
+    // 打包产物与本机工具链
+    "dist/**",
+    "android/**",
+    "resources/**",
+    "electron/**",
   ]),
   // Relax React Compiler refs rule — our draftValuesRef pattern is intentional:
   // refs store mutable draft values during rapid scrolling; state would cause stale closures

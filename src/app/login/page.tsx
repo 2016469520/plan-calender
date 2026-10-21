@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CalendarDays, Mail, Key, AlertCircle, Loader2 } from 'lucide-react'
 import { APP_NAME } from '@/lib/constants'
+import { IS_LOCAL_ONLY } from '@/lib/runtime'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -48,6 +49,10 @@ export default function LoginPage() {
   })
 
   useEffect(() => {
+    if (IS_LOCAL_ONLY) {
+      router.replace('/schedule')
+      return
+    }
     if (user) router.push('/calendar')
   }, [user, router])
 

@@ -14,7 +14,9 @@ import {
   Palette, CalendarDays, Timer, Database, User, Tag
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { IS_LOCAL_ONLY, LOCAL_STORAGE_LABEL } from '@/lib/runtime'
 import { TagManager } from '@/components/common/tag-manager'
+import { BackupPanel } from '@/components/plans/backup-panel'
 import { ReminderList } from '@/components/reminders/reminder-list'
 import { TemplateManager } from '@/components/plans/template-manager'
 import { OverdueProcessor } from '@/components/plans/overdue-processor'
@@ -367,6 +369,8 @@ export default function SettingsPage() {
         {/* Data */}
         {activeSection === 'data' && (
           <div className="space-y-6">
+            <BackupPanel />
+
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">事项模板</CardTitle>
@@ -379,8 +383,8 @@ export default function SettingsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">数据管理</CardTitle>
-                <CardDescription>导入导出事项数据</CardDescription>
+                <CardTitle className="text-base">导入导出事项</CardTitle>
+                <CardDescription>按事项导入 / 导出（CSV 或 JSON）</CardDescription>
               </CardHeader>
               <CardContent>
                 <Button variant="outline" onClick={() => setShowImportExport(true)}>
@@ -397,13 +401,28 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle className="text-base">账户</CardTitle>
               <CardDescription>
-                {isDemoMode ? '本地演示模式 — 数据保存在浏览器中' : `登录账号：${user.email}`}
+                {IS_LOCAL_ONLY
+                  ? `本地模式 — 数据保存在${LOCAL_STORAGE_LABEL}，不上传到任何服务器`
+                  : isDemoMode
+                    ? '本地演示模式 — 数据保存在浏览器中'
+                    : `登录账号：${user.email}`}
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Button variant="destructive" onClick={handleSignOut}>
-                <LogOut className="h-4 w-4 mr-2" />退出登录
-              </Button>
+            <CardContent className="space-y-3">
+              {IS_LOCAL_ONLY ? (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    建议定期到「数据」里导出 JSON 备份；卸载应用或清除应用数据会导致记录丢失。
+                  </p>
+                  <Button variant="outline" onClick={() => setActiveSection('data')}>
+                    <Database className="h-4 w-4 mr-2" />前往数据备份
+                  </Button>
+                </>
+              ) : (
+                <Button variant="destructive" onClick={handleSignOut}>
+                  <LogOut className="h-4 w-4 mr-2" />退出登录
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}

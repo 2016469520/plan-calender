@@ -4,6 +4,7 @@ import { useEffect, useState, createContext, useContext, useCallback } from 'rea
 import { cn } from '@/lib/utils'
 import { WifiOff } from 'lucide-react'
 import { toast } from 'sonner'
+import { IS_LOCAL_ONLY } from '@/lib/runtime'
 
 // ---------- Context ----------
 
@@ -43,6 +44,8 @@ export function PwaProvider({ children }: PwaProviderProps) {
   // Register service worker
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return
+    // 打包版没有网络依赖，也不需要 Service Worker
+    if (IS_LOCAL_ONLY) return
 
     const handleOnline = () => {
       setIsOnline(true)
@@ -141,11 +144,11 @@ export function PwaProvider({ children }: PwaProviderProps) {
     <PwaContext.Provider value={value}>
       {children}
 
-      {/* Offline banner */}
+      {/* Offline banner —— 本地版本来就不依赖网络，不显示 */}
       <div
         className={cn(
           'fixed bottom-16 sm:bottom-4 left-1/2 -translate-x-1/2 z-50 transition-all duration-300',
-          showOfflineBanner
+          showOfflineBanner && !IS_LOCAL_ONLY
             ? 'opacity-100 translate-y-0'
             : 'opacity-0 translate-y-4 pointer-events-none'
         )}

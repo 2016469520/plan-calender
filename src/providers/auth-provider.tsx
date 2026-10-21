@@ -12,6 +12,7 @@ import {
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { setupNewUser } from '@/lib/supabase/new-user-setup'
+import { IS_LOCAL_ONLY } from '@/lib/runtime'
 
 interface AuthState {
   user: User | null
@@ -44,6 +45,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isDemoMode, setIsDemoMode] = useState(false)
 
   useEffect(() => {
+    // 本地打包版：不连任何服务器，直接以本机身份进入
+    if (IS_LOCAL_ONLY) {
+      setIsDemoMode(true)
+      setUser(createDemoUser('local@device'))
+      setIsLoading(false)
+      return
+    }
+
     try {
       const stored = localStorage.getItem(DEMO_USER_STORAGE_KEY)
       if (stored) {
@@ -124,6 +133,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signOut = useCallback(async () => {
+    // 本地打包版没有账号体系，退出会把人锁在空白的登录页，直接忽略
+    if (IS_LOCAL_ONLY) return
+
     if (isDemoMode) {
       setUser(null)
       setIsDemoMode(false)
