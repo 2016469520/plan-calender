@@ -1,5 +1,53 @@
 # PROJECT_STATUS.md — 项目状态
 
+## 当前阶段：UI/UX 全面重设计（Bento Timeline）(2026-10-21)
+
+## 验证状态：2026-10-21（最新）
+
+| 检查项 | 结果 |
+|--------|------|
+| TypeScript (tsc --noEmit) | ✅ 0 error |
+| ESLint | ✅ 0 error / 14 warning（均为既有 hook 依赖与编译器提示） |
+| Vitest | ✅ 18 文件 / 261 项全过 |
+| Playwright e2e | ✅ 34/34（生产构建下 11.5s，无 flake） |
+| 静态导出 | ✅ 通过 |
+| 桌面分支防白屏检查 | ✅ 注入 bridge 后 /schedule /settings /widget /focus 均正常 |
+| 截图矩阵 | ✅ 10 路由 × 浅/深 + 浮窗 × 浅/深 + 375 移动端，无 console error、0 横向溢出 |
+| data-testid | ✅ 基线 25 个全部保留（新增 1 个 habit-checkin-toggle） |
+
+## 🎨 本次变更 (2026-10-21)
+
+### 设计语言：Bento Timeline（模块化 + 时间色）
+- 三方向对比后选定：Quiet Paper（扫视效率）/ **Bento Timeline（模块 + 时段色）** / Neon Grid（未来科技）。
+  选 B 的理由：把"一天切成上午/下午/晚上三个格子"这一产品心智直接色彩化，是别家日历没有的视觉资产；
+  吸收 Quiet Paper 的字号与留白纪律；霓虹只保留在暗色专注区。
+- 文档：`docs/UI_REDESIGN_PLAN.md`（方案与批次）、`docs/UI_DESIGN_SYSTEM.md`（token 与组件契约）、`docs/UI_REDESIGN_PROGRESS.md`（进度与验证）
+
+### 设计系统（`globals.css` + `lib/utils.ts`）
+- 色彩：靛紫主色 + 语义表面层（`surface / surface-2 / border / border-strong`）+ 状态色（success/warning/info/destructive），浅深两套 oklch
+- **时段语义色**：`--period-morning/afternoon/evening` + `p-*` / `period-chip` / `period-dot` / `period-bar` / `period-rail`
+- 排版六档 `text-display/title/section/body/caption/micro`；圆角四档（6/8/12/16/999）；阴影三档（card/float/pop）
+- 动效 140/200/280ms + 统一缓动；全局尊重 `prefers-reduced-motion`
+- 基础件统一：Button / Card / Input / Badge / Skeleton
+
+### 页面改造（5 个并行批次，共 60 个文件）
+- 导航：侧栏按「主流程 / 记录 / 系统」分组 + 3px 主色指示条；移动端底部导航加顶部指示
+- 日程：今日概览卡（进度环 + 进度条 + 延期 + 专注 + 最近一项）；时段分组用 `period-rail` + `period-chip`
+- 日历：月视图细网格 + 今天圆点/描边；周视图三时段行；日视图分区；分类视图 surface 卡
+- 今日：问候 + 完成度主卡 + 三段清单（复用 DayView 的 embedded 模式）
+- 记录类：习惯打卡合并单卡 + 保存状态文字化；复盘统计分段条；统计图重做轨道与主色分层
+- 辅助：任务弹窗族统一分组与 `shadow-pop`；倒数日状态色；搜索筛选胶囊化；浮窗去掉渐变外框改克制描边
+
+### 主控整合修复
+1. `tailwind-merge` 把自定义字号当颜色类 → 注册 font-size 组，修复全局字号被吞
+2. 今日页 `DayView` `h-full` 导致的空白带 → 新增 `embedded` 可选 prop
+3. 「卡中卡」双层边框 → 任务行改无边框 + hover 层级
+4. 时段底色过重 → 只保留 rail 竖线
+5. 月视图芯片对比度与网格可见性
+6. 设置页内容区居中错位 → 左对齐
+7. 统计页趋势图空数据不可见 → 整列轨道
+8. 复盘连续天数行对比度
+
 ## 当前阶段：紧急修复 0.3.1 白屏（React #185）(2026-10-21)
 
 ## 验证状态：2026-10-21（最新）

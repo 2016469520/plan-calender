@@ -21,21 +21,55 @@
 
 ## 阶段 B 待办（按批次）
 
-- [ ] 批次 1 · 地基：`globals.css` tokens 重写 + `ui/` 基础件统一
-- [ ] 批次 2 · 导航骨架：sidebar / mobile-nav / schedule-header / app-shell
-- [ ] 批次 3 · 核心页：schedule / calendar / today
-- [ ] 批次 4 · 记录类：habits / reviews / insights / focus
-- [ ] 批次 5 · 辅助页：countdowns / inbox / settings / login / widget
-- [ ] 批次 6 · 打磨：空/加载/错误统一、断点与缩放、暗色对比度、reduced-motion
-- [ ] 产出 `docs/UI_DESIGN_SYSTEM.md`（落地后的真实规范，含 token 表与组件用法）
+- [x] 批次 1 · 地基：`globals.css` tokens 重写 + `ui/` 基础件统一（Button/Card/Input/Badge/Skeleton + tailwind-merge 字号组扩展）
+- [x] 批次 2 · 导航骨架：sidebar（三组分组 + 3px 指示条）/ mobile-nav / schedule-header（今日概览卡）/ app-shell
+- [x] 批次 3 · 核心页：schedule / calendar（月·周·日·分类）/ today
+- [x] 批次 4 · 记录类：habits / reviews（月历·时间线·详情·表单）/ insights / focus
+- [x] 批次 5 · 辅助页：countdowns / inbox / settings / login / widget + plans 弹窗族 + tag-manager + search + reminders
+- [x] 批次 6 · 打磨：统一空状态/加载态、修「卡中卡」、月视图对比度、今日页空白带、设置页内容错位、insights 趋势图轨道
+- [x] 产出 `docs/UI_DESIGN_SYSTEM.md`（token 表 + 组件用法 + 禁令）
 - [ ] 重新打包 exe / apk，校验哈希，升版本、推送、发 Release
+
+## 批次执行摘要（5 个并行子任务 + 主控整合）
+
+| 批次 | 文件数 | 关键决策 |
+|---|---|---|
+| A 导航+日程 | 16（含新增 `schedule-empty-state.tsx`） | 侧栏三组分组；当前项 3px 主色条；概览卡带进度环；时段用 `period-rail` + `period-chip`；行去掉可见边框，hover 才出现层级 |
+| B 日历+今日 | 11 | 月视图改 `gap-px + bg-border` 细线；今天用主色圆点 + ring；周/日时段用 8% 时段底（后收敛为纯 rail）；分类视图改 surface 卡 |
+| C 记录类 | 14 | 习惯打卡合并为单 surface 容器 + 分隔行；保存状态改文字而非只靠 toast；复盘统计用分段条/小方块；统计图改低饱和主色 |
+| D 弹窗族+倒数日 | 13 | 弹窗统一 `shadow-pop` + `text-section` 标题；表单字段分组；倒数日按剩余天数映射状态色；搜索筛选胶囊化 |
+| E 浮窗+设置+登录 | 6 | 浮窗去掉紫青渐变外框与饱和描边，改 `bg-card + ring-border`；Tab 改主色实底；设置页分区导航加指示条；登录页去重渐变 |
+
+## 主控整合修复（子任务之外）
+
+1. **`tailwind-merge` 字号丢失**：自定义 `text-body/caption/micro` 被当作颜色类，与 `text-muted-foreground` 同处 `cn()` 时被删除。已在 `src/lib/utils.ts` 用 `extendTailwindMerge` 注册 font-size 组，实测共存与覆盖都正确。
+2. **今日页空白带**：`DayView` 根节点 `h-full overflow-auto` 嵌入今日页后把后续内容顶出视口。新增可选 prop `embedded`（不自带滚动容器与日期头），今日页启用。
+3. **卡中卡**：日视图分区已是卡片，任务行再套边框造成双层。任务行改无边框 + `hover:bg-surface-2`。
+4. **时段底色过重**：周/日视图原本整块 8% 时段底 + 白卡产生"色块套白卡"，改为纯 `period-rail` 竖线 + 时段 chip。
+5. **月视图对比度**：任务芯片 11px → 12px、`bg-muted/60` → `bg-surface-2`、完成态 `/60` → `/80`，格底改 `bg-card` 让网格线可见，今天 ring 提到 `/40`。
+6. **设置页内容错位**：内容区 `mx-auto max-w-3xl` 在宽屏下被居中到远离分区导航，改为左对齐。
+7. **统计页趋势图**：原本只有极淡的 `bg-muted` 柱，空数据日几乎不可见；改为整列轨道 + 主色实心/浅色分层，今天日期高亮。
+8. **复盘连续天数行对比度**：`text-muted-foreground` → `text-foreground/70` + 主色图标。
 
 ## 验证记录
 
 | 时间 | 项 | 结果 |
 |---|---|---|
-| 2026-10-21 17:25 | 阶段 A 范围自查（未修改任何 UI 代码） | ✅ 仅新增 2 份 docs |
-| 2026-10-21 基线 | `tsc --noEmit` / `eslint` / `vitest` / `build:static` / `desktop-render-check` | ✅ 沿用 0.3.2 的绿线（261 tests，0 lint error） |
+| 2026-10-21 17:25 | 阶段 A 范围自查（未修改任何 UI 代码） | ✅ 仅新增 docs |
+| 2026-10-21 18:2x | `tsc --noEmit` | ✅ 0 error |
+| 2026-10-21 18:2x | `eslint` | ✅ 0 error / 14 warning（均为既有 hook 依赖与编译器提示） |
+| 2026-10-21 18:2x | `vitest run` | ✅ 18 文件 / 261 项全过 |
+| 2026-10-21 18:2x | `build:static` + 全量截图（浅/深 × 10 路由 + 浮窗 + 375 移动端） | ✅ 无 console error，移动端 0 横向溢出 |
+| 待补 | `playwright test`（34 项 e2e）、`desktop-render-check`、exe/apk 哈希校验 | ⏳ |
+
+## 遗留与后续方向
+
+- 浮窗内「专注」页沿用品牌渐变环（`focus-ring.tsx` 未改），与外壳的克制风格是有意的对比；若要完全统一可去掉渐变。
+- 非本月日期用 `text-muted-foreground/60`，对比度低于 4.5:1，属有意降饱和（可访问性权衡）。
+- `recurrence-editor` / `subtask-manager` / `search-filter` 目前没有页面引用，只做了静态校验。
+- 已知既有缺陷（本次未动，属业务逻辑）：事项难度下拉含 `medium` 但 zod 枚举无该项；搜索筛选「全部」会传 `['all']`。
+- 月/周/日三套视图各自维护一份时段样式常量，后续若调整需同步三处。
+
 
 ## 备注
 
