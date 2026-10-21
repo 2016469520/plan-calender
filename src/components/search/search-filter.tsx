@@ -232,11 +232,12 @@ export function SearchFilter({ onSelectTask, compact = false }: SearchFilterProp
               <div className="space-y-2">
                 <label className="text-caption text-muted-foreground">状态</label>
                 <Select
-                  value={filterOptions.status?.[0] || ''}
+                  value={filterOptions.status?.[0] || 'all'}
                   onValueChange={(v) =>
                     setFilterOptions((prev) => ({
                       ...prev,
-                      status: v ? [v] : undefined,
+                      // 「全部」不是一个真实状态值，必须清空筛选而不是传 'all'
+                      status: v && v !== 'all' ? [v] : undefined,
                     }))
                   }
                 >
@@ -256,11 +257,11 @@ export function SearchFilter({ onSelectTask, compact = false }: SearchFilterProp
               <div className="space-y-2">
                 <label className="text-caption text-muted-foreground">优先级</label>
                 <Select
-                  value={filterOptions.priority?.[0] || ''}
+                  value={filterOptions.priority?.[0] || 'all'}
                   onValueChange={(v) =>
                     setFilterOptions((prev) => ({
                       ...prev,
-                      priority: v ? [v] : undefined,
+                      priority: v && v !== 'all' ? [v] : undefined,
                     }))
                   }
                 >
@@ -280,11 +281,11 @@ export function SearchFilter({ onSelectTask, compact = false }: SearchFilterProp
               <div className="space-y-2">
                 <label className="text-caption text-muted-foreground">标签</label>
                 <Select
-                  value={filterOptions.tagIds?.[0] || ''}
+                  value={filterOptions.tagIds?.[0] || 'all'}
                   onValueChange={(v) =>
                     setFilterOptions((prev) => ({
                       ...prev,
-                      tagIds: v ? [v] : undefined,
+                      tagIds: v && v !== 'all' ? [v] : undefined,
                     }))
                   }
                 >

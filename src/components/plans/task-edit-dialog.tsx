@@ -289,12 +289,12 @@ export function TaskEditDialog({
               <Select value={field.value} onValueChange={field.onChange}>
                 <SelectTrigger className="w-full rounded-md">
                   <SelectValue>
-                    {{ low: '简单', normal: '一般', high: '困难', urgent: '极难', medium: '一般' }[field.value as string] || '一般'}
+                    {{ low: '简单', normal: '一般', high: '困难', urgent: '极难' }[field.value as string] || '一般'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="low">简单</SelectItem>
-                  <SelectItem value="medium">一般</SelectItem>
+                  <SelectItem value="normal">一般</SelectItem>
                   <SelectItem value="high">困难</SelectItem>
                   <SelectItem value="urgent">极难</SelectItem>
                 </SelectContent>
