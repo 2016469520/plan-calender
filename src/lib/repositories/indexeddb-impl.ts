@@ -33,6 +33,7 @@ import type {
   DateRange,
 } from '@/types'
 import { nowISO, todayStr } from '@/lib/utils/date'
+import { notifyDataChanged } from '@/lib/widget-sync'
 
 // ---------- Helpers ----------
 
@@ -82,6 +83,7 @@ class IndexedDBTaskRepository implements ITaskRepository {
     const db = await getDB()
     const task = makeRecord<Task>(userId, data)
     await db.add('tasks', task)
+    notifyDataChanged('tasks')
     return task
   }
 
@@ -91,6 +93,7 @@ class IndexedDBTaskRepository implements ITaskRepository {
     if (!existing || existing.user_id !== userId) throw new Error('Task not found')
     const updated = { ...existing, ...data, updated_at: nowISO() }
     await db.put('tasks', updated)
+    notifyDataChanged('tasks')
     return updated
   }
 
@@ -107,6 +110,7 @@ class IndexedDBTaskRepository implements ITaskRepository {
     const existing = await db.get('tasks', id)
     if (!existing || existing.user_id !== userId) return
     await db.delete('tasks', id)
+    notifyDataChanged('tasks')
   }
 
   async reorder(userId: string, updates: { id: string; order_index: number }[]): Promise<void> {
@@ -119,6 +123,7 @@ class IndexedDBTaskRepository implements ITaskRepository {
         await db.put('tasks', task)
       }
     }
+    notifyDataChanged('tasks')
   }
 
   async moveTask(
@@ -131,6 +136,7 @@ class IndexedDBTaskRepository implements ITaskRepository {
     if (!task || task.user_id !== userId) throw new Error('Task not found')
     const updated = { ...task, ...target, updated_at: nowISO() }
     await db.put('tasks', updated)
+    notifyDataChanged('tasks')
     return updated
   }
 

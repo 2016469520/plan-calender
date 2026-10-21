@@ -1,9 +1,9 @@
 // ============================================================
-// Electron 主进程 — 只用内置 app:// 协议加载静态导出的前端
-// 数据保存在 Chromium 的 IndexedDB 中（系统用户数据目录），不联网
+// Electron 主进程 — 主窗口 + 常驻桌面浮窗 + 托盘
+// 只用内置 app:// 协议加载静态导出的前端，数据存本机 IndexedDB
 // ============================================================
 
-const { app, BrowserWindow, Menu, protocol, shell } = require('electron')
+const { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage, protocol, screen, shell } = require('electron')
 const path = require('node:path')
 const fs = require('node:fs')
 const { resolveAsset, mimeFor } = require('./serve.cjs')
@@ -13,7 +13,15 @@ const APP_HOST = 'local'
 const APP_ORIGIN = `${APP_SCHEME}://${APP_HOST}`
 const DIST_DIR = path.join(__dirname, '..', 'out')
 const DEV_URL = process.env.ELECTRON_START_URL || ''
-const APP_TITLE = '我的计划日历'
+const APP_TITLE = '时格'
+
+const WIDGET_WIDTH = 340
+const WIDGET_HEIGHT = 460
+
+let mainWindow = null
+let widgetWindow = null
+let tray = null
+let isQuitting = false
 
 // 自定义协议必须以 standard + secure 注册，IndexedDB / localStorage 才会持久化
 protocol.registerSchemesAsPrivileged([
@@ -35,7 +43,6 @@ function buildResponse(file, status = 200) {
     status,
     headers: {
       'content-type': mimeFor(file),
-      // 本地文件不做缓存协商，升级后不会残留旧文件
       'cache-control': 'no-store',
     },
   })
@@ -55,42 +62,56 @@ function registerProtocolHandler() {
 
 // ---------- 窗口状态持久化 ----------
 
+const DEFAULT_STATE = {
+  main: { width: 1280, height: 860 },
+  widget: { visible: true, pinned: true },
+}
+
 function stateFile() {
   return path.join(app.getPath('userData'), 'window-state.json')
 }
 
-function loadWindowState() {
-  const fallback = { width: 1280, height: 860 }
+function loadState() {
   try {
     const raw = JSON.parse(fs.readFileSync(stateFile(), 'utf8'))
-    if (typeof raw.width === 'number' && typeof raw.height === 'number') {
-      return { ...fallback, ...raw }
+    return {
+      main: { ...DEFAULT_STATE.main, ...(raw.main || {}) },
+      widget: { ...DEFAULT_STATE.widget, ...(raw.widget || {}) },
     }
   } catch {
-    /* 首次启动没有状态文件 */
+    return JSON.parse(JSON.stringify(DEFAULT_STATE))
   }
-  return fallback
 }
 
-function saveWindowState(win) {
-  if (!win || win.isDestroyed()) return
+function saveState(partial) {
+  const current = loadState()
+  const next = { ...current, ...partial }
   try {
-    fs.writeFileSync(stateFile(), JSON.stringify(win.getNormalBounds()), 'utf8')
+    fs.writeFileSync(stateFile(), JSON.stringify(next), 'utf8')
   } catch {
     /* 忽略写入失败 */
   }
 }
 
-// ---------- 窗口 ----------
+function persistBounds(kind, win) {
+  if (!win || win.isDestroyed()) return
+  const bounds = win.getNormalBounds()
+  const state = loadState()
+  state[kind] = { ...state[kind], ...bounds }
+  saveState({ [kind]: state[kind] })
+}
 
-function createWindow() {
-  const state = loadWindowState()
+// ---------- 主窗口 ----------
+
+function createMainWindow() {
+  const state = loadState()
+  const mains = state.main
 
   const win = new BrowserWindow({
-    width: state.width,
-    height: state.height,
-    x: state.x,
-    y: state.y,
+    width: mains.width || 1280,
+    height: mains.height || 860,
+    x: mains.x,
+    y: mains.y,
     minWidth: 900,
     minHeight: 620,
     title: APP_TITLE,
@@ -103,15 +124,28 @@ function createWindow() {
       sandbox: true,
       spellcheck: false,
       backgroundThrottling: false,
+      preload: path.join(__dirname, 'preload.cjs'),
     },
   })
 
   win.once('ready-to-show', () => win.show())
-  win.on('resize', () => saveWindowState(win))
-  win.on('move', () => saveWindowState(win))
-  win.on('close', () => saveWindowState(win))
+  win.on('resize', () => persistBounds('main', win))
+  win.on('move', () => persistBounds('main', win))
 
-  // 站外链接交给系统浏览器，不在应用内打开
+  // 关掉主窗口 = 收到托盘/浮窗，而不是退出应用
+  win.on('close', (event) => {
+    if (isQuitting) return
+    event.preventDefault()
+    win.hide()
+    ensureWidgetVisible()
+  })
+
+  attachNavigationGuards(win)
+  win.loadURL(DEV_URL || `${APP_ORIGIN}/`)
+  return win
+}
+
+function attachNavigationGuards(win) {
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('http://') || url.startsWith('https://')) {
       shell.openExternal(url)
@@ -126,10 +160,112 @@ function createWindow() {
       if (url.startsWith('http')) shell.openExternal(url)
     }
   })
+}
 
-  win.loadURL(DEV_URL || `${APP_ORIGIN}/`)
+// ---------- 桌面浮窗 ----------
+
+function defaultWidgetPosition(state) {
+  const { workArea } = screen.getPrimaryDisplay()
+  const width = state.widget.width || WIDGET_WIDTH
+  const height = state.widget.height || WIDGET_HEIGHT
+  return {
+    x: workArea.x + workArea.width - width - 24,
+    y: workArea.y + workArea.height - height - 24,
+  }
+}
+
+function createWidgetWindow() {
+  const state = loadState()
+  const saved = state.widget
+  const hasPosition = typeof saved.x === 'number' && typeof saved.y === 'number'
+  const fallback = defaultWidgetPosition(state)
+
+  const win = new BrowserWindow({
+    width: saved.width || WIDGET_WIDTH,
+    height: saved.height || WIDGET_HEIGHT,
+    x: hasPosition ? saved.x : fallback.x,
+    y: hasPosition ? saved.y : fallback.y,
+    minWidth: 280,
+    minHeight: 260,
+    maxWidth: 640,
+    maxHeight: 900,
+    frame: false,
+    transparent: true,
+    resizable: true,
+    maximizable: false,
+    fullscreenable: false,
+    alwaysOnTop: saved.pinned !== false,
+    skipTaskbar: true,
+    show: false,
+    title: `${APP_TITLE} 浮窗`,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      spellcheck: false,
+      backgroundThrottling: false,
+      preload: path.join(__dirname, 'preload.cjs'),
+    },
+  })
+
+  if (saved.pinned !== false) {
+    win.setAlwaysOnTop(true, 'floating')
+  }
+
+  win.once('ready-to-show', () => {
+    if (loadState().widget.visible !== false) win.show()
+  })
+  win.on('resize', () => persistBounds('widget', win))
+  win.on('move', () => persistBounds('widget', win))
+
+  // 关掉浮窗只是隐藏，主窗口继续运行
+  win.on('close', (event) => {
+    if (isQuitting) return
+    event.preventDefault()
+    win.hide()
+    saveState({ widget: { ...loadState().widget, visible: false } })
+  })
+
+  attachNavigationGuards(win)
+  win.loadURL(DEV_URL ? `${DEV_URL}/widget/` : `${APP_ORIGIN}/widget/`)
   return win
 }
+
+function ensureWidgetVisible() {
+  if (!widgetWindow) {
+    widgetWindow = createWidgetWindow()
+    return
+  }
+  widgetWindow.show()
+  saveState({ widget: { ...loadState().widget, visible: true } })
+}
+
+function toggleWidgetVisible() {
+  if (!widgetWindow) {
+    widgetWindow = createWidgetWindow()
+    saveState({ widget: { ...loadState().widget, visible: true } })
+    return true
+  }
+  if (widgetWindow.isVisible()) {
+    widgetWindow.hide()
+    saveState({ widget: { ...loadState().widget, visible: false } })
+    return false
+  }
+  ensureWidgetVisible()
+  return true
+}
+
+function showMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    mainWindow = createMainWindow()
+    return
+  }
+  if (mainWindow.isMinimized()) mainWindow.restore()
+  mainWindow.show()
+  mainWindow.focus()
+}
+
+// ---------- 菜单与托盘 ----------
 
 function buildMenu() {
   const isDev = !!DEV_URL
@@ -151,6 +287,12 @@ function buildMenu() {
       label: '视图',
       submenu: [
         { role: 'reload', label: '重新加载' },
+        { type: 'separator' },
+        {
+          label: '桌面浮窗',
+          click: () => toggleWidgetVisible(),
+        },
+        { type: 'separator' },
         { role: 'resetZoom', label: '实际大小' },
         { role: 'zoomIn', label: '放大' },
         { role: 'zoomOut', label: '缩小' },
@@ -163,6 +305,90 @@ function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
+function createTray() {
+  const iconPath = path.join(__dirname, 'assets', 'app.ico')
+  const image = nativeImage.createFromPath(iconPath)
+  tray = new Tray(image.isEmpty() ? nativeImage.createEmpty() : image)
+  tray.setToolTip(APP_TITLE)
+
+  const refreshMenu = () => {
+    const widgetVisible = !!widgetWindow && widgetWindow.isVisible()
+    const pinned = !!widgetWindow && widgetWindow.isAlwaysOnTop()
+    tray.setContextMenu(
+      Menu.buildFromTemplate([
+        { label: `打开${APP_TITLE}`, click: () => showMainWindow() },
+        {
+          label: widgetVisible ? '隐藏桌面浮窗' : '显示桌面浮窗',
+          click: () => toggleWidgetVisible(),
+        },
+        {
+          label: '浮窗置顶',
+          type: 'checkbox',
+          checked: pinned,
+          click: () => {
+            if (!widgetWindow) {
+              ensureWidgetVisible()
+              return
+            }
+            const next = !widgetWindow.isAlwaysOnTop()
+            widgetWindow.setAlwaysOnTop(next, 'floating')
+            saveState({ widget: { ...loadState().widget, pinned: next } })
+            refreshMenu()
+          },
+        },
+        { type: 'separator' },
+        {
+          label: '退出',
+          click: () => {
+            isQuitting = true
+            app.quit()
+          },
+        },
+      ])
+    )
+  }
+
+  refreshMenu()
+  tray.on('click', () => showMainWindow())
+  tray.on('right-click', refreshMenu)
+  app.on('widget-visibility-changed', refreshMenu)
+}
+
+// ---------- IPC ----------
+
+function registerIpc() {
+  ipcMain.handle('widget:hide', () => {
+    if (widgetWindow) widgetWindow.hide()
+    saveState({ widget: { ...loadState().widget, visible: false } })
+    return false
+  })
+
+  ipcMain.handle('widget:toggle', () => toggleWidgetVisible())
+
+  ipcMain.handle('main:show', () => {
+    showMainWindow()
+  })
+
+  ipcMain.handle('widget:toggle-pin', () => {
+    if (!widgetWindow) return false
+    const next = !widgetWindow.isAlwaysOnTop()
+    widgetWindow.setAlwaysOnTop(next, 'floating')
+    saveState({ widget: { ...loadState().widget, pinned: next } })
+    app.emit('widget-visibility-changed')
+    return next
+  })
+
+  ipcMain.handle('widget:is-pinned', () => {
+    if (!widgetWindow) return loadState().widget.pinned !== false
+    return widgetWindow.isAlwaysOnTop()
+  })
+
+  ipcMain.handle('app:quit', () => {
+    isQuitting = true
+    app.quit()
+  })
+}
+
 // ---------- 生命周期 ----------
 
 const gotLock = app.requestSingleInstanceLock()
@@ -170,25 +396,30 @@ if (!gotLock) {
   app.quit()
 } else {
   app.on('second-instance', () => {
-    const [win] = BrowserWindow.getAllWindows()
-    if (win) {
-      if (win.isMinimized()) win.restore()
-      win.focus()
-    }
+    showMainWindow()
   })
 
   app.whenReady().then(() => {
     app.setAppUserModelId('app.local.plancalendar')
     registerProtocolHandler()
+    registerIpc()
     buildMenu()
-    createWindow()
+
+    mainWindow = createMainWindow()
+    widgetWindow = createWidgetWindow()
+    createTray()
 
     app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+      showMainWindow()
     })
   })
 
+  app.on('before-quit', () => {
+    isQuitting = true
+  })
+
+  // 托盘常驻：窗口全关也不退出，由「退出」显式结束
   app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit()
+    if (isQuitting) app.quit()
   })
 }
