@@ -31,9 +31,17 @@
 }
 
 /* 主题感知的遮罩：保证文字对比度，同时保留画面 */
+.atmo-darken {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
 .atmo-scrim {
   position: absolute;
   inset: 0;
+  /* --mask-strength 由设置里的遮罩强度控制（0-1） */
+  opacity: calc(var(--mask-strength, 0.55) * 1.6);
   background:
     linear-gradient(
       180deg,
@@ -236,23 +244,57 @@
 
 .atmo-character {
   position: fixed;
-  left: 16px;
-  bottom: 16px;
   z-index: 30;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
-  max-width: 240px;
+  max-width: 260px;
+  transition:
+    opacity 200ms var(--ease-standard),
+    transform 200ms var(--ease-standard);
+}
+
+/* 四个停靠位置 */
+.atmo-pos-bottom-left {
+  left: 16px;
+  bottom: 16px;
+}
+.atmo-pos-bottom-right {
+  right: 16px;
+  bottom: 16px;
+  align-items: flex-end;
+}
+.atmo-pos-hero {
+  right: 28px;
+  top: 92px;
+  align-items: flex-end;
+}
+.atmo-pos-sidebar {
+  left: 16px;
+  bottom: 84px;
+}
+
+@media (min-width: 1024px) {
+  .atmo-pos-bottom-left,
+  .atmo-pos-sidebar {
+    left: 244px;
+  }
 }
 
 .atmo-character-figure {
-  width: 116px;
-  height: 136px;
+  width: calc(116px * var(--char-scale, 1));
+  height: calc(136px * var(--char-scale, 1));
   cursor: pointer;
   filter: drop-shadow(0 10px 24px color-mix(in srgb, var(--foreground) 18%, transparent));
   transition: transform var(--motion-base) var(--ease-standard);
   animation: atmo-idle-bob 5.5s ease-in-out infinite;
+}
+
+/* 关闭动画时完全静止（表情仍会切换） */
+.atmo-character[data-animate='false'] .atmo-character-figure {
+  animation: none;
+  transition: none;
 }
 
 .atmo-character-figure:hover {
@@ -425,13 +467,7 @@
   }
 }
 
-/* 桌面：角色挪到侧栏右侧，避免压住侧栏底部的浮窗开关 */
-@media (min-width: 1024px) {
-  .atmo-character {
-    left: 244px;
-    bottom: 18px;
-  }
-}
+/* 桌面：默认位置挪到侧栏右侧，避免压住侧栏底部的浮窗开关（见 .atmo-pos-* 规则） */
 
 /* 小屏：角色缩小，避免挡操作 */
 @media (max-width: 767px) {
@@ -472,4 +508,23 @@
    的透明度，背景只做极淡的底纹，不影响任何数据可读性。 */
 [data-atmo='on'] .cal-cell {
   background-color: color-mix(in srgb, var(--card) 88%, transparent);
+}
+/* ---------------- 低性能模式 ---------------- */
+/* 由 use-performance-mode 检测到掉帧/弱设备时设置。
+   只关装饰，不影响任何功能与信息呈现。 */
+[data-perf='low'] .atmo-particles,
+[data-perf='low'] .atmo-scanline,
+[data-perf='low'] .atmo-confetti {
+  display: none;
+}
+[data-perf='low'] .atmo-art {
+  filter: none !important;
+}
+[data-perf='low'] .atmo-character-figure {
+  animation: none !important;
+  filter: none;
+}
+[data-perf='low'] .atmo-bubble,
+[data-perf='low'] .atmo-quote {
+  backdrop-filter: none;
 }

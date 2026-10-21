@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import { isHomePath } from '@/lib/atmosphere/routes'
 import { ArrowRight, Sparkles, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAppearance } from '@/providers/appearance-provider'
@@ -44,7 +45,7 @@ export function WelcomeOverlay() {
   const { state } = useAppearance()
   const pathname = usePathname()
   // 只在首页出现：设置页/日历页弹开场会打断操作
-  const isHomeRoute = pathname === '/schedule' || pathname === '/today'
+  const isHomeRoute = isHomePath(pathname)
   const atmosphere = state.atmosphere
   const scene = useCurrentScene()
   const sceneArt = renderScene(scene?.id, 'h-full w-full')

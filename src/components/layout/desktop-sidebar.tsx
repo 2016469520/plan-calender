@@ -1,10 +1,11 @@
-'use client'
+﻿'use client'
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { navGroups, type NavItem } from './nav-data'
 import { DesktopWidgetControl } from './desktop-widget-control'
+import { ImmersiveToggle } from './immersive-toggle'
 import { APP_NAME } from '@/lib/constants'
 import { CalendarDays } from 'lucide-react'
 
@@ -75,6 +76,11 @@ export function DesktopSidebar() {
           </div>
         ))}
       </nav>
+
+      {/* 沉浸 / 纯净 快捷开关 */}
+      <div className="border-t border-border p-2">
+        <ImmersiveToggle />
+      </div>
 
       {/* Desktop widget toggle — 底部固定，保持每次可点（网页端无 bridge 时整块隐藏） */}
       <div className="border-t border-border p-2 pt-3 empty:hidden">

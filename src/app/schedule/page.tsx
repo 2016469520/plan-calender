@@ -5,6 +5,7 @@ import { useAuth } from '@/providers/auth-provider'
 import { useRepos } from '@/providers/repo-provider'
 import { useQuery } from '@tanstack/react-query'
 import { ScheduleHeader } from '@/components/schedule/schedule-header'
+import { ThemeHero } from '@/components/atmosphere/hero-banner'
 import { QuickAddTask } from '@/components/schedule/quick-add-task'
 import { ScheduleViewSwitcher } from '@/components/schedule/schedule-view-switcher'
 import type { ScheduleView } from '@/components/schedule/schedule-view-switcher'
@@ -208,6 +209,9 @@ export default function SchedulePage() {
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-3xl space-y-4 px-4 py-4 sm:px-6 sm:py-6">
+            {/* 主题主视觉：场景 + 角色 + 每日一句（纯净模式下自动隐藏） */}
+            <ThemeHero />
+
             {/* 今日概览卡：日期 + 完成进度 + 专注时长 */}
             <ScheduleHeader today={today} tasks={allTasks} />
 

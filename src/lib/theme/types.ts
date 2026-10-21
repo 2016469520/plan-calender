@@ -79,9 +79,17 @@ export interface UserPreset {
 }
 
 /** 沉浸氛围：场景、角色、短句、动画 */
+/** 沉浸 / 纯净两种工作模式 */
+export type AtmosphereMode = 'immersive' | 'pure'
+
+/** 角色停靠位置 */
+export type CharacterPosition = 'bottom-left' | 'bottom-right' | 'hero' | 'sidebar'
+
 export interface AtmosphereSettings {
   /** 总开关：关掉后只剩基础 UI */
   enabled: boolean
+  /** 沉浸模式（全开） / 纯净工作模式（隐藏角色、弱化背景、减少动画） */
+  mode: AtmosphereMode
   /** 氛围动画（樱花/星点/扫描线/像素粒子） */
   animations: boolean
   /** 每套主题各自选中的场景；没有则用该主题默认场景 */
@@ -92,14 +100,40 @@ export interface AtmosphereSettings {
   characterEnabled: boolean
   /** 每套主题各自选中的角色 */
   characterByTheme: Partial<Record<ThemeId, string>>
+  /** 角色尺寸百分比 60-160 */
+  characterSize: number
+  /** 角色停靠位置 */
+  characterPosition: CharacterPosition
+  /** 角色不透明度 30-100 */
+  characterOpacity: number
+  /** 角色待机/切换动画 */
+  characterAnimate: boolean
+  /** 表情跟随真实状态自动切换 */
+  characterAutoState: boolean
+  /** 角色说欢迎语/台词 */
+  characterWelcome: boolean
+  /** 选中的自定义角色素材 id */
+  customCharacterId: string | null
   /** 是否显示每日一句 */
   quoteEnabled: boolean
   /** 用户自定义短句（按主题分开） */
   customQuotes: Partial<Record<ThemeId, string[]>>
+  /** 背景来源：内置场景 / 自定义图片 */
+  bgSource: 'scene' | 'custom'
+  /** 选中的自定义背景素材 id */
+  customBackgroundId: string | null
   /** 背景可见度 0-100 */
   bgOpacity: number
   /** 背景模糊 0-20px */
   bgBlur: number
+  /** 背景压暗 0-60（越大越暗） */
+  bgDarken: number
+  /** 遮罩强度 0-100（保证文字可读） */
+  bgMask: number
+  /** 色相偏移 -30..30 */
+  bgHue: number
+  /** 亮度 70-130 */
+  bgBrightness: number
   /** 完成任务时是否放轻量庆祝效果 */
   celebration: boolean
   /** 是否显示每日开场页 */

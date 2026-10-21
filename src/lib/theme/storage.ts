@@ -30,6 +30,7 @@ export const APPEARANCE_VERSION = 2
 
 const MOTION_VALUES = MOTION_OPTIONS.map((m) => m.value)
 const FONT_VALUES = ['theme', 'system', 'rounded', 'mono', 'serif']
+const POSITION_VALUES = ['bottom-left', 'bottom-right', 'hero', 'sidebar']
 
 export function defaultPersonalization(id: ThemeId): ThemePersonalization {
   return { ...getTheme(id).defaults, radius: { ...getTheme(id).defaults.radius } }
@@ -38,15 +39,29 @@ export function defaultPersonalization(id: ThemeId): ThemePersonalization {
 export function defaultAtmosphere(): AtmosphereSettings {
   return {
     enabled: true,
+    mode: 'immersive',
     animations: true,
     sceneByTheme: {},
     rotateScenes: false,
     characterEnabled: true,
     characterByTheme: {},
+    characterSize: 100,
+    characterPosition: 'hero',
+    characterOpacity: 100,
+    characterAnimate: true,
+    characterAutoState: true,
+    characterWelcome: true,
+    customCharacterId: null,
     quoteEnabled: true,
     customQuotes: {},
+    bgSource: 'scene',
+    customBackgroundId: null,
     bgOpacity: 100,
     bgBlur: 0,
+    bgDarken: 0,
+    bgMask: 55,
+    bgHue: 0,
+    bgBrightness: 100,
     celebration: true,
     welcome: true,
   }
@@ -180,15 +195,37 @@ export function sanitizeAtmosphere(raw: unknown): AtmosphereSettings {
 
   return {
     enabled: input.enabled !== false,
+    mode: input.mode === 'pure' ? 'pure' : 'immersive',
     animations: input.animations !== false,
     sceneByTheme,
     rotateScenes: input.rotateScenes === true,
     characterEnabled: input.characterEnabled !== false,
     characterByTheme,
+    characterSize: clamp(input.characterSize, 60, 160, base.characterSize),
+    characterPosition: POSITION_VALUES.includes(String(input.characterPosition))
+      ? (input.characterPosition as AtmosphereSettings['characterPosition'])
+      : base.characterPosition,
+    characterOpacity: clamp(input.characterOpacity, 30, 100, base.characterOpacity),
+    characterAnimate: input.characterAnimate !== false,
+    characterAutoState: input.characterAutoState !== false,
+    characterWelcome: input.characterWelcome !== false,
+    customCharacterId:
+      typeof input.customCharacterId === 'string' && input.customCharacterId
+        ? input.customCharacterId
+        : null,
     quoteEnabled: input.quoteEnabled !== false,
     customQuotes,
+    bgSource: input.bgSource === 'custom' ? 'custom' : 'scene',
+    customBackgroundId:
+      typeof input.customBackgroundId === 'string' && input.customBackgroundId
+        ? input.customBackgroundId
+        : null,
     bgOpacity: clamp(input.bgOpacity, 0, 100, base.bgOpacity),
     bgBlur: clamp(input.bgBlur, 0, 20, base.bgBlur),
+    bgDarken: clamp(input.bgDarken, 0, 60, base.bgDarken),
+    bgMask: clamp(input.bgMask, 0, 100, base.bgMask),
+    bgHue: clamp(input.bgHue, -30, 30, base.bgHue),
+    bgBrightness: clamp(input.bgBrightness, 70, 130, base.bgBrightness),
     celebration: input.celebration !== false,
     welcome: input.welcome !== false,
   }

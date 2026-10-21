@@ -14,8 +14,8 @@
 
 | 平台 | 文件 | 说明 |
 |---|---|---|
-| Windows | `TimeGrid-0.6.0-portable.exe` | 便携版，双击即用，不写注册表、不需要管理员权限 |
-| Android | `TimeGrid-0.6.0-android.apk` | 安装包，7.0（API 24）及以上；首次安装需允许「安装未知来源应用」 |
+| Windows | `TimeGrid-0.7.0-portable.exe` | 便携版，双击即用，不写注册表、不需要管理员权限 |
+| Android | `TimeGrid-0.7.0-android.apk` | 安装包，7.0（API 24）及以上；首次安装需允许「安装未知来源应用」 |
 
 > 两个文件都在 [Releases](https://github.com/2016469520/plan-calender/releases/latest) 页面，手机可以直接扫码或点链接下载。
 
@@ -391,3 +391,21 @@ npm run check
 - **庆祝**：完成任务时撒一小把彩带（可关闭）
 
 所有美术都是本项目原创的 SVG，随包离线可用、可无限缩放，无第三方素材与网络请求；素材与许可清单见 [docs/ATMOSPHERE_ASSETS.md](docs/ATMOSPHERE_ASSETS.md)。
+
+### 沉浸 / 纯净 两种工作模式
+
+侧栏底部常驻一个开关，随时切换：
+
+- **沉浸模式**：背景、角色、每日一句、氛围动画全开
+- **纯净工作模式**：隐藏角色、压暗背景、停止动画，保留主题配色，工作区最大化
+
+设置页里还有：场景切换与每日轮换、角色位置（左下/右下/主视觉/侧栏）与尺寸透明度、背景可见度/模糊/压暗/遮罩/色相/亮度、以及四类独立开关。
+
+### 自定义素材
+
+- **导入角色图**：可多选，按文件名绑定状态（`normal/happy/thinking/working/success/error`），运行时按情绪自动换图
+- **导入壁纸**：换成自己的背景，支持与其他主题共用
+- **自定义短句**：每套主题最多 20 条
+- 图片存在本机独立的 IndexedDB 里，不上传、不联网；换素材不用改代码
+
+素材包约定与文件命名规则见 [docs/ATMOSPHERE_PACKS.md](docs/ATMOSPHERE_PACKS.md)。

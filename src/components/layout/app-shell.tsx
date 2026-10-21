@@ -7,6 +7,7 @@ import { MobileNav } from './mobile-nav'
 import { useAuth } from '@/providers/auth-provider'
 import { useInitializeDefaultTags } from '@/hooks/use-default-tags'
 import { useCrossWindowSync } from '@/hooks/use-cross-window-sync'
+import { usePerformanceMode } from '@/hooks/use-performance-mode'
 import { SceneBackdrop } from '@/components/atmosphere/scene-backdrop'
 import { CharacterCompanion } from '@/components/atmosphere/character-companion'
 import { CelebrationLayer } from '@/components/atmosphere/celebration'
@@ -19,6 +20,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isWidget = pathname?.startsWith('/widget') ?? false
 
   useInitializeDefaultTags()
+  // 掉帧时自动降级装饰效果（不影响功能）
+  usePerformanceMode()
   // 主窗口与桌面浮窗同时打开时保持数据一致
   useCrossWindowSync()
 

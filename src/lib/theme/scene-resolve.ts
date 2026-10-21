@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // 场景 / 角色的解析逻辑（纯函数，无 React 依赖，便于单测）
 // ============================================================
 
@@ -18,6 +18,26 @@ export function todayKey(date: Date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
     date.getDate()
   ).padStart(2, '0')}`
+}
+
+/**
+ * 把「沉浸 / 纯净」模式折算成实际生效的氛围参数。
+ *
+ * 纯净工作模式：隐藏角色、关掉动画与短句、背景压到极淡、遮罩拉满，
+ * 但仍保留主题配色——切回来时状态不丢（原始设置一直存在 state 里）。
+ */
+export function resolveAtmosphere(atmosphere: AtmosphereSettings): AtmosphereSettings {
+  if (atmosphere.mode !== 'pure') return atmosphere
+  return {
+    ...atmosphere,
+    characterEnabled: false,
+    animations: false,
+    quoteEnabled: false,
+    celebration: false,
+    bgOpacity: Math.min(atmosphere.bgOpacity, 22),
+    bgMask: Math.max(atmosphere.bgMask, 90),
+    bgBlur: Math.max(atmosphere.bgBlur, 6),
+  }
 }
 
 function hashOf(text: string): number {
@@ -45,6 +65,14 @@ export function resolveScene(
 
   if (atmosphere.rotateScenes) {
     return list[hashOf(todayKey(date)) % list.length]
+  }
+
+  // 彩蛋：暗格按时间段换一张——深夜用颗粒渐变，白天用网格
+  if (themeId === 'bento') {
+    const hour = date.getHours()
+    const night = hour < 6 || hour >= 21
+    const picked = list.find((s) => s.id === (night ? 'bento-grain' : 'bento-mesh'))
+    if (picked) return picked
   }
 
   return defaultSceneFor(themeId)

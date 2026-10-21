@@ -720,3 +720,22 @@
 - **决策**: 只允许 `/schedule` 与 `/today` 触发；每天一次由 localStorage 记录日期键
 - **理由**: 开场页是"今天的开场"，不是"每个页面的开场"；设置页弹出模态层会让用户以为卡住了
 - **配套**: e2e 的 demo 登录辅助函数会写入"今天已看过"标记，避免测试被模态层挡住；氛围行为的验证放在 `smoke/atmosphere-behavior-check.mjs`
+
+## 决策 84：沉浸模式与纯净工作模式是同一份状态的两个档位 (2026-10-22)
+- **背景**: 需要"一键在浪漫氛围和高效率工作区之间切换"
+- **决策**: 不新增一套开关，而是在氛围设置里加 `mode: 'immersive' | 'pure'`，由 `resolveAtmosphere()` 折算成实际参数：
+  - pure：隐藏角色、关掉动画/短句/庆祝、背景可见度压到 ≤22%、遮罩拉满、模糊至少 6px
+  - 原始设置原样保留，切回 immersive 立刻恢复
+- **为什么不要在 UI 上逐个关**: 用户想要的是"现在专心干活"，不是"逐项关闭八个开关再逐项打开"
+- **配套**: 侧栏底部常驻一个开关（`ImmersiveToggle`），随时切换，不用进设置页
+
+## 决策 85：自定义素材用独立 IndexedDB + 文件名绑定状态 (2026-10-22)
+- **背景**: 任务要求"把角色文件夹放进去就能用"，但当前环境没有 Electron IPC 扫描的余量，且不能为此改动业务库 schema
+- **决策**:
+  - 图片存在独立的 `timegrid-atmosphere` 数据库，元数据在内存里用 `useSyncExternalStore` 广播
+  - 导入时按文件名绑定状态（normal/happy/thinking/working/success/error），一次多选共享 `groupId`
+  - 渲染时在组内按当前情绪挑图，找不到退回通用图
+  - object URL 缓存，同一素材只解码一次
+- **踩到的坑**: 调用方在 `onChange` 里把 `input.value` 清空后，异步函数里再读 `files[0].name` 会拿到 `undefined` 并抛 `TypeError`。修法是入口处先 `Array.from(files)` 拍成数组，之后只引用数组。
+- **为什么不改业务库**: 便当盒（业务）与装饰（素材）生命周期不同，混在一个 DB 里会让 schema 迁移和"清空数据"互相牵连
+- **后续**: Electron 可加一个 IPC 扫描 `%APPDATA%\\my-plan-calendar\\characters\\<包>\\config.json`，复用同一套 `addAsset/groupId/state` 逻辑即可

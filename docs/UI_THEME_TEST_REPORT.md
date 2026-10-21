@@ -31,6 +31,8 @@
 | 角色真实反馈 | `smoke/atmosphere-behavior-check.mjs` | ✅ 7/7（完成→开心+台词+庆祝，4.2s 回落，关闭氛围后背景与角色全部隐藏） |
 | 场景画廊 | `smoke/scene-gallery.mjs` | ✅ 18 张场景各自在真实界面下截图 |
 | 氛围设置面板 | `smoke/atmosphere-panel-shot.mjs` | ✅ 面板渲染 + 3 张场景缩略图 + 选中态 |
+| 首页主视觉 / 纯净模式 | `smoke/hero-check.mjs` | ✅ 10/10（6 主题 Hero 组合、纯净模式隐藏角色与背景、侧栏开关切回） |
+| 自定义素材 | `smoke/custom-assets-check.mjs` | ✅ 4/4（导入角色图与壁纸 → 生效 → 删除回退，0 运行时错误） |
 
 ## 验收矩阵
 
