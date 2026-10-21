@@ -7,6 +7,9 @@ import { cn } from "@/lib/utils"
 
 function Slider({
   className,
+  trackClassName,
+  indicatorClassName,
+  thumbClassName,
   defaultValue,
   value,
   min = 0,
@@ -21,6 +24,10 @@ function Slider({
   min?: number
   max?: number
   step?: number
+  /** 允许调用方换掉轨道/进度/滑块的配色（例如专注区的紫青渐变） */
+  trackClassName?: string
+  indicatorClassName?: string
+  thumbClassName?: string
 }) {
   const _value = value || defaultValue || [min]
   return (
@@ -43,16 +50,22 @@ function Slider({
       >
         <SliderPrimitive.Track
           data-slot="slider-track"
-          className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-secondary"
+          className={cn(
+            "relative h-1.5 w-full grow overflow-hidden rounded-full bg-secondary",
+            trackClassName
+          )}
         >
           <SliderPrimitive.Indicator
             data-slot="slider-indicator"
-            className="absolute h-full bg-primary"
+            className={cn("absolute h-full bg-primary", indicatorClassName)}
           />
         </SliderPrimitive.Track>
         <SliderPrimitive.Thumb
           data-slot="slider-thumb"
-          className="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 data-[dragging]:bg-primary data-[dragging]:border-primary cursor-grab data-[dragging]:cursor-grabbing"
+          className={cn(
+            "block h-4 w-4 cursor-grab rounded-full border border-primary/50 bg-background shadow-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 data-[dragging]:border-primary data-[dragging]:bg-primary data-[dragging]:cursor-grabbing",
+            thumbClassName
+          )}
         />
       </SliderPrimitive.Control>
     </SliderPrimitive.Root>

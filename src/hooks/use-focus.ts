@@ -6,6 +6,7 @@ import { useRepos } from '@/providers/repo-provider'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { FocusSession, FocusSessionFormData, TimerMode } from '@/types'
 import { toast } from 'sonner'
+import { notifyDataChanged } from '@/lib/widget-sync'
 
 const STORAGE_KEY = 'plan-calendar-active-focus'
 
@@ -110,6 +111,7 @@ export function useFocus() {
       stateRef.current = null
       setElapsedSeconds(0)
       queryClient.invalidateQueries({ queryKey: ['focus', 'active'] })
+      notifyDataChanged('focus')
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       queryClient.invalidateQueries({ queryKey: ['focus', 'stats'] })
       toast.success('专注完成！', { duration: 3000 })
@@ -294,6 +296,7 @@ export function useFocus() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(stateRef.current))
       }
       queryClient.invalidateQueries({ queryKey: ['focus', 'active'] })
+      notifyDataChanged('focus')
     } catch {
       toast.error('暂停失败')
     }
@@ -313,10 +316,30 @@ export function useFocus() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(stateRef.current))
       }
       queryClient.invalidateQueries({ queryKey: ['focus', 'active'] })
+      notifyDataChanged('focus')
     } catch {
       toast.error('恢复失败')
     }
   }, [user, fsRepo, sessionId, queryClient])
+
+  /** 专注中临时加时：只改计划时长，剩余时间按已流逝时间重算 */
+  const extend = useCallback(
+    async (minutes: number) => {
+      if (!user || !sessionId || timerMode !== 'countdown') return
+      const nextPlanned = Math.min(240, plannedMinutes + minutes)
+      if (nextPlanned === plannedMinutes) return
+      try {
+        await fsRepo.update(user.id, sessionId, { planned_minutes: nextPlanned } as Partial<FocusSession>)
+        setPlannedMinutes(nextPlanned)
+        setRemainingSeconds((prev) => Math.max(0, prev + (nextPlanned - plannedMinutes) * 60))
+        queryClient.invalidateQueries({ queryKey: ['focus', 'active'] })
+        notifyDataChanged('focus')
+      } catch {
+        toast.error('加时失败')
+      }
+    },
+    [user, fsRepo, sessionId, timerMode, plannedMinutes, queryClient]
+  )
 
   const cancel = useCallback(async () => {
     if (!user || !sessionId) return
@@ -337,6 +360,7 @@ export function useFocus() {
       localStorage.removeItem(STORAGE_KEY)
       stateRef.current = null
       queryClient.invalidateQueries({ queryKey: ['focus', 'active'] })
+      notifyDataChanged('focus')
       toast('专注已取消')
     } catch {
       toast.error('取消失败')
@@ -368,6 +392,7 @@ export function useFocus() {
     pause,
     resume,
     cancel,
+    extend,
     formatTime: fmtTime,
   }
 }

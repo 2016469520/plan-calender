@@ -169,7 +169,7 @@ export default function FocusPage() {
                         {day.minutes > 0 ? `${day.minutes}分` : ''}
                       </span>
                       <div
-                        className="w-full bg-primary/20 rounded-t-sm transition-all min-h-[4px]"
+                        className="w-full rounded-t-sm bg-gradient-to-t from-violet-500/70 to-cyan-400/70 transition-all min-h-[4px]"
                         style={{ height: `${Math.max(height, 4)}%` }}
                       />
                       <span className="text-[10px] text-muted-foreground mt-1">{dayLabel}</span>
@@ -238,13 +238,13 @@ function StatCard({
   sub?: string
 }) {
   return (
-    <Card className="shadow-none">
+    <Card className="acg-surface shadow-none">
       <CardContent className="p-4">
         <div className="flex items-center gap-2 mb-2">
-          <Icon className="h-4 w-4 text-muted-foreground" />
+          <Icon className="h-4 w-4 text-violet-500" />
           <span className="text-xs text-muted-foreground">{label}</span>
         </div>
-        <div className="text-xl font-bold">{value}</div>
+        <div className="text-xl font-bold tabular-nums">{value}</div>
         {sub && <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>}
       </CardContent>
     </Card>
