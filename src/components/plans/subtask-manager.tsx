@@ -7,6 +7,14 @@ import { useRepos } from '@/providers/repo-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { Plus, Trash2, GripVertical, CheckCircle2, Circle, ListChecks } from 'lucide-react'
 import { toast } from 'sonner'
@@ -21,6 +29,8 @@ export function SubtaskManager({ taskId }: SubtaskManagerProps) {
   const { taskSubitems } = useRepos()
   const queryClient = useQueryClient()
   const [newTitle, setNewTitle] = useState('')
+  /** 正在重命名的子任务：用应用内弹窗代替 window.prompt */
+  const [renaming, setRenaming] = useState<{ id: string; title: string } | null>(null)
 
   const { data: subitems = [], isLoading } = useQuery({
     queryKey: ['taskSubitems', taskId],
@@ -165,12 +175,7 @@ export function SubtaskManager({ taskId }: SubtaskManagerProps) {
                   'flex-1 truncate text-body',
                   sub.is_completed && 'text-muted-foreground line-through'
                 )}
-                onDoubleClick={() => {
-                  const nextTitle = prompt('编辑子任务', sub.title)
-                  if (nextTitle && nextTitle !== sub.title) {
-                    handleEditTitle(sub, nextTitle)
-                  }
-                }}
+                onDoubleClick={() => setRenaming({ id: sub.id, title: sub.title })}
                 title="双击编辑"
               >
                 {sub.title}
@@ -203,6 +208,56 @@ export function SubtaskManager({ taskId }: SubtaskManagerProps) {
           <span className="text-caption tabular-nums text-muted-foreground">{percent}%</span>
         </div>
       )}
+
+      {/* 重命名（替代 window.prompt） */}
+      <Dialog
+        open={!!renaming}
+        onOpenChange={(open) => {
+          if (!open) setRenaming(null)
+        }}
+      >
+        <DialogContent className="shadow-[var(--shadow-pop)] sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-section">编辑子任务</DialogTitle>
+            <DialogDescription className="text-caption text-muted-foreground">
+              改个好认的名字，回车即可保存。
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={renaming?.title ?? ''}
+            autoFocus
+            onChange={(e) =>
+              setRenaming((prev) => (prev ? { ...prev, title: e.target.value } : prev))
+            }
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                if (renaming?.title.trim()) {
+                  const target = subitems.find((s) => s.id === renaming.id)
+                  if (target) handleEditTitle(target, renaming.title.trim())
+                  setRenaming(null)
+                }
+              }
+            }}
+            aria-label="子任务标题"
+          />
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setRenaming(null)}>
+              取消
+            </Button>
+            <Button
+              onClick={() => {
+                if (!renaming?.title.trim()) return
+                const target = subitems.find((s) => s.id === renaming.id)
+                if (target) handleEditTitle(target, renaming.title.trim())
+                setRenaming(null)
+              }}
+            >
+              保存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

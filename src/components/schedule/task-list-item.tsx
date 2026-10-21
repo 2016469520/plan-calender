@@ -1,8 +1,8 @@
-'use client'
+﻿'use client'
 
 import { cn } from '@/lib/utils'
 import { PERIOD_LABELS, PRIORITY_LABELS } from '@/lib/constants'
-import type { Task, Tag, Period } from '@/types'
+import type { Task, Tag } from '@/types'
 import { useRepos } from '@/providers/repo-provider'
 import { useAuth } from '@/providers/auth-provider'
 import { useQueryClient } from '@tanstack/react-query'
@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useState } from 'react'
+import { PERIOD_CLASS } from '@/lib/period-style'
 
 interface TaskListItemProps {
   task: Task
@@ -25,13 +26,6 @@ interface TaskListItemProps {
   isFocus?: boolean
   onClick: () => void
 }
-
-const PERIOD_CLASS: Record<Period, string> = {
-  morning: 'p-morning',
-  afternoon: 'p-afternoon',
-  evening: 'p-evening',
-}
-
 export function TaskListItem({ task, tags, isActive, isFocus, onClick }: TaskListItemProps) {
   const { user } = useAuth()
   const { tasks: taskRepo } = useRepos()

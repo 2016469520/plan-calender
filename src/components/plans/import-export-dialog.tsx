@@ -40,19 +40,13 @@ import {
 } from 'lucide-react'
 import type { Task, Period } from '@/types'
 import { todayStr } from '@/lib/utils/date'
+import { PERIOD_CLASS } from '@/lib/period-style'
 
 const PERIOD_LABELS: Record<Period, string> = {
   morning: '上午',
   afternoon: '下午',
   evening: '晚上',
 }
-
-const PERIOD_TONES: Record<Period, string> = {
-  morning: 'p-morning',
-  afternoon: 'p-afternoon',
-  evening: 'p-evening',
-}
-
 interface ImportExportDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -255,7 +249,7 @@ export function ImportExportDialog({ open, onOpenChange }: ImportExportDialogPro
                     <span
                       className={cn(
                         'shrink-0 rounded-full px-2 py-0.5 text-micro period-chip',
-                        PERIOD_TONES[item.period as Period]
+                        PERIOD_CLASS[item.period as Period]
                       )}
                     >
                       {PERIOD_LABELS[item.period as Period]}

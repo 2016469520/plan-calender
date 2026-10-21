@@ -71,22 +71,12 @@ import {
 import { useForm } from 'react-hook-form'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { TaskEditDialog } from '@/components/plans/task-edit-dialog'
-
-const PERIODS: Period[] = ['morning', 'afternoon', 'evening']
-
+import { PERIOD_CLASS, PERIOD_ORDER } from '@/lib/period-style'
 const PERIOD_ICONS: Record<Period, typeof Sun> = {
   morning: Sun,
   afternoon: Sunset,
   evening: Moon,
 }
-
-const PERIOD_CLASS: Record<Period, string> = {
-  morning: 'p-morning',
-  afternoon: 'p-afternoon',
-  evening: 'p-evening',
-}
-
-
 function dayNav(date: string, dir: -1 | 1): string {
   const d = parseISO(date)
   d.setDate(d.getDate() + dir)
@@ -129,7 +119,7 @@ export function DayView({ currentDate, onDateChange, embedded = false }: DayView
     for (const task of dayTasks) {
       map[task.period].push(task)
     }
-    for (const period of PERIODS) {
+    for (const period of PERIOD_ORDER) {
       map[period].sort((a, b) => a.order_index - b.order_index)
     }
     return map
@@ -351,7 +341,7 @@ export function DayView({ currentDate, onDateChange, embedded = false }: DayView
             embedded ? 'px-0 py-0' : 'p-4 sm:p-6'
           )}
         >
-          {PERIODS.map((period) => {
+          {PERIOD_ORDER.map((period) => {
             const periodTasks = tasksByPeriod[period]
             const taskIds = periodTasks.map((t) => t.id)
             const PeriodIcon = PERIOD_ICONS[period]

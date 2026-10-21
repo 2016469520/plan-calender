@@ -20,9 +20,7 @@ import { calculateTagStats, calculateTaskStats, calculateReviewStats } from '@/l
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import type { Period } from '@/types'
-
-const PERIODS: Period[] = ['morning', 'afternoon', 'evening']
-
+import { PERIOD_ORDER } from '@/lib/period-style'
 const PERIOD_TONE: Record<Period, string> = {
   morning: 'p-morning',
   afternoon: 'p-afternoon',
@@ -275,7 +273,7 @@ export default function InsightsPage() {
             />
           ) : (
             <div className="mt-3 space-y-3">
-              {PERIODS.map((period) => {
+              {PERIOD_ORDER.map((period) => {
                 const p = taskStats.byPeriod[period]
                 const pct = Math.round(p.rate * 100)
                 return (

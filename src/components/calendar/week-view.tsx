@@ -22,25 +22,14 @@ import {
 } from '@dnd-kit/core'
 import type { Task, Period } from '@/types'
 import { Circle, CheckCircle2, Clock, AlertCircle, GripVertical } from 'lucide-react'
+import { PERIOD_CLASS, PERIOD_ORDER } from '@/lib/period-style'
 
 const MAX_VISIBLE_TASKS = 3
-
-/** 时段行/列用的极浅底色（令牌 --period 的 8%，不引入新颜色） */
-
-const PERIOD_CLASS: Record<Period, string> = {
-  morning: 'p-morning',
-  afternoon: 'p-afternoon',
-  evening: 'p-evening',
-}
-
 interface WeekViewProps {
   currentDate: string
   onTaskClick?: (task: Task) => void
   onOverflowClick?: (date: string, period: Period, tasks: Task[]) => void
 }
-
-const PERIODS: Period[] = ['morning', 'afternoon', 'evening']
-
 export function WeekView({ currentDate, onTaskClick, onOverflowClick }: WeekViewProps) {
   const { user } = useAuth()
   const { tasks } = useRepos()
@@ -67,7 +56,7 @@ export function WeekView({ currentDate, onTaskClick, onOverflowClick }: WeekView
       }
     }
     for (const day of weekData.days) {
-      for (const period of PERIODS) {
+      for (const period of PERIOD_ORDER) {
         map[day][period].sort((a, b) => a.order_index - b.order_index)
       }
     }
@@ -186,7 +175,7 @@ export function WeekView({ currentDate, onTaskClick, onOverflowClick }: WeekView
         {/* Three periods × seven days grid */}
         <div className="flex-1 overflow-auto">
           <div className="min-w-[640px]">
-            {PERIODS.map((period) => (
+            {PERIOD_ORDER.map((period) => (
               <div
                 key={period}
                 className={cn(

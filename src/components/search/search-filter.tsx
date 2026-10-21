@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useCallback, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -25,22 +25,16 @@ import {
   Inbox,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { Task, Period } from '@/types'
+import type { Task } from '@/types'
 import type { TaskFilterOptions } from '@/lib/repositories/interfaces'
 import { formatDisplayDate, todayStr } from '@/lib/utils/date'
 import { PERIOD_LABELS, PRIORITY_LABELS, STATUS_LABELS } from '@/lib/constants'
+import { PERIOD_CLASS } from '@/lib/period-style'
 
 interface SearchFilterProps {
   onSelectTask?: (task: Task) => void
   compact?: boolean
 }
-
-const PERIOD_TONES: Record<Period, string> = {
-  morning: 'p-morning',
-  afternoon: 'p-afternoon',
-  evening: 'p-evening',
-}
-
 /** 已选筛选项胶囊：点击移除 */
 function FilterPill({
   label,
@@ -439,7 +433,7 @@ export function SearchFilter({ onSelectTask, compact = false }: SearchFilterProp
                       <span
                         className={cn(
                           'period-chip rounded-full px-2 py-0.5 text-micro',
-                          PERIOD_TONES[task.period]
+                          PERIOD_CLASS[task.period]
                         )}
                       >
                         {PERIOD_LABELS[task.period]}

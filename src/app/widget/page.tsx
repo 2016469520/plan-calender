@@ -26,15 +26,7 @@ import {
   X,
 } from 'lucide-react'
 import type { Period, Task } from '@/types'
-
-const PERIOD_ORDER: Period[] = ['morning', 'afternoon', 'evening']
-
-/** 时段色类名必须是静态字面量，Tailwind 才能扫描到 */
-const PERIOD_CLASS: Record<Period, string> = {
-  morning: 'p-morning',
-  afternoon: 'p-afternoon',
-  evening: 'p-evening',
-}
+import { PERIOD_CLASS, PERIOD_ORDER } from '@/lib/period-style'
 
 function MiniProgress({ rate, size = 28 }: { rate: number; size?: number }) {
   const stroke = 3

@@ -1,18 +1,12 @@
-'use client'
+﻿'use client'
 
 import { cn } from '@/lib/utils'
 import { formatDisplayDate, formatWeekday, todayStr } from '@/lib/utils/date'
 import { PERIOD_LABELS, PRIORITY_LABELS, PRIORITY_COLORS } from '@/lib/constants'
 import { MoveToCategoryMenu } from './move-to-category-menu'
-import type { Period, Task } from '@/types'
+import type { Task } from '@/types'
 import { Clock, AlertCircle, Repeat, Bell, ListChecks } from 'lucide-react'
-
-const PERIOD_CLASS: Record<Period, string> = {
-  morning: 'p-morning',
-  afternoon: 'p-afternoon',
-  evening: 'p-evening',
-}
-
+import { PERIOD_CLASS } from '@/lib/period-style'
 interface CategoryTaskCardProps {
   task: Task
   onClick: (task: Task) => void

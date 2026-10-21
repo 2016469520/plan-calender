@@ -6,6 +6,7 @@ import { PERIOD_LABELS } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Check, Loader2, Trash2, X } from 'lucide-react'
+import { PERIOD_CLASS, PERIOD_ORDER } from '@/lib/period-style'
 
 export interface WidgetTaskDraft {
   title: string
@@ -26,16 +27,6 @@ interface WidgetTaskFormProps {
   onDelete?: () => void
   onToggleDone?: () => void
 }
-
-const PERIODS: Period[] = ['morning', 'afternoon', 'evening']
-
-/** 时段色类名必须是静态字面量，Tailwind 才能扫描到 */
-const PERIOD_CLASS: Record<Period, string> = {
-  morning: 'p-morning',
-  afternoon: 'p-afternoon',
-  evening: 'p-evening',
-}
-
 /**
  * 浮窗内的任务表单：标题 + 时段 + 标签 + 起止时间。
  * 新建和编辑共用同一套字段，编辑时额外提供「完成 / 删除」。
@@ -107,7 +98,7 @@ export function WidgetTaskForm({
         <div className="space-y-2">
           <p className="text-micro text-muted-foreground">时段</p>
           <div className="grid grid-cols-3 gap-1.5">
-            {PERIODS.map((item) => (
+            {PERIOD_ORDER.map((item) => (
               <button
                 key={item}
                 type="button"

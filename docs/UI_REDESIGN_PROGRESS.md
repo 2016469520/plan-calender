@@ -60,15 +60,32 @@
 | 2026-10-21 18:2x | `eslint` | ✅ 0 error / 14 warning（均为既有 hook 依赖与编译器提示） |
 | 2026-10-21 18:2x | `vitest run` | ✅ 18 文件 / 261 项全过 |
 | 2026-10-21 18:2x | `build:static` + 全量截图（浅/深 × 10 路由 + 浮窗 + 375 移动端） | ✅ 无 console error，移动端 0 横向溢出 |
-| 待补 | `playwright test`（34 项 e2e）、`desktop-render-check`、exe/apk 哈希校验 | ⏳ |
+| 2026-10-21 23:2x | `playwright test`（生产构建） | ✅ 34/34 |
+| 2026-10-21 23:2x | `desktop-render-check`（注入 bridge） | ✅ 4 路由全过 |
+| 2026-10-21 23:2x | exe asar / APK 与 `out/` 哈希比对 | ✅ 逐文件一致 |
+
+## 收尾轮（2026-10-21 23:xx）：把三条技术债清掉
+
+1. **搜索筛选接入主流程**
+   - 新增 `src/components/search/search-sheet.tsx`：桌面 Dialog / 手机 Drawer 包住已有的 `SearchFilter`
+   - 日程页控制行加「搜索」按钮 + `Ctrl/Cmd+K` 快捷键；选中结果后关闭面板并打开事项详情
+   - 这样 README 里写的"按关键词/标签/状态/优先级/日期范围搜索"才真正有入口（此前该组件零引用）
+   - 实测 7/7：入口可见、面板打开、关键词命中、点结果进详情、快捷键、弹窗可关闭
+2. **清掉最后两个原生弹窗**
+   - `template-manager` 删除模板：`window.confirm` → 应用内 Dialog（含影响说明与 destructive 按钮）
+   - `subtask-manager` 双击改名：`window.prompt` → 应用内 Dialog（回车保存、空标题不提交）
+3. **时段样式收敛为唯一来源**
+   - 新增 `src/lib/period-style.ts`（`PERIOD_ORDER` / `PERIOD_CLASS` / `PERIOD_CHIP_CLASS` / `PERIOD_DOT_CLASS` / `PERIOD_RAIL_CLASS`）
+   - 替换 10 处各自维护的常量：`day-view` / `week-view` / `category-task-card` / `task-list-item` / `widget-task-form` / `template-manager` / `import-export-dialog` / `search-filter` / 日程页 / 统计页 / 浮窗页
+   - 全仓已无 `const PERIODS` / `PERIOD_CLASS` / `PERIOD_TONES` 局部定义
 
 ## 遗留与后续方向
 
 - 浮窗内「专注」页沿用品牌渐变环（`focus-ring.tsx` 未改），与外壳的克制风格是有意的对比；若要完全统一可去掉渐变。
 - 非本月日期用 `text-muted-foreground/60`，对比度低于 4.5:1，属有意降饱和（可访问性权衡）。
-- `recurrence-editor` / `subtask-manager` / `search-filter` 目前没有页面引用，只做了静态校验。
-- 已知既有缺陷（本次未动，属业务逻辑）：事项难度下拉含 `medium` 但 zod 枚举无该项；搜索筛选「全部」会传 `['all']`。
-- 月/周/日三套视图各自维护一份时段样式常量，后续若调整需同步三处。
+- `recurrence-editor` 目前仍无页面引用（重复日程编辑器未接到编辑弹窗里）。
+- 搜索面板的「清除全部」按钮在只有关键词时也出现，位置可再优化。
+
 
 
 ## 备注

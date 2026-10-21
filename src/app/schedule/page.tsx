@@ -1,6 +1,6 @@
-'use client'
+﻿'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useAuth } from '@/providers/auth-provider'
 import { useRepos } from '@/providers/repo-provider'
 import { useQuery } from '@tanstack/react-query'
@@ -20,6 +20,8 @@ import { HomeFocusTimer } from '@/components/focus/focus-timer'
 import { HomeCountdowns } from '@/components/countdowns/home-countdowns'
 import { HomeHabitsSummary } from '@/components/habits/home-habits-summary'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+import { SearchSheet } from '@/components/search/search-sheet'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { useToday } from '@/hooks/use-today'
 import { addDays, format, parseISO, toDateStr } from '@/lib/utils/date'
@@ -27,9 +29,7 @@ import { groupTasksByTag } from '@/lib/utils/task-grouping'
 import type { Task, Period } from '@/types'
 import { FolderOpen, Search, TagIcon } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-
-const PERIODS: Period[] = ['morning', 'afternoon', 'evening']
-
+import { PERIOD_ORDER } from '@/lib/period-style'
 /** Generate the next 7 days (today + 6) as date strings */
 function getWeekDateRange(today: string): { dates: string[]; end: string } {
   const dates: string[] = []
@@ -61,7 +61,20 @@ export default function SchedulePage() {
   const [groupBy, setGroupBy] = useState<'none' | 'category'>('none')
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
   const today = useToday()
+
+  // Ctrl/Cmd+K 打开搜索面板
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setSearchOpen(true)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
 
   // Load today + broader range for overdue/upcoming
   const range = useMemo(() => {
@@ -216,6 +229,17 @@ export default function SchedulePage() {
                 groupBy={groupBy}
                 onGroupByChange={setGroupBy}
               />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1 text-caption"
+                onClick={() => setSearchOpen(true)}
+                data-testid="open-search"
+                title="搜索事项（Ctrl+K）"
+              >
+                <Search className="h-3.5 w-3.5" aria-hidden="true" />
+                搜索
+              </Button>
             </div>
 
             {isLoading ? (
@@ -252,7 +276,7 @@ export default function SchedulePage() {
                           onTaskClick={handleTaskClick}
                         />
                         <div className="space-y-4">
-                          {PERIODS.map((period) => (
+                          {PERIOD_ORDER.map((period) => (
                             <TimePeriodSection
                               key={period}
                               period={period}
@@ -457,6 +481,12 @@ export default function SchedulePage() {
         task={activeTask}
         open={showDetailPanel}
         onClose={handleClosePanel}
+      />
+
+      <SearchSheet
+        open={searchOpen}
+        onOpenChange={setSearchOpen}
+        onSelectTask={handleTaskClick}
       />
     </div>
   )

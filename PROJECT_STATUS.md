@@ -1,7 +1,23 @@
 # PROJECT_STATUS.md — 项目状态
 
-## 当前阶段：UI/UX 全面重设计（Bento Timeline）(2026-10-21)
+## 当前阶段：重设计收尾（搜索入口 / 原生弹窗 / 时段样式收敛）(2026-10-21)
 
+## 验证状态：2026-10-21 23:xx
+
+| 检查项 | 结果 |
+|--------|------|
+| tsc / eslint / vitest | ✅ 0 error / 0 error / 261 项 |
+| Playwright e2e（生产构建） | ✅ 34/34 |
+| 搜索入口专项回归 | ✅ 7/7（入口、面板、关键词命中、点结果进详情、Ctrl+K、删除确认弹窗、取消关闭） |
+| desktop-render-check | ✅ 4 路由无白屏 |
+| exe asar / APK 哈希 | ✅ 与 out/ 逐文件一致 |
+
+本阶段改动：
+1. 搜索筛选接入主流程（search-sheet.tsx + 日程页「搜索」按钮 + Ctrl+K），此前该组件零引用
+2. 	emplate-manager 删除模板、subtask-manager 双击改名改用应用内 Dialog，仓库内已无 window.confirm/prompt
+3. 新增 src/lib/period-style.ts，把 10 处重复的时段常量收敛为唯一来源
+
+## 当前阶段：UI/UX 全面重设计（Bento Timeline）(2026-10-21)
 ## 验证状态：2026-10-21（最新）
 
 | 检查项 | 结果 |

@@ -11,6 +11,8 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -33,13 +35,7 @@ import {
   Play,
 } from 'lucide-react'
 import type { TaskTemplate, Task, Period, Priority } from '@/types'
-
-const PERIOD_TONES: Record<Period, string> = {
-  morning: 'p-morning',
-  afternoon: 'p-afternoon',
-  evening: 'p-evening',
-}
-
+import { PERIOD_CLASS } from '@/lib/period-style'
 interface TemplateManagerProps {
   onApply?: (template: Partial<Task>) => void
 }
@@ -52,6 +48,8 @@ export function TemplateManager({ onApply }: TemplateManagerProps) {
   const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState('')
   const [newDesc, setNewDesc] = useState('')
+  /** 待删除的模板：用应用内弹窗代替 window.confirm */
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null)
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ['taskTemplates'],
@@ -222,7 +220,7 @@ export function TemplateManager({ onApply }: TemplateManagerProps) {
                       <span
                         className={cn(
                           'period-chip rounded-full px-2 py-0.5 text-micro',
-                          PERIOD_TONES[template.template_data[0].period as Period]
+                          PERIOD_CLASS[template.template_data[0].period as Period]
                         )}
                       >
                         {PERIOD_LABELS[template.template_data[0].period as Period]}
@@ -255,11 +253,7 @@ export function TemplateManager({ onApply }: TemplateManagerProps) {
                   variant="ghost"
                   size="icon-sm"
                   className="text-muted-foreground hover:text-destructive"
-                  onClick={() => {
-                    if (confirm(`确定删除模板「${template.name}」吗？`)) {
-                      deleteMutation.mutate(template.id)
-                    }
-                  }}
+                  onClick={() => setPendingDelete({ id: template.id, name: template.name })}
                   title="删除模板"
                   aria-label={`删除模板 ${template.name}`}
                 >
@@ -291,6 +285,37 @@ export function TemplateManager({ onApply }: TemplateManagerProps) {
           </DrawerContent>
         </Drawer>
       )}
+
+      {/* 删除确认（替代 window.confirm） */}
+      <Dialog
+        open={!!pendingDelete}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null)
+        }}
+      >
+        <DialogContent className="shadow-[var(--shadow-pop)] sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-section">删除模板</DialogTitle>
+            <DialogDescription className="text-caption text-muted-foreground">
+              确定删除「{pendingDelete?.name}」吗？删除后无法恢复，已用该模板创建的事项不受影响。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setPendingDelete(null)}>
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (pendingDelete) deleteMutation.mutate(pendingDelete.id)
+                setPendingDelete(null)
+              }}
+            >
+              删除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
