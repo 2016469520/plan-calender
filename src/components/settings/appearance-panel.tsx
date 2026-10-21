@@ -190,7 +190,12 @@ export function AppearancePanel() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `timegrid-appearance-${new Date().toISOString().slice(0, 10)}.json`
+    // 用本地日期命名：toISOString 是 UTC，北京凌晨会落到前一天
+    const now = new Date()
+    const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+      now.getDate()
+    ).padStart(2, '0')}`
+    a.download = `timegrid-appearance-${stamp}.json`
     a.click()
     URL.revokeObjectURL(url)
   }
