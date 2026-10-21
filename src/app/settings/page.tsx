@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useAuth } from '@/providers/auth-provider'
 import { useRepos } from '@/providers/repo-provider'
@@ -6,10 +6,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
-import { useTheme } from 'next-themes'
+import { AppearancePanel } from '@/components/settings/appearance-panel'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
-  LogOut, Moon, Sun, Monitor, Bell, BellOff, BellRing, MonitorDown,
+  LogOut, Monitor, Bell, BellOff, BellRing, MonitorDown,
   Palette, CalendarDays, Timer, Database, User, Tag
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -26,13 +26,13 @@ import { usePwa } from '@/components/pwa/pwa-provider'
 import { toast } from 'sonner'
 import { Download } from 'lucide-react'
 import { useState } from 'react'
-import type { CalendarView, WeekStartDay, ThemeMode } from '@/types'
+import type { CalendarView, WeekStartDay } from '@/types'
 import { CALENDAR_VIEW_LABELS, WEEK_START_LABELS } from '@/lib/constants'
 
 type SettingsSection = 'appearance' | 'calendar' | 'focus' | 'notifications' | 'tags' | 'data' | 'account'
 
 const SECTION_ITEMS: { id: SettingsSection; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: 'appearance', label: '外观', icon: Palette },
+  { id: 'appearance', label: '外观与个性化', icon: Palette },
   { id: 'calendar', label: '日历', icon: CalendarDays },
   { id: 'focus', label: '专注', icon: Timer },
   { id: 'notifications', label: '提醒', icon: Bell },
@@ -100,7 +100,6 @@ export default function SettingsPage() {
   const { user, isDemoMode, signOut } = useAuth()
   const { users } = useRepos()
   const router = useRouter()
-  const { theme, setTheme } = useTheme()
   const queryClient = useQueryClient()
   const [showImportExport, setShowImportExport] = useState(false)
   const [activeSection, setActiveSection] = useState<SettingsSection>('appearance')
@@ -144,10 +143,6 @@ export default function SettingsPage() {
     upsertMutation.mutate({ notification_enabled: checked })
   }
 
-  const handleThemeChange = (t: string) => {
-    setTheme(t)
-    upsertMutation.mutate({ theme: t as ThemeMode })
-  }
 
   const handleCompactMode = (checked: boolean) => {
     upsertMutation.mutate({ compact_mode: checked })
@@ -259,42 +254,13 @@ export default function SettingsPage() {
           {/* Appearance */}
           {activeSection === 'appearance' && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                <SectionCard icon={Palette} title="主题" description="选择界面颜色模式">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Button
-                      variant={theme === 'light' ? 'default' : 'outline'}
-                      size="sm"
-                      className="h-8"
-                      onClick={() => handleThemeChange('light')}
-                    >
-                      <Sun className="h-4 w-4" />浅色
-                    </Button>
-                    <Button
-                      variant={theme === 'dark' ? 'default' : 'outline'}
-                      size="sm"
-                      className="h-8"
-                      onClick={() => handleThemeChange('dark')}
-                    >
-                      <Moon className="h-4 w-4" />深色
-                    </Button>
-                    <Button
-                      variant={theme === 'system' ? 'default' : 'outline'}
-                      size="sm"
-                      className="h-8"
-                      onClick={() => handleThemeChange('system')}
-                    >
-                      <Monitor className="h-4 w-4" />跟随系统
-                    </Button>
-                  </div>
-                </SectionCard>
+              <AppearancePanel />
 
-                <SectionCard icon={Monitor} title="界面偏好" description="调整列表与页面的疏密">
-                  <SettingRow label="紧凑模式" description="使用更紧凑的界面布局">
-                    <Switch checked={compactMode} onCheckedChange={handleCompactMode} />
-                  </SettingRow>
-                </SectionCard>
-              </div>
+              <SectionCard icon={Monitor} title="界面偏好" description="调整列表与页面的疏密">
+                <SettingRow label="紧凑模式" description="使用更紧凑的界面布局">
+                  <Switch checked={compactMode} onCheckedChange={handleCompactMode} />
+                </SettingRow>
+              </SectionCard>
 
               {/* 桌面浮窗开关（仅 Electron 打包版显示） */}
               <DesktopWidgetControl variant="card" />
