@@ -677,3 +677,24 @@
 
 
 
+
+## 决策 80：主题用「CSS 持有调色板 + TS 持有元数据」的分层 (2026-10-22)
+- **背景**: 需要六套差异明显的主题，且不能复制六份业务代码
+- **决策**:
+  - 调色板与结构规则只写在 `src/styles/theme-<id>.css`（浅/深两块）
+  - `src/lib/theme/themes.ts` 只存元数据：名称、描述、预览色、默认个性化参数
+  - `apply.ts` 只负责把「个性化」翻译成内联 CSS 变量，不参与主题本身
+- **为什么不在 TS 里存调色板**: 两处各存一份必然漂移；CSS 还能直接用 `[data-theme].dark` 限定符表达深色，TS 里要手写 mode 判断
+- **为什么个性化用内联变量**: 内联样式优先级最高，天然压过主题块；恢复默认时 `removeProperty` 即可回退，不需要维护"用户覆盖层"样式表
+- **首帧**: `prepaint.ts` 以字符串形式注入 `<head>`，在 React 挂载前写好 `data-theme`/`.dark`/缩放/强调色，避免默认主题闪一下
+
+## 决策 81：`@theme inline` 与圆角工具类的冲突，以及 Button 的截断 (2026-10-22)
+- **现象**: 圆角滑杆拖动后卡片会变、按钮不变
+- **两个原因**:
+  1. `globals.css` 用 `@theme inline` 声明半径，Tailwind 把 `rounded-md` 编译成字面量 `8px`，运行时改 `--radius-md` 对它们无效
+  2. Button 的类名是 `rounded-[min(var(--radius-md),12px)]`，即使引用变量也被硬截断在 12px
+- **决策**:
+  1. 在 `themes.css` 里把 `rounded-sm/md/lg/xl/2xl/3xl/4xl` 及方向变体重新映射到 `var(--radius-*)`（不加 @layer，压过 utilities）
+  2. 去掉 Button/Toggle 上的 `min()` 截断，改为纯变量
+- **副作用（正向）**: 樱色主题的 `--radius-md: 999px` 之前被截断成 12px，胶囊按钮一直没生效；修掉之后才真正呈现
+- **教训**: 主题系统的"可变参数"必须一路走到最底层，任何 `min()`/`max()`/字面量都会变成静默的死角

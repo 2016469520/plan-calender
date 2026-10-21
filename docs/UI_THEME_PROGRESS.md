@@ -1,12 +1,12 @@
 # UI 主题系统 · 进度与恢复
 
-> 更新时间：2026-10-22 00:xx（北京时间）
+> 更新时间：2026-10-22 00:40（北京时间）
 > 分支：`feat/theme-system`（未推送远程）
 
 ## 当前阶段
 
-Phase 4 进行中：六套主题的 CSS 已进入收尾（4/6 已落地，2 套在并行编写）。
-Phase 3（架构）、Phase 5（设置页）、Phase 6（个性化）的代码骨架已完成。
+Phase 1–10 全部完成。六套主题、主题管理、高级个性化、全局适配、截图验收均已落地并实测通过。
+详细验收结论见 docs/UI_THEME_TEST_REPORT.md。
 
 ## 已完成
 
@@ -30,8 +30,8 @@ Phase 3（架构）、Phase 5（设置页）、Phase 6（个性化）的代码�
 | `src/styles/theme-minimal.css` | Theme 04 留白（Apple / Linear） |
 | `src/styles/theme-pixel.css` | Theme 05 像素机（8-bit） |
 | `src/styles/theme-bento.css` | Theme 06 暗格（Dark Bento） |
-| `src/styles/theme-anime.css` | Theme 01 樱色（编写中） |
-| `src/styles/theme-cyber.css` | Theme 02 霓虹终端（编写中） |
+| `src/styles/theme-anime.css` | Theme 01 樱色（日系二次元） |
+| `src/styles/theme-cyber.css` | Theme 02 霓虹终端（HUD 科幻） |
 
 ### 设置界面（Phase 5 / 6）
 | 文件 | 内容 |
@@ -44,16 +44,14 @@ Phase 3（架构）、Phase 5（设置页）、Phase 6（个性化）的代码�
 - `src/app/layout.tsx`：引入 `themes.css` + 首帧前脚本
 - `src/components/ui/sonner.tsx`：改从外观 Provider 取明暗
 
-## 未完成
+## 未完成（非阻断，已记录在测试报告）
 
-1. `theme-anime.css` / `theme-cyber.css` 落地并检查（并行任务，等待返回）
-2. Phase 7：全局页面主题适配抽查与残留硬编码颜色清理
-3. Phase 8：六套主题 × 主要页面的自动化截图与差异验证
-4. Phase 9：视觉验收（对比度、错位、拥挤、字体）
-5. Phase 10：性能与细节修复
-6. `docs/UI_THEME_TEST_REPORT.md` 验收矩阵
-7. Git 检查点提交（按阶段）
+无阻断项。以下为已知限制：
 
+1. Electron 真机窗口与 Android 安装包内的主题渲染需在本机确认（本环境无法开 GUI）
+2. 
+ext-themes 依赖已无代码引用，可后续从 package.json 移除
+3. 像素主题的胶囊归一化只作用于 .surface 内，属有意取舍
 ## 恢复指令
 
 ```powershell
@@ -69,28 +67,26 @@ ls src\styles\theme-*.css
 若主题 CSS 缺失导致构建失败：确认 `src/styles/themes.css` 里的 `@import` 与 `src/styles/theme-*.css` 一一对应。
 若设置页报 `useAppearance 必须在 AppearanceProvider 内使用`：确认 `app-providers.tsx` 仍包着 `ThemeProvider`。
 
-## 验收矩阵（草稿）
+## 验收矩阵
 
 | 项 | 状态 |
 |---|---|
-| Anime 主题 | ⏳ |
-| Cyberpunk 主题 | ⏳ |
-| Fluent 主题 | ✅ |
-| Minimal 主题 | ✅ |
-| Retro Pixel 主题 | ✅ |
-| Dark Bento 主题 | ✅ |
-| 预览卡 | ✅ |
-| 一键切换 | ✅ 代码就绪，待运行验证 |
-| 全局应用 | ⏳ |
-| 保存 / 启动恢复 | ✅ 代码就绪，待运行验证 |
-| 非法主题回退 | ✅ `getTheme` + `sanitizeState` |
-| 强调色 | ✅ |
-| 圆角 | ✅ |
-| 界面缩放 | ✅ |
-| 字体设置 | ✅ |
-| 动画强度 | ✅ |
-| 用户预设 | ✅ |
-| 恢复默认 | ✅ |
-| 导入导出 | ✅ |
-| 原有功能回归 | ⏳ |
-| 主题差异度 | ⏳ |
+| Anime 主题 | ✅ 实测 |
+| Cyberpunk 主题 | ✅ 实测 |
+| Fluent 主题 | ✅ 实测 |
+| Minimal 主题 | ✅ 实测 |
+| Retro Pixel 主题 | ✅ 实测 |
+| Dark Bento 主题 | ✅ 实测 |
+| 预览卡 | ✅ 实测（真实变量渲染） |
+| 一键切换 | ✅ 实测（点击即切换） |
+| 全局应用 | ✅ 6 主题 × 6 页面扫查 |
+| 保存 / 启动恢复 | ✅ 刷新后主题/圆角/强调色保持 |
+| 非法主题回退 | ✅ 写入坏 id 后回到 fluent |
+| 强调色 / 圆角 / 缩放 / 字体 / 动效 | ✅ 全部实测 |
+| 用户预设 | ✅ 保存→刷新→应用→删除 |
+| 恢复默认 | ✅ 当前主题 / 全部两档 |
+| 导入导出 | ✅ 单测覆盖往返与非法输入 |
+| 原有功能回归 | ✅ 292 单测 + 34 e2e |
+| 主题差异度 | ✅ 主色 6 种 / 结构签名 6 种 / 截图哈希 10/10 |
+
+完整证据见 docs/UI_THEME_TEST_REPORT.md。

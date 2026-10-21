@@ -1,6 +1,54 @@
-# 时格 · UI 设计系统（v1，落地版）
+# 时格 · UI 设计系统（v2，多主题版）
 
-> 所有数值都已在 `src/app/globals.css` 中实现为 CSS 变量或工具类。**改造页面时只能引用这些令牌/工具类，不要再新增硬编码颜色、圆角或阴影。**
+> **v2 变化**：v1 的 Bento Timeline 成为六套主题之一（云母为默认推荐），全部视觉由主题层驱动。
+> 所有数值都在 `src/app/globals.css`（基础令牌）与 `src/styles/*.css`（主题层）中实现为变量或工具类。
+> **改页面时只能引用令牌/工具类，不要新增硬编码颜色、圆角或阴影**——否则该处不会跟随主题切换。
+
+## 0. 主题系统速查
+
+| 层 | 位置 | 负责 |
+|---|---|---|
+| 基础令牌 | `src/app/globals.css` | 语义色、类型阶梯、时段色、默认圆角/阴影/动效 |
+| 主题层 | `src/styles/themes.css` | 共享契约：类型倍率、标题变量、卡片/输入/导航变量、动效等级、装饰底纹、预览卡 |
+| 单主题 | `src/styles/theme-<id>.css` | 该主题的调色板（浅/深）+ 结构签名规则 |
+| 元数据 | `src/lib/theme/themes.ts` | 名称、描述、预览色、默认个性化、字体与动效选项 |
+| 运行时 | `src/lib/theme/{apply,storage,store}.ts` | 个性化→CSS 变量、校验持久化、外部 store |
+| 组件 | `src/providers/appearance-provider.tsx` | `useAppearance()`：主题、明暗、个性化、预设、导入导出 |
+
+六套主题：`fluent` 云母（默认）/ `anime` 樱色 / `cyber` 霓虹终端 / `minimal` 留白 / `pixel` 像素机 / `bento` 暗格。
+`cyber` 与 `bento` 只提供深色，切换时明暗按钮会禁用并给出说明。
+
+**新增第七套主题**：在 `types.ts` 加 id → 加 `src/styles/theme-<id>.css`（照抄任一份的变量清单）→
+在 `themes.ts` 加元数据 → 在 `themes.css` 加 `@import`。业务页面无需改动。
+
+### 主题可用的结构变量（新增主题时必须写全）
+
+```
+--heading-font / --heading-weight / --heading-tracking / --heading-transform
+--card-border-w / --card-border-color / --card-shadow / --card-inset-opacity / --card-bg-image
+--radius / --radius-sm..4xl / --radius-input
+--nav-active-bg / --nav-active-color
+--deco-image / --deco-size / --deco-opacity
+--input-bg / --focus-ring-w
+--motion-fast / --motion-base / --motion-slow / --ease-standard
+```
+
+### 个性化覆盖（内联变量，优先级高于主题 CSS）
+
+| 项 | 写入的变量 | 范围 |
+|---|---|---|
+| 强调色 | `--primary` `--primary-foreground` `--ring` `--sidebar-primary` `--chart-1` | hex；前景按亮度自动取深/浅 |
+| 圆角 | `--radius-sm..4xl` `--radius-input` | 0–32px，四档独立 |
+| 缩放 | `<html>` 的 `font-size` | 80–150%，靠根字号而非位图拉伸 |
+| 字体 | `--font-sans` `--font-heading` | 5 种系统栈 |
+| 字号 | `--type-scale`（正文）/ `--title-scale`（标题） | 0.85–1.2 / 0.85–1.25 |
+| 动效 | `--motion-fast/base/slow` + `data-motion` | 关闭/低/标准/高 |
+
+### 写页面时的三条硬规则
+
+1. **不要写死颜色/圆角/阴影**：用 `bg-card`、`border-border`、`rounded-md`、`shadow-[var(--shadow-card)]` 等令牌。
+2. **圆角只用 `rounded-*` 工具类**：`themes.css` 已把工具类重映射到 `--radius-*`，写 `rounded-[12px]` 会脱离个性化。
+3. **装饰元素必须有意义**：主题专属装饰（HUD 角标、樱花发丝、像素光标）由主题层负责，页面不要自带渐变边框。
 
 ## 1. 风格定位
 
