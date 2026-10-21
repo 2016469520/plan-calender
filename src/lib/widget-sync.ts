@@ -7,7 +7,7 @@
 
 export const DATA_CHANNEL = 'timegrid:data'
 
-export type DataChangeScope = 'tasks' | 'habits' | 'reviews' | 'all'
+export type DataChangeScope = 'tasks' | 'habits' | 'reviews' | 'focus' | 'all'
 
 interface DataChangeMessage {
   type: 'data-changed'

@@ -25,6 +25,10 @@ export function useCrossWindowSync(): void {
       if (scope === 'reviews' || scope === 'all') {
         queryClient.invalidateQueries({ queryKey: ['reviews'] })
       }
+      if (scope === 'focus' || scope === 'all') {
+        queryClient.invalidateQueries({ queryKey: ['focus', 'active'] })
+        queryClient.invalidateQueries({ queryKey: ['focus', 'stats'] })
+      }
     }
 
     return subscribeDataChanged(handle)
