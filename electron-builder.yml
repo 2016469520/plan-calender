@@ -1,5 +1,5 @@
 appId: app.local.plancalendar
-productName: 我的计划日历
+productName: 时格
 copyright: 个人项目
 
 directories:
@@ -27,12 +27,12 @@ win:
       arch:
         - x64
   icon: resources/icon.ico
-  artifactName: PlanCalendar-${version}-portable.${ext}
+  artifactName: TimeGrid-${version}-portable.${ext}
   requestedExecutionLevel: asInvoker
 
 portable:
-  artifactName: PlanCalendar-${version}-portable.${ext}
-  unpackDirName: PlanCalendar
+  artifactName: TimeGrid-${version}-portable.${ext}
+  unpackDirName: TimeGrid
 
 # 打包结果不参与签名（个人使用，无证书）
 forceCodeSigning: false

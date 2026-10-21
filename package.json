@@ -1,9 +1,9 @@
 {
   "name": "my-plan-calendar",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "main": "electron/main.cjs",
-  "description": "个人计划管理系统 — 月/周/日视图、习惯打卡、每日复盘（本地优先）",
+  "description": "时格 — 把一天分成上午/下午/晚上三个时段排计划，带桌面浮窗的本地日程应用",
   "author": "2016469520",
   "scripts": {
     "dev": "next dev",

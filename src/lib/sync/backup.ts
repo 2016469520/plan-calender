@@ -105,7 +105,7 @@ export async function createBackup(
     format: BACKUP_FORMAT,
     version: BACKUP_VERSION,
     exported_at: now.toISOString(),
-    app: '我的计划日历',
+    app: '时格',
     data: {
       tasks,
       tags,

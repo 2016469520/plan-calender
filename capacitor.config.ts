@@ -5,8 +5,9 @@ import type { CapacitorConfig } from '@capacitor/cli'
  * WebView 用 https://localhost 作为来源，IndexedDB 因此可以稳定持久化。
  */
 const config: CapacitorConfig = {
+  // appId 保持不变：安卓上 applicationId 变了会被当成新应用，旧数据不会跟着升级
   appId: 'app.local.plancalendar',
-  appName: '我的计划日历',
+  appName: '时格',
   webDir: 'out',
   android: {
     allowMixedContent: false,

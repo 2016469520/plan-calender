@@ -1,7 +1,7 @@
 {
-  "name": "我的计划日历",
-  "short_name": "计划日历",
-  "description": "个人计划管理系统 — 月/周/日视图，上午/下午/晚上三时段规划",
+  "name": "时格",
+  "short_name": "时格",
+  "description": "把一天分成上午 / 下午 / 晚上三个时段来排计划，顺手打卡习惯、写每日复盘",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
