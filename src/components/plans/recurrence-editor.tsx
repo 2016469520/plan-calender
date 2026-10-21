@@ -1,6 +1,7 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
+import { parseISO } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -46,9 +47,18 @@ const pillClass = (selected: boolean) =>
 interface RecurrenceEditorProps {
   value: RecurrenceRule | null | undefined
   onChange: (rule: RecurrenceRule | null) => void
+  /** 任务日期（yyyy-MM-dd）：选「每周」时默认落在这一天所在的星期几 */
+  baseDate?: string
 }
 
-export function RecurrenceEditor({ value, onChange }: RecurrenceEditorProps) {
+/** 把日期换成 ISO 星期（1=周一 … 7=周日） */
+function isoWeekday(dateStr?: string): number {
+  const date = dateStr ? parseISO(dateStr) : new Date()
+  const day = date.getDay()
+  return day === 0 ? 7 : day
+}
+
+export function RecurrenceEditor({ value, onChange, baseDate }: RecurrenceEditorProps) {
   const frequency = value?.frequency || 'none'
   const [endType, setEndType] = useState<'none' | 'count' | 'date'>(
     value?.count ? 'count' : value?.endDate ? 'date' : 'none'
@@ -68,7 +78,8 @@ export function RecurrenceEditor({ value, onChange }: RecurrenceEditorProps) {
 
     // Preserve and set appropriate defaults
     if (freq === 'weekly' && !base.byWeekday) {
-      base.byWeekday = [1] // Default to Monday
+      // 默认沿用任务当天的星期几，而不是写死周一
+      base.byWeekday = [isoWeekday(baseDate)]
     }
     if (freq === 'monthly') {
       base.byMonthDay = value?.byMonthDay || 1

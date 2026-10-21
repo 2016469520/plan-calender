@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useMemo, useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -8,7 +8,6 @@ import { format, parseISO, isToday } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { PERIOD_LABELS } from '@/lib/constants'
-import { nowISO } from '@/lib/utils/date'
 import { useTaskDnd } from '@/hooks/use-task-dnd'
 import {
   SortableTaskItem,
@@ -18,7 +17,7 @@ import {
 } from '@/components/calendar/task-dnd'
 import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core'
 import { DragOverlay } from '@dnd-kit/core'
-import type { Task, Period, TaskStatus, Priority } from '@/types'
+import type { Task, Period, Priority } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -71,6 +70,7 @@ import {
 import { useForm } from 'react-hook-form'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { TaskEditDialog } from '@/components/plans/task-edit-dialog'
+import { setTaskCompletion } from '@/lib/tasks/task-completion'
 import { PERIOD_CLASS, PERIOD_ORDER } from '@/lib/period-style'
 const PERIOD_ICONS: Record<Period, typeof Sun> = {
   morning: Sun,
@@ -92,7 +92,8 @@ interface DayViewProps {
 
 export function DayView({ currentDate, onDateChange, embedded = false }: DayViewProps) {
   const { user } = useAuth()
-  const { tasks, tags } = useRepos()
+  const repos = useRepos()
+  const { tasks, tags } = repos
   const queryClient = useQueryClient()
   const [newTaskPeriod, setNewTaskPeriod] = useState<Period | null>(null)
   const [activeDragTask, setActiveDragTask] = useState<Task | null>(null)
@@ -129,14 +130,6 @@ export function DayView({ currentDate, onDateChange, embedded = false }: DayView
   const totalCount = dayTasks.filter((t) => t.status !== 'cancelled').length
   const completionPct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0
 
-  const updateTaskMutation = useMutation({
-    mutationFn: (data: { id: string; updates: Partial<Task> }) =>
-      tasks.update(user!.id, data.id, data.updates),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
-    },
-  })
-
   const deleteTaskMutation = useMutation({
     mutationFn: (id: string) => tasks.softDelete(user!.id, id),
     onSuccess: () => {
@@ -154,14 +147,10 @@ export function DayView({ currentDate, onDateChange, embedded = false }: DayView
   })
 
   const toggleTask = (task: Task) => {
-    const newStatus: TaskStatus = task.status === 'done' ? 'todo' : 'done'
-    updateTaskMutation.mutate({
-      id: task.id,
-      updates: {
-        status: newStatus,
-        completed_at: newStatus === 'done' ? nowISO() : undefined,
-      },
-    })
+    // 走统一入口：完成重复事项时会顺带生成下一次
+    void setTaskCompletion(repos, user!.id, task, task.status !== 'done').then(() =>
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+    )
   }
 
   // DnD handlers

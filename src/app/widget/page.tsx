@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/providers/auth-provider'
@@ -10,6 +10,7 @@ import { format, parseISO, formatWeekday } from '@/lib/utils/date'
 import { defaultPeriodByTime } from '@/lib/utils/period'
 import { getDesktopBridge } from '@/lib/desktop-bridge'
 import { notifyDataChanged } from '@/lib/widget-sync'
+import { setTaskCompletion } from '@/lib/tasks/task-completion'
 import { PERIOD_LABELS } from '@/lib/constants'
 import { HomeFocusTimer } from '@/components/focus/focus-timer'
 import { WidgetTaskForm, type WidgetTaskDraft } from '@/components/widget/widget-task-form'
@@ -25,7 +26,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-react'
-import type { Period, Task } from '@/types'
+import type { Task } from '@/types'
 import { PERIOD_CLASS, PERIOD_ORDER } from '@/lib/period-style'
 
 function MiniProgress({ rate, size = 28 }: { rate: number; size?: number }) {
@@ -67,7 +68,8 @@ function MiniProgress({ rate, size = 28 }: { rate: number; size?: number }) {
 
 export default function WidgetPage() {
   const { user } = useAuth()
-  const { tasks: taskRepo, tags: tagRepo } = useRepos()
+  const repos = useRepos()
+  const { tasks: taskRepo, tags: tagRepo } = repos
   const queryClient = useQueryClient()
   const today = useToday()
   const bridge = getDesktopBridge()
@@ -133,11 +135,7 @@ export default function WidgetPage() {
       if (!user || busyId) return
       setBusyId(task.id)
       try {
-        const nextDone = task.status !== 'done'
-        await taskRepo.update(user.id, task.id, {
-          status: nextDone ? 'done' : 'todo',
-          completed_at: nextDone ? new Date().toISOString() : undefined,
-        } as Partial<Task>)
+        await setTaskCompletion(repos, user.id, task, task.status !== 'done')
         refresh()
       } catch {
         /* 等下一次刷新纠正 */
@@ -145,7 +143,7 @@ export default function WidgetPage() {
         setBusyId(null)
       }
     },
-    [user, busyId, taskRepo, refresh]
+    [user, busyId, repos, refresh]
   )
 
   /** 快速添加：只填标题，时段按当前时间推断 */

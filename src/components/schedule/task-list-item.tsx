@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { PERIOD_LABELS, PRIORITY_LABELS } from '@/lib/constants'
 import type { Task, Tag } from '@/types'
 import { useRepos } from '@/providers/repo-provider'
+import { setTaskCompletion } from '@/lib/tasks/task-completion'
 import { useAuth } from '@/providers/auth-provider'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -28,7 +29,7 @@ interface TaskListItemProps {
 }
 export function TaskListItem({ task, tags, isActive, isFocus, onClick }: TaskListItemProps) {
   const { user } = useAuth()
-  const { tasks: taskRepo } = useRepos()
+  const repos = useRepos()
   const queryClient = useQueryClient()
   const [toggling, setToggling] = useState(false)
 
@@ -42,14 +43,11 @@ export function TaskListItem({ task, tags, isActive, isFocus, onClick }: TaskLis
     if (!user || toggling) return
     setToggling(true)
     try {
-      const newStatus = isDone ? 'todo' : 'done'
-      await taskRepo.update(user.id, task.id, {
-        status: newStatus,
-        completed_at: newStatus === 'done' ? new Date().toISOString() : undefined,
-      } as Partial<Task>)
+      const nextDone = !isDone
+      const { spawned } = await setTaskCompletion(repos, user.id, task, nextDone)
       queryClient.invalidateQueries({ queryKey: ['tasks', user.id] })
-      if (newStatus === 'done') {
-        toast.success('已完成', { duration: 1500 })
+      if (nextDone) {
+        toast.success(spawned ? '已完成，下一次已排好' : '已完成', { duration: 1500 })
       }
     } catch {
       toast.error('操作失败')

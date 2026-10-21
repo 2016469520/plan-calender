@@ -1,6 +1,6 @@
 {
   "name": "my-plan-calendar",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "private": true,
   "main": "electron/main.cjs",
   "description": "时格 — 把一天分成上午/下午/晚上三个时段排计划，带桌面浮窗的本地日程应用",

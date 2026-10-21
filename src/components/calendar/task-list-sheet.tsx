@@ -1,13 +1,13 @@
-'use client'
+﻿'use client'
 
 import { useMemo } from 'react'
 import { useRepos } from '@/providers/repo-provider'
 import { useAuth } from '@/providers/auth-provider'
 import { useQueryClient, useMutation } from '@tanstack/react-query'
 import { PERIOD_LABELS } from '@/lib/constants'
+import { setTaskCompletion } from '@/lib/tasks/task-completion'
 import { cn } from '@/lib/utils'
-import { nowISO } from '@/lib/utils/date'
-import type { Task, Period, TaskStatus } from '@/types'
+import type { Task, Period } from '@/types'
 import {
   Sheet,
   SheetContent,
@@ -43,7 +43,7 @@ export function TaskListSheet({
 }: TaskListSheetProps) {
   const isDesktop = useMediaQuery('(min-width: 768px)')
   const { user } = useAuth()
-  const taskRepo = useRepos().tasks
+  const repos = useRepos()
   const queryClient = useQueryClient()
 
   const dateDisplay = useMemo(() => {
@@ -53,13 +53,7 @@ export function TaskListSheet({
   }, [date])
 
   const toggleMutation = useMutation({
-    mutationFn: async (task: Task) => {
-      const newStatus: TaskStatus = task.status === 'done' ? 'todo' : 'done'
-      return taskRepo.update(user!.id, task.id, {
-        status: newStatus,
-        completed_at: newStatus === 'done' ? nowISO() : undefined,
-      } as Partial<Task>)
-    },
+    mutationFn: async (task: Task) => setTaskCompletion(repos, user!.id, task, task.status !== 'done'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
     },

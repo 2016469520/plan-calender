@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, type ReactNode } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
@@ -33,8 +33,9 @@ import { useRepos } from '@/providers/repo-provider'
 import { useAuth } from '@/providers/auth-provider'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMediaQuery } from '@/hooks/use-media-query'
+import { RecurrenceEditor } from './recurrence-editor'
 import { toast } from 'sonner'
-import { Bell } from 'lucide-react'
+import { Bell, Repeat } from 'lucide-react'
 
 const taskFormSchema = z.object({
   title: z.string().min(1, '标题不能为空'),
@@ -48,6 +49,18 @@ const taskFormSchema = z.object({
   status: z.enum(['todo', 'in_progress', 'done', 'cancelled']),
   estimated_minutes: z.string().optional(),
   reminder_at: z.string().optional(),
+  recurrence_rule: z
+    .object({
+      frequency: z.enum(['daily', 'weekly', 'monthly', 'yearly', 'weekdays']),
+      interval: z.number(),
+      byWeekday: z.array(z.number()).optional(),
+      byMonthDay: z.number().optional(),
+      bySetPos: z.number().optional(),
+      endDate: z.string().optional(),
+      count: z.number().optional(),
+    })
+    .nullable()
+    .optional(),
 })
 
 type TaskFormValues = z.infer<typeof taskFormSchema>
@@ -117,6 +130,7 @@ export function TaskEditDialog({
       status: 'todo',
       tag_id: 'none',
       reminder_at: '',
+      recurrence_rule: null,
     },
   })
 
@@ -135,6 +149,7 @@ export function TaskEditDialog({
         status: task.status,
         estimated_minutes: task.estimated_minutes?.toString(),
         reminder_at: task.reminder_at || '',
+        recurrence_rule: task.recurrence_rule ?? null,
       })
     } else {
       form.reset({
@@ -146,6 +161,7 @@ export function TaskEditDialog({
         status: 'todo',
         tag_id: defaultTagId || 'none',
         reminder_at: '',
+        recurrence_rule: null,
       })
     }
   }, [task, defaultDate, defaultPeriod, defaultTagId, form])
@@ -165,6 +181,7 @@ export function TaskEditDialog({
       status: data.status,
       estimated_minutes: data.estimated_minutes ? parseInt(data.estimated_minutes, 10) : undefined,
       reminder_at: data.reminder_at || undefined,
+      recurrence_rule: data.recurrence_rule ?? null,
       order_index: task?.order_index ?? 0,
     }
 
@@ -187,6 +204,9 @@ export function TaskEditDialog({
   }
 
   const isEditing = !!task
+
+  // 用 useWatch 而不是 form.watch，避免触发 React Compiler 的不兼容库警告
+  const taskDate = useWatch({ control: form.control, name: 'task_date' })
 
   const formContent = (
     <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -325,6 +345,31 @@ export function TaskEditDialog({
           hint="设置提醒时间，届时会通过浏览器通知提醒你"
         >
           <Input type="datetime-local" {...form.register('reminder_at')} />
+        </Field>
+      </div>
+
+      {/* 重复 */}
+      <div className="space-y-2 border-t border-border pt-3">
+        <Field
+          label={
+            <span className="flex items-center gap-1.5">
+              <Repeat className="h-3.5 w-3.5" aria-hidden="true" />
+              重复
+            </span>
+          }
+          hint="完成这一项时会自动生成下一次；重复规则保存在这个系列上"
+        >
+          <Controller
+            name="recurrence_rule"
+            control={form.control}
+            render={({ field }) => (
+              <RecurrenceEditor
+                value={field.value ?? null}
+                onChange={(rule) => field.onChange(rule)}
+                baseDate={taskDate}
+              />
+            )}
+          />
         </Field>
       </div>
 
