@@ -1,5 +1,44 @@
 # PROJECT_STATUS.md — 项目状态
 
+## 当前阶段：专注重做 + 浮窗改版 + 二次元视觉 (2026-10-21)
+
+## 验证状态：2026-10-21（最新）
+
+| 检查项 | 结果 |
+|--------|------|
+| TypeScript (tsc --noEmit) | ✅ 通过 |
+| ESLint | ✅ 0 error / 15 warning |
+| Vitest (258 tests) | ✅ 全部通过（新增专注核心 11 项） |
+| 静态导出 | ✅ 通过 |
+| 专注/浮窗浏览器回归 | ✅ 13/13 |
+| 便携 exe | ✅ 96.3MB，asar 与 out/ 逐文件哈希一致 |
+| 安卓 apk | ✅ 5.7MB，assets 与 out/ 逐文件哈希一致 |
+
+## 🔧 本次变更 (2026-10-21)
+
+### 专注功能重做
+1. **时长改成 1 分钟粒度**：`− / +` 单次 ±1，按住自动加速（间隔从 380ms 递减到 55ms），Shift 点击一次 ±5；滚轮 ±1；滑块 `step=1`
+2. **预设值**：5 / 15 / 25 / 45 / 60 / 90，点一下即选中
+3. **倒计时运行中可加时**：`+1` 分钟按钮，`useFocus.extend()` 只改 `planned_minutes`，剩余时间按已流逝时间重算，刷新后依然一致
+4. **正计时可设目标**：15 / 25 / 45 / 60 分钟；目标存在 `planned_minutes` 里，跨窗口/刷新不丢；进度环随专注填充，超出目标切换桃红配色并显示 `+MM:SS`
+5. **逻辑抽成纯函数**（`src/lib/focus/focus-core.ts`）：`formatClock`、`clampMinutes`、`adjustMinutes`、`countdownProgress`、`stopwatchProgress`、`overtimeLabel`，共 11 个单元测试
+6. **环形进度组件** `FocusRing`：紫→青渐变描边 + 外发光，未知进度时呼吸态
+
+### 浮窗改版
+7. **两个标签页**：清单 / 专注；专注页直接复用 `HomeFocusTimer variant="widget"`，浮窗里就能开番茄钟
+8. **视觉重做**：渐变描边容器、紫青柔光底、迷你完成度圆环、渐变勾选按钮、按时段分组的深链接行、空状态插画式图标
+9. **专注跨窗口同步**：`useFocus` 在开始/暂停/继续/结束/完成时广播 `focus` 事件，另一窗口只失效 `focus/active` 与 `focus/stats`
+
+### 视觉风格
+10. `globals.css` 新增一组克制的二次元装饰类：`.acg-surface`（紫青柔光，深浅色分别调强度）、`.acg-frame`（1px 渐变描边）、`.acg-shadow`、`.acg-pill`、`.acg-breathe`、`.acg-ring-glow`
+11. 应用范围刻意收敛：专注卡片、浮窗、专注页统计卡片与趋势柱状图；日程/日历等主界面保持原样，避免影响可读性
+12. `ui/slider.tsx` 支持传入 `trackClassName / indicatorClassName / thumbClassName`，专注区滑块改用渐变配色
+
+### 修改文件（本次会话）
+- 新增：`src/lib/focus/focus-core.ts`、`src/components/focus/focus-ring.tsx`、`src/__tests__/unit/focus-core.test.ts`
+- 重写：`src/components/focus/focus-timer.tsx`、`src/app/widget/page.tsx`
+- 调整：`src/hooks/use-focus.ts`（extend + 广播）、`src/hooks/use-cross-window-sync.ts`、`src/lib/widget-sync.ts`、`src/components/ui/slider.tsx`、`src/app/globals.css`、`src/app/focus/page.tsx`、`package.json`（0.3.0）、README
+
 ## 当前阶段：更名「时格」+ 桌面常驻浮窗 (2026-10-21)
 
 ## 验证状态：2026-10-21（最新）
