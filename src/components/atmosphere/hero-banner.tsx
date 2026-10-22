@@ -17,6 +17,7 @@ import { resolveAtmosphere } from '@/lib/theme/scene-resolve'
 import { linesFor } from '@/lib/theme/atmosphere'
 import { useCurrentCharacter, useCurrentScene } from './use-current-scene'
 import { renderCharacter, renderScene } from './art/registry'
+import { stateUrl, useCharacterPacks } from '@/lib/atmosphere/character-packs'
 import { QuoteStrip } from './quote-strip'
 import { cn } from '@/lib/utils'
 
@@ -35,6 +36,11 @@ export function ThemeHero() {
   const scene = useCurrentScene()
   const character = useCurrentCharacter()
   const [collapsed, setCollapsed] = useState(false)
+  const packs = useCharacterPacks()
+  const activePack = useMemo(
+    () => (character?.packId ? packs.find((p) => p.id === character.packId) ?? null : null),
+    [character, packs]
+  )
 
   const line = useMemo(() => {
     if (!character || !atmo.characterWelcome) return null
@@ -105,11 +111,22 @@ export function ThemeHero() {
             )}
             data-testid="hero-character"
           >
-            {renderCharacter(character.artId, {
-              expression: atmo.characterAnimate ? 'happy' : 'idle',
-              className: 'h-full w-full',
-              reacting: false,
-            })}
+            {activePack ? (
+              // 本地素材包优先
+              // eslint-disable-next-line @next/next/no-img-element -- 本地素材是运行时 object URL
+              <img
+                src={stateUrl(activePack, atmo.characterAnimate ? 'happy' : 'idle') ?? ''}
+                alt=""
+                className="h-full w-full object-contain"
+                draggable={false}
+              />
+            ) : (
+              renderCharacter(character.artId, {
+                expression: atmo.characterAnimate ? 'happy' : 'idle',
+                className: 'h-full w-full',
+                reacting: false,
+              })
+            )}
           </div>
         )}
       </div>

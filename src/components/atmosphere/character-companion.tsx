@@ -15,6 +15,7 @@ import { linesFor, type CharacterExpression } from '@/lib/theme/atmosphere'
 import { resolveAtmosphere } from '@/lib/theme/scene-resolve'
 import { atmosphereEvents, subscribeAtmosphere } from '@/lib/atmosphere/bus'
 import { getAssetUrl, useCustomAssets } from '@/lib/atmosphere/custom-assets'
+import { stateUrl, useCharacterPacks } from '@/lib/atmosphere/character-packs'
 import { renderCharacter } from './art/registry'
 import { useCurrentCharacter } from './use-current-scene'
 import { cn } from '@/lib/utils'
@@ -42,6 +43,7 @@ export function CharacterCompanion() {
   const showDock = atmo.characterPosition !== 'hero'
   const character = useCurrentCharacter()
   const assets = useCustomAssets()
+  const packs = useCharacterPacks()
 
   const [mood, setMood] = useState<CharacterExpression>('idle')
   const [line, setLine] = useState<string | null>(null)
@@ -124,12 +126,22 @@ export function CharacterCompanion() {
     showLine(pickLine(character.id, next))
   }, [character, atmo.characterAutoState, showLine])
 
+  // 本地素材包（模式 A）：按当前情绪挑状态图，没有就退回展示图
+  const activePack = useMemo(
+    () => (character?.packId ? packs.find((p) => p.id === character.packId) ?? null : null),
+    [character, packs]
+  )
+  const packUrl = useMemo(() => {
+    if (!activePack) return null
+    return stateUrl(activePack, atmo.characterAutoState ? mood : 'idle')
+  }, [activePack, atmo.characterAutoState, mood])
+
   const art = useMemo(() => {
-    if (customUrl) {
+    if (packUrl || customUrl) {
       return (
-        // eslint-disable-next-line @next/next/no-img-element -- 用户素材是运行时 object URL，next/image 无法优化
+        // eslint-disable-next-line @next/next/no-img-element -- 本地素材是运行时 object URL，next/image 无法优化
         <img
-          src={customUrl}
+          src={(packUrl ?? customUrl) as string}
           alt=""
           className="h-full w-full object-contain"
           draggable={false}
@@ -143,7 +155,7 @@ export function CharacterCompanion() {
           reacting: atmo.characterAnimate && reacting,
         })
       : null
-  }, [customUrl, character, atmo.characterAnimate, mood, reacting])
+  }, [packUrl, customUrl, character, atmo.characterAnimate, mood, reacting])
 
   if (!showDock) return null
   if (!atmo.enabled || !atmo.characterEnabled || !art) return null

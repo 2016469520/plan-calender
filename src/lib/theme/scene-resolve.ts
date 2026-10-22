@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // 场景 / 角色的解析逻辑（纯函数，无 React 依赖，便于单测）
 // ============================================================
 
@@ -20,6 +20,8 @@ export interface CharacterFigure {
   artId: string
   work: string
   expressions: CharacterExpression[]
+  /** 本地素材包 id（模式 A）；内置立绘为 null */
+  packId?: string | null
 }
 
 /** 本地时区的日期键，例如 2026-10-22 */
@@ -97,6 +99,18 @@ export function resolveCharacter(
   atmosphere: AtmosphereSettings
 ): CharacterFigure | null {
   if (!atmosphere.enabled || !atmosphere.characterEnabled) return null
+
+  // 0) 本地素材包（模式 A 优先）
+  if (atmosphere.characterId && atmosphere.characterId.startsWith('pack-')) {
+    return {
+      id: atmosphere.characterId,
+      name: '本地角色',
+      artId: '',
+      work: '本地素材',
+      expressions: ['idle', 'happy', 'thinking', 'working', 'error', 'sleepy'],
+      packId: atmosphere.characterId,
+    }
+  }
 
   // 1) 角色库选中（跨主题）
   const picked = figureOf(atmosphere.characterId)

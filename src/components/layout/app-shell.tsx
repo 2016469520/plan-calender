@@ -8,6 +8,7 @@ import { useAuth } from '@/providers/auth-provider'
 import { useInitializeDefaultTags } from '@/hooks/use-default-tags'
 import { useCrossWindowSync } from '@/hooks/use-cross-window-sync'
 import { usePerformanceMode } from '@/hooks/use-performance-mode'
+import { importScannedPacks, scanDesktopPacks, useLoadPacks } from '@/lib/atmosphere/character-packs'
 import { SceneBackdrop } from '@/components/atmosphere/scene-backdrop'
 import { CharacterCompanion } from '@/components/atmosphere/character-companion'
 import { CelebrationLayer } from '@/components/atmosphere/celebration'
@@ -22,6 +23,21 @@ export function AppShell({ children }: { children: ReactNode }) {
   useInitializeDefaultTags()
   // 掉帧时自动降级装饰效果（不影响功能）
   usePerformanceMode()
+  // 本地角色包：任何页面都能取到（首页陪伴位、主视觉都要用）
+  useLoadPacks()
+
+  // 桌面版：自动扫描 <userData>/characters，拷进去就能用
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const scanned = await scanDesktopPacks()
+      if (cancelled || scanned.length === 0) return
+      await importScannedPacks(scanned)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
   // 主窗口与桌面浮窗同时打开时保持数据一致
   useCrossWindowSync()
 

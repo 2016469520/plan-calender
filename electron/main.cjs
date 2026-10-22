@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // Electron 主进程 — 主窗口 + 常驻桌面浮窗 + 托盘
 // 只用内置 app:// 协议加载静态导出的前端，数据存本机 IndexedDB
 // ============================================================
@@ -433,7 +433,77 @@ function registerIpc() {
     showMainWindow()
   })
 
-  ipcMain.handle('widget:toggle-pin', () => {
+  /**
+ * 扫描用户自己的角色素材目录：<userData>/characters/<包名>/manifest.json + 图片
+ *
+ * 这样从网上存下来的角色文件夹，拷进去重启就出现在角色库里，
+ * 不需要在设置页里再选一次文件夹。图片以 data URL 返回（单张上限 6MB），
+ * 由渲染进程存进 IndexedDB。
+ */
+const PACK_IMAGE_EXT = ['.png', '.webp', '.jpg', '.jpeg', '.gif', '.avif']
+const PACK_MAX_BYTES = 6 * 1024 * 1024
+
+function readImageAsDataUrl(file) {
+  try {
+    const stat = fs.statSync(file)
+    if (stat.size > PACK_MAX_BYTES) return null
+    const ext = path.extname(file).toLowerCase()
+    const mime =
+      ext === '.png' ? 'image/png'
+      : ext === '.webp' ? 'image/webp'
+      : ext === '.gif' ? 'image/gif'
+      : ext === '.avif' ? 'image/avif'
+      : 'image/jpeg'
+    return `data:${mime};base64,${fs.readFileSync(file).toString('base64')}`
+  } catch {
+    return null
+  }
+}
+
+ipcMain.handle('packs:scan', () => {
+  const root = path.join(app.getPath('userData'), 'characters')
+  const result = { root, packs: [], error: null }
+  try {
+    if (!fs.existsSync(root)) {
+      fs.mkdirSync(root, { recursive: true })
+      return result
+    }
+    for (const dirName of fs.readdirSync(root)) {
+      const dir = path.join(root, dirName)
+      let stat
+      try {
+        stat = fs.statSync(dir)
+      } catch {
+        continue
+      }
+      if (!stat.isDirectory()) continue
+      const manifestPath = path.join(dir, 'manifest.json')
+      if (!fs.existsSync(manifestPath)) continue
+
+      let manifest = {}
+      try {
+        manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+      } catch {
+        continue
+      }
+
+      const images = {}
+      for (const fileName of fs.readdirSync(dir)) {
+        if (!PACK_IMAGE_EXT.includes(path.extname(fileName).toLowerCase())) continue
+        const dataUrl = readImageAsDataUrl(path.join(dir, fileName))
+        if (!dataUrl) continue
+        const key = path.basename(fileName, path.extname(fileName)).toLowerCase()
+        images[key] = dataUrl
+      }
+      if (Object.keys(images).length === 0) continue
+      result.packs.push({ dir: dirName, manifest, images })
+    }
+  } catch (error) {
+    result.error = String(error && error.message ? error.message : error)
+  }
+  return result
+})
+ipcMain.handle('widget:toggle-pin', () => {
     if (!widgetWindow || widgetWindow.isDestroyed()) {
       ensureWidgetVisible()
       return true

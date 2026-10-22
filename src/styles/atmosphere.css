@@ -578,3 +578,81 @@
   mix-blend-mode: normal;
   opacity: 0.5;
 }
+/* ---------------- 角色卡的作品气质装饰 ---------------- */
+/* 不同作品给不一样的角落语言：水墨 / 竹影 / HUD 角标 / 圆点糖纸。
+   只用伪元素与渐变，不增加图片请求。 */
+.series-corner {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+}
+[data-theme][data-mode='dark'] .series-corner {
+  mix-blend-mode: screen;
+  opacity: 0.35;
+}
+
+/* 一人之下：水墨泼点 */
+[data-series='yiren'] .series-corner {
+  background:
+    radial-gradient(circle at 88% 12%, rgba(20, 26, 30, 0.18) 0 6%, transparent 7%),
+    radial-gradient(circle at 93% 22%, rgba(20, 26, 30, 0.12) 0 3%, transparent 4%),
+    radial-gradient(60% 40% at 100% 0%, rgba(63, 122, 106, 0.16), transparent 70%);
+}
+
+/* 武侠：竹影斜线 */
+[data-series='wuxia'] .series-corner {
+  background-image: repeating-linear-gradient(
+    118deg,
+    rgba(47, 143, 122, 0.16) 0 1px,
+    transparent 1px 9px
+  );
+  mask-image: linear-gradient(180deg, #000 0%, transparent 42%);
+}
+
+/* 机甲：HUD 角标 */
+[data-series='mecha'] .series-corner {
+  background-image:
+    linear-gradient(90deg, rgba(224, 60, 60, 0.5) 0 14px, transparent 14px),
+    linear-gradient(180deg, rgba(224, 60, 60, 0.5) 0 14px, transparent 14px),
+    linear-gradient(270deg, rgba(224, 60, 60, 0.28) 0 8px, transparent 8px),
+    linear-gradient(0deg, rgba(224, 60, 60, 0.28) 0 8px, transparent 8px);
+  background-position: 8px 8px, 8px 8px, calc(100% - 8px) calc(100% - 8px), calc(100% - 8px) calc(100% - 8px);
+  background-size: 14px 1px, 1px 14px, 8px 1px, 1px 8px;
+  background-repeat: no-repeat;
+  opacity: 0.45;
+  mask-image: radial-gradient(120% 100% at 50% 0%, #000 40%, transparent 78%);
+}
+
+/* 科幻：网格 */
+[data-series='sci-fi'] .series-corner {
+  background-image:
+    repeating-linear-gradient(0deg, rgba(91, 110, 245, 0.14) 0 1px, transparent 1px 10px),
+    repeating-linear-gradient(90deg, rgba(91, 110, 245, 0.14) 0 1px, transparent 1px 10px);
+  mask-image: linear-gradient(180deg, #000, transparent 55%);
+}
+
+/* 果宝：糖纸圆点 */
+[data-series='candy'] .series-corner {
+  background-image: radial-gradient(circle, rgba(240, 138, 30, 0.22) 0 2.5px, transparent 2.5px);
+  background-size: 14px 14px;
+  mask-image: linear-gradient(160deg, #000 0%, transparent 48%);
+}
+
+/* 童年动画：柔和气泡 */
+[data-series='cute'] .series-corner {
+  background:
+    radial-gradient(circle at 82% 18%, rgba(240, 160, 32, 0.22) 0 9%, transparent 10%),
+    radial-gradient(circle at 92% 32%, rgba(240, 160, 32, 0.14) 0 5%, transparent 6%);
+}
+
+/* 时格原创：细斜纹 */
+[data-series='original'] .series-corner {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(219, 39, 119, 0.12) 0 1px,
+    transparent 1px 7px
+  );
+  mask-image: linear-gradient(200deg, #000, transparent 45%);
+}

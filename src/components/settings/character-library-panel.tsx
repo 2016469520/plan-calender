@@ -1,42 +1,48 @@
-﻿'use client'
+'use client'
 
 // ============================================================
-// 角色库
+// 角色库（资料卡版）
 //
-// 分类 + 搜索 + 收藏 + 最近使用 + 推荐联动。
-// 只显示"能真正渲染出来"的角色：没有内置立绘的进「待导入」，
-// 不会被当成已安装。
+// 三种来源合并成一个列表：
+// 1. 本地素材包（模式 A，优先）—— 用户放进 characters/ 的文件夹
+// 2. 内置立绘（模式 B，分系列重绘）
+// 3. 待导入推荐位 —— 只有配色与主题推荐
+//
+// 卡片是"资料卡"而不是头像卡：主视觉、作品丝带、标签、收藏、选中态。
+// 点卡片开详情，点「选用」直接换成陪伴角色。
 // ============================================================
 
-import { useMemo, useRef, useState } from 'react'
-import {
-  Check,
-  Heart,
-  Search,
-  Sparkles,
-  Star,
-  Upload,
-  UserRound,
-} from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { FolderPlus, Heart, Link2, Search, Upload, UserRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { useAppearance } from '@/providers/appearance-provider'
 import {
   CATEGORY_LABELS,
-  categoryCounts,
-  filterByCategory,
-  getCharacterEntry,
   installedCharacters,
   pendingCharacters,
-  searchCharacters,
+  descriptionOf,
   worksOf,
   type CharacterCategory,
+  type CharacterEntry,
 } from '@/lib/theme/characters'
-import { getTheme } from '@/lib/theme/themes'
-import { getScene } from '@/lib/theme/atmosphere'
-import { renderCharacter } from '@/components/atmosphere/art/registry'
 import { addAsset } from '@/lib/atmosphere/custom-assets'
+import {
+  deletePack,
+  displayUrl,
+  importPackFiles,
+  importPackFromUrl,
+  importScannedPacks,
+  scanDesktopPacks,
+  stateUrl,
+  useCharacterPacks,
+  useLoadPacks,
+} from '@/lib/atmosphere/character-packs'
+import type { CharacterExpression } from '@/lib/theme/atmosphere'
+import type { ThemeId } from '@/lib/theme/types'
+import { CharacterCard, type LibraryItem } from './character-card'
+import { CharacterDetail } from './character-detail'
 
 const CATEGORY_ORDER: (CharacterCategory | 'all')[] = [
   'all',
@@ -46,7 +52,31 @@ const CATEGORY_ORDER: (CharacterCategory | 'all')[] = [
   'japan',
   'game',
   'original',
+  'custom',
 ]
+
+const DEFAULT_RECOMMEND = {
+  themeId: 'bento' as ThemeId,
+  sceneId: 'bento-mesh',
+  accent: '#7c6bb0',
+}
+
+function fromEntry(entry: CharacterEntry): LibraryItem {
+  return {
+    id: entry.id,
+    name: entry.name,
+    work: entry.work,
+    tags: entry.tags,
+    categories: entry.categories,
+    artId: entry.artId,
+    packId: null,
+    displayUrl: null,
+    stateUrls: null,
+    recommend: entry.recommend,
+    description: entry.description ?? descriptionOf(entry.id),
+    source: entry.artId ? 'builtin' : 'pending',
+  }
+}
 
 export function CharacterLibraryPanel() {
   const {
@@ -57,45 +87,128 @@ export function CharacterLibraryPanel() {
     selectCharacter,
     toggleFavoriteCharacter,
   } = useAppearance()
+  const packs = useCharacterPacks()
+  useLoadPacks()
+
+  // 桌面版：打开设置页时顺手扫一次 <userData>/characters
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const scanned = await scanDesktopPacks()
+      if (cancelled || scanned.length === 0) return
+      const result = await importScannedPacks(scanned)
+      if (!cancelled && result.imported.length > 0) {
+        setNote(`已从本地目录载入 ${result.imported.length} 个角色包：${result.imported.join('、')}`)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<CharacterCategory | 'all'>('all')
   const [work, setWork] = useState<string>('all')
+  const [detailId, setDetailId] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
-  const fileInput = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState(false)
+  const [urlOpen, setUrlOpen] = useState(false)
+  const [urlValue, setUrlValue] = useState('')
+  const folderInput = useRef<HTMLInputElement>(null)
+  const singleInput = useRef<HTMLInputElement>(null)
 
-  const counts = useMemo(() => categoryCounts(), [])
-  const installed = useMemo(() => installedCharacters(), [])
-  const pending = useMemo(() => pendingCharacters(), [])
+  const allItems = useMemo<LibraryItem[]>(() => {
+    const builtin = installedCharacters().map(fromEntry)
+    const packItems: LibraryItem[] = packs.map((pack) => {
+      const stateUrls: Partial<Record<CharacterExpression, string>> = {}
+      for (const st of ['idle', 'happy', 'thinking', 'working', 'error', 'sleepy'] as CharacterExpression[]) {
+        const url = stateUrl(pack, st)
+        if (url) stateUrls[st] = url
+      }
+      const manifest = pack.manifest
+      const accent = manifest.preferred_accent
+      return {
+        id: pack.id,
+        name: manifest.name ?? '未命名角色',
+        work: manifest.series ?? '本地素材',
+        tags: manifest.tags ?? [],
+        categories: ['custom'],
+        artId: null,
+        packId: pack.id,
+        displayUrl: displayUrl(pack),
+        stateUrls,
+        recommend: {
+          themeId: (manifest.preferred_theme as ThemeId) ?? DEFAULT_RECOMMEND.themeId,
+          sceneId: manifest.preferred_background ?? DEFAULT_RECOMMEND.sceneId,
+          accent:
+            accent && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(accent)
+              ? accent
+              : DEFAULT_RECOMMEND.accent,
+        },
+        description: manifest.description,
+        source: 'pack' as const,
+      }
+    })
+    const pending = pendingCharacters().map(fromEntry)
+    return [...packItems, ...builtin, ...pending]
+  }, [packs])
+
+  const installedItems = useMemo(
+    () => allItems.filter((i) => i.source !== 'pending'),
+    [allItems]
+  )
   const favorites = state.characterLibrary.favorites
   const recent = state.characterLibrary.recent
   const selectedId = state.atmosphere.characterId
 
   const list = useMemo(() => {
-    let out = searchCharacters(query)
-    out = filterByCategory(out, category)
-    if (work !== 'all') out = out.filter((c) => c.work === work)
-    return out.filter((c) => c.artId !== null)
-  }, [query, category, work])
+    let out = allItems
+    const q = query.trim().toLowerCase()
+    if (q) {
+      out = out.filter((i) => [i.name, i.work, ...i.tags].join(' ').toLowerCase().includes(q))
+    }
+    if (category === 'custom') out = out.filter((i) => i.source === 'pack')
+    else if (category !== 'all') out = out.filter((i) => i.categories.includes(category))
+    if (work !== 'all') out = out.filter((i) => i.work === work)
+    return out
+  }, [allItems, query, category, work])
 
-  const works = useMemo(() => worksOf(installed), [installed])
-  const favoritesList = useMemo(
-    () => favorites.map((id) => getCharacterEntry(id)).filter((c): c is NonNullable<typeof c> => !!c),
-    [favorites]
+  const works = useMemo(
+    () => worksOf(installedItems.map((i) => ({ work: i.work } as CharacterEntry))),
+    [installedItems]
   )
-  const recentList = useMemo(
+
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { all: installedItems.length, custom: packs.length }
+    for (const key of Object.keys(CATEGORY_LABELS) as CharacterCategory[]) {
+      c[key] = installedItems.filter((i) => i.categories.includes(key)).length
+    }
+    return c
+  }, [installedItems, packs.length])
+
+  const favoriteItems = useMemo(
+    () =>
+      favorites
+        .map((id) => allItems.find((i) => i.id === id))
+        .filter((i): i is LibraryItem => !!i),
+    [favorites, allItems]
+  )
+  const recentItems = useMemo(
     () =>
       recent
-        .map((id) => getCharacterEntry(id))
-        .filter((c): c is NonNullable<typeof c> => !!c)
+        .map((id) => allItems.find((i) => i.id === id))
+        .filter((i): i is LibraryItem => !!i)
         .slice(0, 6),
-    [recent]
+    [recent, allItems]
   )
 
-  const selected = useMemo(() => getCharacterEntry(selectedId), [selectedId])
+  const detail = useMemo(
+    () => (detailId ? allItems.find((i) => i.id === detailId) ?? null : null),
+    [detailId, allItems]
+  )
 
-  const applyRecommendation = () => {
-    if (!selected) return
-    const { themeId, sceneId, accent } = selected.recommend
+  const applyRecommendationOf = (item: LibraryItem) => {
+    const { themeId, sceneId, accent } = item.recommend
     setThemeId(themeId)
     patchAtmosphere({
       enabled: true,
@@ -104,42 +217,45 @@ export function CharacterLibraryPanel() {
       bgSource: 'scene',
     })
     applySeed(accent, 'accent')
-    setNote(`已应用「${selected.name}」的推荐：${getTheme(themeId).name} · ${getScene(sceneId)?.name ?? sceneId} · ${accent}`)
+    setNote(`已应用「${item.name}」的推荐搭配`)
   }
 
-  const importFor = async (id: string) => {
-    const input = fileInput.current
-    if (!input) return
-    const entry = getCharacterEntry(id)
-    // 只接受一次选择，选完立刻导入并绑定到这个角色
-    const handler = async () => {
-      const files = input.files
-      if (!files || files.length === 0) return
-      const first = files[0]
-      const result = await addAsset(first, {
-        kind: 'character',
-        name: entry ? `${entry.name}（导入）` : '自定义角色',
-      })
-      if (!result.ok) {
-        setNote(result.error)
-      } else {
-        patchAtmosphere({
-          customCharacterId: result.asset.id,
-          characterEnabled: true,
-          mode: 'immersive',
-        })
-        setNote(`已导入 ${first.name}，可在「沉浸氛围 → 我的角色图」里管理`)
-      }
-      input.value = ''
-      input.removeEventListener('change', handler)
+  const handleFolder = async (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    setBusy(true)
+    const result = await importPackFiles(files)
+    setBusy(false)
+    if (result.imported.length > 0) {
+      setNote(
+        `导入 ${result.imported.length} 个角色包：${result.imported.join('、')}` +
+          (result.skipped.length ? `；跳过 ${result.skipped.join('、')}` : '')
+      )
+    } else {
+      setNote(result.error ?? '导入失败')
     }
-    input.addEventListener('change', handler)
-    input.click()
+  }
+
+  const handleSingle = async (item: LibraryItem | null, file: File | undefined) => {
+    if (!file) return
+    const result = await addAsset(file, {
+      kind: 'character',
+      name: item ? `${item.name}（导入）` : '自定义角色',
+    })
+    if (!result.ok) {
+      setNote(result.error)
+      return
+    }
+    patchAtmosphere({
+      customCharacterId: result.asset.id,
+      characterEnabled: true,
+      mode: 'immersive',
+    })
+    setNote(`已导入 ${file.name}`)
   }
 
   return (
     <section className="surface p-4" data-testid="character-library">
-      <div className="mb-3 flex items-start justify-between gap-3">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div className="flex min-w-0 items-start gap-2.5">
           <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
             <UserRound className="h-4 w-4" />
@@ -147,14 +263,114 @@ export function CharacterLibraryPanel() {
           <div className="min-w-0">
             <h2 className="text-section text-foreground">角色库</h2>
             <p className="mt-0.5 text-caption text-muted-foreground">
-              已内置 {installed.length} 个角色 · 另有 {pending.length} 个推荐位等你导入立绘
+              {packs.length > 0 && `${packs.length} 个本地素材包 · `}
+              内置 {installedItems.length - packs.length} 个角色 · {pendingCharacters().length} 个待导入
             </p>
           </div>
         </div>
-        <input ref={fileInput} type="file" accept="image/*" className="hidden" />
+        <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1"
+            disabled={busy}
+            onClick={() => folderInput.current?.click()}
+            data-testid="import-character-pack"
+          >
+            <FolderPlus className="h-3.5 w-3.5" />
+            {busy ? '导入中…' : '导入角色包'}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1"
+            onClick={() => setUrlOpen((v) => !v)}
+            data-testid="import-from-url"
+          >
+            <Link2 className="h-3.5 w-3.5" />
+            从链接添加
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 gap-1 text-muted-foreground"
+            onClick={() => singleInput.current?.click()}
+          >
+            <Upload className="h-3.5 w-3.5" />
+            单张立绘
+          </Button>
+          <input
+            ref={folderInput}
+            type="file"
+            multiple
+            className="hidden"
+            {...({ webkitdirectory: '', directory: '' } as Record<string, string>)}
+            onChange={(e) => {
+              void handleFolder(e.target.files)
+              e.target.value = ''
+            }}
+          />
+          <input
+            ref={singleInput}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              void handleSingle(null, e.target.files?.[0])
+              e.target.value = ''
+            }}
+          />
+        </div>
       </div>
 
-      {/* 搜索 + 作品 */}
+      {urlOpen && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded-md border border-border bg-surface-2/60 p-2">
+          <Input
+            value={urlValue}
+            onChange={(e) => setUrlValue(e.target.value)}
+            placeholder="粘贴图片直链，例如 https://…/baobao.png"
+            className="h-8 min-w-48 flex-1"
+            aria-label="图片链接"
+            data-testid="url-input"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                void (async () => {
+                  setBusy(true)
+                  const r = await importPackFromUrl(urlValue)
+                  setBusy(false)
+                  setNote(r.ok ? `已添加 ${r.imported[0]}` : r.error ?? '导入失败')
+                  if (r.ok) {
+                    setUrlValue('')
+                    setUrlOpen(false)
+                  }
+                })()
+              }
+            }}
+          />
+          <Button
+            size="sm"
+            className="h-8"
+            disabled={busy || !urlValue.trim()}
+            data-testid="url-submit"
+            onClick={async () => {
+              setBusy(true)
+              const r = await importPackFromUrl(urlValue)
+              setBusy(false)
+              setNote(r.ok ? `已添加 ${r.imported[0]}` : r.error ?? '导入失败')
+              if (r.ok) {
+                setUrlValue('')
+                setUrlOpen(false)
+              }
+            }}
+          >
+            添加
+          </Button>
+          <span className="text-micro text-muted-foreground">
+            图片只存在本机；需要对方允许跨域读取
+          </span>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
         <div className="relative min-w-40 flex-1">
           <Search
@@ -185,7 +401,6 @@ export function CharacterLibraryPanel() {
         </select>
       </div>
 
-      {/* 分类 */}
       <div className="mt-2 flex flex-wrap gap-1">
         {CATEGORY_ORDER.map((key) => {
           const label = key === 'all' ? '全部角色' : CATEGORY_LABELS[key as CharacterCategory]
@@ -212,18 +427,17 @@ export function CharacterLibraryPanel() {
         })}
       </div>
 
-      {/* 收藏 / 最近 */}
-      {(favoritesList.length > 0 || recentList.length > 0) && (
+      {(favoriteItems.length > 0 || recentItems.length > 0) && (
         <div className="mt-2 flex flex-wrap items-center gap-3 text-micro text-muted-foreground">
-          {favoritesList.length > 0 && (
-            <span className="flex items-center gap-1">
+          {favoriteItems.length > 0 && (
+            <span className="flex flex-wrap items-center gap-1">
               <Heart className="h-3 w-3" aria-hidden="true" />
               收藏
-              {favoritesList.map((c) => (
+              {favoriteItems.map((c) => (
                 <button
                   key={c.id}
                   type="button"
-                  onClick={() => selectCharacter(c.id)}
+                  onClick={() => setDetailId(c.id)}
                   className={cn(
                     'rounded-full px-1.5 py-0.5 ui-transition hover:bg-accent',
                     selectedId === c.id && 'bg-primary/12 text-primary'
@@ -234,14 +448,14 @@ export function CharacterLibraryPanel() {
               ))}
             </span>
           )}
-          {recentList.length > 0 && (
-            <span className="flex items-center gap-1">
+          {recentItems.length > 0 && (
+            <span className="flex flex-wrap items-center gap-1">
               最近
-              {recentList.map((c) => (
+              {recentItems.map((c) => (
                 <button
                   key={c.id}
                   type="button"
-                  onClick={() => selectCharacter(c.id)}
+                  onClick={() => setDetailId(c.id)}
                   className={cn(
                     'rounded-full px-1.5 py-0.5 ui-transition hover:bg-accent',
                     selectedId === c.id && 'bg-primary/12 text-primary'
@@ -255,138 +469,65 @@ export function CharacterLibraryPanel() {
         </div>
       )}
 
-      {/* 角色网格 */}
-      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-        {list.map((entry) => {
-          const active = selectedId === entry.id
-          const fav = favorites.includes(entry.id)
-          return (
-            <div
-              key={entry.id}
-              className={cn(
-                'atmo-thumb relative border ui-transition',
-                active ? 'border-primary/60 bg-primary/[0.06]' : 'border-border hover:bg-accent/50'
-              )}
-            >
-              <button
-                type="button"
-                onClick={() => selectCharacter(entry.id)}
-                aria-pressed={active}
-                data-testid={`character-card-${entry.id}`}
-                className="block w-full p-2 text-left"
-                title={`${entry.name} · ${entry.work}`}
-              >
-                <span className="atmo-thumb flex h-24 w-full items-center justify-center bg-surface-2">
-                  {renderCharacter(entry.artId, {
-                    expression: 'idle',
-                    className: 'h-full w-full',
-                  })}
-                </span>
-                <span className="mt-1 flex items-center gap-1">
-                  <span className="truncate text-caption font-medium text-foreground">
-                    {entry.name}
-                  </span>
-                  {active && <Check className="h-3 w-3 shrink-0 text-primary" />}
-                </span>
-                <span className="block truncate text-[10px] text-muted-foreground">
-                  {entry.work}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => toggleFavoriteCharacter(entry.id)}
-                aria-label={fav ? `取消收藏 ${entry.name}` : `收藏 ${entry.name}`}
-                aria-pressed={fav}
-                className={cn(
-                  'absolute right-1 top-1 rounded-full p-1 ui-transition',
-                  fav
-                    ? 'text-primary'
-                    : 'text-muted-foreground/60 hover:text-foreground'
-                )}
-              >
-                <Star className={cn('h-3.5 w-3.5', fav && 'fill-current')} />
-              </button>
-            </div>
-          )
-        })}
+      <div className="mt-2 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+        {list.map((item) => (
+          <CharacterCard
+            key={item.id}
+            item={item}
+            active={selectedId === item.id}
+            favorite={favorites.includes(item.id)}
+            onSelect={() => selectCharacter(item.id)}
+            onToggleFavorite={() => toggleFavoriteCharacter(item.id)}
+            onOpen={() => setDetailId(item.id)}
+            onImport={() => {
+              setDetailId(item.id)
+              singleInput.current?.click()
+            }}
+          />
+        ))}
         {list.length === 0 && (
-          <p className="col-span-full py-4 text-center text-caption text-muted-foreground">
+          <p className="col-span-full py-6 text-center text-caption text-muted-foreground">
             没有匹配的角色，换个关键词试试
           </p>
         )}
       </div>
 
-      {/* 选中角色的推荐 */}
-      {selected && (
-        <div className="mt-3 rounded-md border border-border bg-surface-2/60 p-2.5">
-          <p className="flex flex-wrap items-center gap-1.5 text-micro text-muted-foreground">
-            <Sparkles className="h-3 w-3" aria-hidden="true" />
-            {'推荐搭配：'}
-            <span className="text-foreground">{getTheme(selected.recommend.themeId).name}</span>
-            <span>·</span>
-            <span className="text-foreground">
-              {getScene(selected.recommend.sceneId)?.name ?? selected.recommend.sceneId}
-            </span>
-            <span>·</span>
-            <span
-              className="inline-block h-3 w-3 rounded-full border border-border"
-              style={{ backgroundColor: selected.recommend.accent }}
-            />
-            <span className="font-mono text-[10px]">{selected.recommend.accent}</span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="ml-auto h-6 px-2 text-micro"
-              onClick={applyRecommendation}
-              data-testid="apply-character-recommend"
-            >
-              应用推荐
-            </Button>
-          </p>
-          <p className="mt-1 text-[10px] text-muted-foreground">
-            只在你点「应用推荐」时才改动主题与配色；已锁定的背景不会被替换
-          </p>
-        </div>
-      )}
-
-      {/* 待导入 */}
-      {pending.length > 0 && (
-        <div className="mt-3 border-t border-border pt-3">
-          <p className="mb-1.5 text-micro text-muted-foreground">
-            待导入（{pending.length}）：这些角色只有推荐位，还没有立绘
-          </p>
-          <ul className="space-y-1">
-            {pending.map((entry) => (
-              <li
-                key={entry.id}
-                className="flex items-center gap-2 rounded-md bg-surface-2/60 px-2 py-1"
-              >
-                <span className="min-w-0 flex-1 truncate text-caption text-foreground">
-                  {entry.name}
-                  <span className="ml-1.5 text-[10px] text-muted-foreground">{entry.work}</span>
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 gap-1 px-1.5 text-micro text-muted-foreground"
-                  onClick={() => void importFor(entry.id)}
-                  data-testid={`character-import-${entry.id}`}
-                >
-                  <Upload className="h-3 w-3" />
-                  导入立绘
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       {note && <p className="mt-2 text-micro text-muted-foreground">{note}</p>}
 
       <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
-        内置立绘为本项目绘制的**同人风推演**（非官方素材），仅用于本地体验与风格测试；
-        角色与作品名仅作指代。你可以导入自己拥有的立绘替换。
+        想用自己收藏的高清立绘？把 <span className="font-mono">characters/角色名/manifest.json</span>{' '}
+        连同图片放进一个文件夹，点「导入角色包」选中整个文件夹即可；图片只存在本机，不上传。
+        内置立绘为本项目绘制的同人风演绎（非官方素材），仅供本地体验。
       </p>
+
+      {detail && (
+        <CharacterDetail
+          item={detail}
+          active={selectedId === detail.id}
+          favorite={favorites.includes(detail.id)}
+          onClose={() => setDetailId(null)}
+          onSelect={() => {
+            selectCharacter(detail.id)
+            setDetailId(null)
+          }}
+          onToggleFavorite={() => toggleFavoriteCharacter(detail.id)}
+          onApplyRecommendation={() => applyRecommendationOf(detail)}
+          onReplace={() => {
+            setDetailId(null)
+            singleInput.current?.click()
+          }}
+          onDeletePack={
+            detail.packId
+              ? async () => {
+                  await deletePack(detail.packId as string)
+                  if (selectedId === detail.id) selectCharacter(null)
+                  setDetailId(null)
+                  setNote(`已删除「${detail.name}」的本地素材包`)
+                }
+              : undefined
+          }
+        />
+      )}
     </section>
   )
 }

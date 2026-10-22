@@ -43,6 +43,8 @@ export interface CharacterEntry {
   artId: string | null
   /** 素材形态：多表情 / 单立绘 / 仅头像 / 仅默认图 */
   form: 'full' | 'single' | 'avatar' | 'default'
+  /** 一句话简介（详情页用） */
+  description?: string
   recommend: CharacterRecommendation
 }
 
@@ -246,6 +248,26 @@ export const CHARACTER_LIBRARY: CharacterEntry[] = [
 
   // ---------- 预留位（还没有内置立绘，只出现在「待导入」） ----------
   {
+    id: 'pilihuo',
+    name: '霹雳火',
+    work: '超兽武装',
+    categories: ['classic', 'childhood'],
+    tags: ['机甲', '火焰', '热血'],
+    artId: null,
+    form: 'full',
+    recommend: { themeId: 'cyber', sceneId: 'cyber-deep-space', accent: '#e0532a' },
+  },
+  {
+    id: 'zhuzhuxia',
+    name: '猪猪侠',
+    work: '猪猪侠',
+    categories: ['classic', 'childhood'],
+    tags: ['红衣', '侠客', '乐观'],
+    artId: null,
+    form: 'full',
+    recommend: { themeId: 'anime', sceneId: 'anime-star-night', accent: '#ef4444' },
+  },
+  {
     id: 'hatsune-miku',
     name: '初音未来',
     work: 'VOCALOID',
@@ -383,4 +405,72 @@ export function figureOf(id: string | null | undefined): {
     work: entry.work,
     expressions: expressionsOf(entry),
   }
+}
+/** 作品 → 系列主色（卡片装饰与系列一致性的视觉锚点） */
+export const SERIES_ACCENT: Record<string, string> = {
+  一人之下: '#3f7a6a',
+  虹猫蓝兔七侠传: '#2f8f7a',
+  喜羊羊与灰太狼: '#f0a020',
+  开心宝贝: '#e03c3c',
+  果宝特攻: '#f08a1e',
+  超兽武装: '#e0532a',
+  赛尔号: '#5b6ef5',
+  洛洛历险记: '#e0483c',
+  神兵小将: '#0ea5e9',
+  星游记: '#f97316',
+  时格: '#db2777',
+}
+
+export function seriesAccentOf(work: string): string {
+  return SERIES_ACCENT[work] ?? '#7c6bb0'
+}
+
+/** 本地素材包在库里的 id 前缀，用来区分来源 */
+export const PACK_ID_PREFIX = 'pack-'
+
+export function isPackId(id: string | null | undefined): boolean {
+  return !!id && id.startsWith(PACK_ID_PREFIX)
+}
+/**
+ * 一句话简介（详情页展示）。
+ * 不写进每条数据里，是为了让角色表保持"元数据为主"，文案单独维护。
+ */
+const DESCRIPTIONS: Record<string, string> = {
+  'feng-baobao': '一人之下的女主角，来历成谜、表情极少，手里常拎一把菜刀。话不多，但做事极稳。',
+  'zhang-chulan': '看似吊儿郎当的大学生，实则心思缜密；炁体源流的继承人，习惯把锋芒藏在笑里。',
+  'wang-ye': '武当山的道士，风后奇门的持有者。懒散、通透，遇事先看一眼再决定要不要动。',
+  'zhuge-qing': '诸葛家后人，术士出身。一把折扇、一双狐眼，习惯先看清局势再落子。',
+  hongmao: '七侠之首，长虹剑的主人。性子直，遇不平事必出手，侠气写在脸上。',
+  lantu: '冰魄剑的持有者，外冷内热。剑走轻灵，护人时从不退。',
+  'kaixin-chaoren': '开心超人的核心是"绝不丧气"。红色头盔、胸前星标，遇事第一个冲上去。',
+  xiyangyang: '羊村最会动脑的那只羊。铃铛一响，办法就来。',
+  huitailang: '永远在抓羊、永远在失败，但从不放弃。"我一定会回来的"是他的口头禅。',
+  'cheng-liuxiang': '橙子成精的武侠少年，果宝特攻的剑客。招式讲究，人也讲究。',
+  'boluo-chuixue': '菠萝成精的剑客，走位飘忽。嘴上不饶人，出剑比嘴更快。',
+  huolinfei: '超兽武装的火焰机师。热血、直给，战斗时能量槽全开。',
+  leiyi: '赛尔号的雷电系精灵，蓝紫机体配金色电纹。速度是他的一切。',
+  luoluo: '洛洛历险记的飞行员。护目镜推在额头，随时准备起飞。',
+  'nangong-wentian': '神兵小将的主角，国风少年侠客。一杆长枪，守的是身后的人。',
+  maidang: '星游记的冒险少年。红头巾、橙外套，走到哪儿都想看看更远的地方。',
+  'anime-aoi': '时格的看板娘，樱色系。负责在合适的时候说一句合适的话。',
+  'cyber-nova': '时格的全息助手，霓虹系 AI。只报事实，不灌鸡汤。',
+  'pixel-pix': '时格的像素冒险者。把所有待办都当成主线任务。',
+}
+
+export function descriptionOf(id: string | null | undefined): string | undefined {
+  return id ? DESCRIPTIONS[id] : undefined
+}
+/** 作品 → 系列装饰 key（卡片角落的"作品气质"装饰，纯 CSS） */
+export type SeriesKey = 'yiren' | 'wuxia' | 'mecha' | 'cute' | 'candy' | 'sci-fi' | 'original' | 'custom'
+
+export function seriesKeyOf(work: string): SeriesKey {
+  if (work === '一人之下') return 'yiren'
+  if (work === '虹猫蓝兔七侠传') return 'wuxia'
+  if (work === '超兽武装' || work === '开心宝贝') return 'mecha'
+  if (work === '赛尔号') return 'sci-fi'
+  if (work === '果宝特攻') return 'candy'
+  if (work === '喜羊羊与灰太狼' || work === '猪猪侠' || work === '神兵小将' || work === '星游记') return 'cute'
+  if (work === '洛洛历险记') return 'sci-fi'
+  if (work === '时格') return 'original'
+  return 'custom'
 }

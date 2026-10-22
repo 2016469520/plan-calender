@@ -25,7 +25,7 @@ import {
   getTheme,
 } from './themes'
 import { CHARACTERS, SCENES } from './atmosphere'
-import { CHARACTER_IDS } from './characters'
+import { CHARACTER_IDS, PACK_ID_PREFIX } from './characters'
 
 export const STORAGE_KEY = 'timegrid:appearance:v1'
 /** 3：新增智能配色 color 与角色库偏好 characterLibrary（旧配置自动补默认） */
@@ -230,8 +230,10 @@ export function sanitizeAtmosphere(raw: unknown): AtmosphereSettings {
       typeof input.customCharacterId === 'string' && input.customCharacterId
         ? input.customCharacterId
         : null,
+    // 本地素材包的 id 以 pack- 开头，也要接受，否则重载后选择会丢失
     characterId:
-      typeof input.characterId === 'string' && CHARACTER_IDS.includes(input.characterId)
+      typeof input.characterId === 'string' &&
+      (CHARACTER_IDS.includes(input.characterId) || input.characterId.startsWith(PACK_ID_PREFIX))
         ? input.characterId
         : null,
     quoteEnabled: input.quoteEnabled !== false,
@@ -299,7 +301,13 @@ function sanitizeLibrary(raw: unknown): { favorites: string[]; recent: string[] 
   const input = raw as Record<string, unknown>
   const pick = (v: unknown) =>
     Array.isArray(v)
-      ? v.filter((id): id is string => typeof id === 'string' && CHARACTER_IDS.includes(id)).slice(0, 12)
+      ? v
+          .filter(
+            (id): id is string =>
+              typeof id === 'string' &&
+              (CHARACTER_IDS.includes(id) || id.startsWith(PACK_ID_PREFIX))
+          )
+          .slice(0, 12)
       : []
   return { favorites: pick(input.favorites), recent: pick(input.recent) }
 }

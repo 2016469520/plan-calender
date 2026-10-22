@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 桌面端（Electron）能力桥。
  *
  * 打包版由 preload 注入 window.timegrid；网页/安卓端该对象不存在，
@@ -23,6 +23,8 @@ export interface DesktopBridge {
   isPinned: () => Promise<boolean>
   /** 退出整个应用 */
   quit: () => Promise<void>
+  /** 扫描 <userData>/characters 下的角色包（返回 manifest 与 data URL 图片） */
+  scanCharacterPacks?: () => Promise<{ root: string; packs: unknown[]; error: string | null }>
 }
 
 interface BridgeWindow {
@@ -54,6 +56,9 @@ export function getDesktopBridge(): DesktopBridge | null {
     togglePin: () => bridge.togglePin(),
     isPinned: () => bridge.isPinned(),
     quit: () => bridge.quit(),
+    scanCharacterPacks: bridge.scanCharacterPacks
+      ? () => (bridge.scanCharacterPacks as () => Promise<{ root: string; packs: unknown[]; error: string | null }>)()
+      : undefined,
   }
 
   return cachedBridge
