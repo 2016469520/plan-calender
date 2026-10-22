@@ -14,15 +14,10 @@ import { isHomePath } from '@/lib/atmosphere/routes'
 import { ArrowRight, Sparkles, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAppearance } from '@/providers/appearance-provider'
-import {
-  defaultCharacterFor,
-  getCharacter,
-  linesFor,
-  type CharacterExpression,
-} from '@/lib/theme/atmosphere'
+import { linesFor, type CharacterExpression } from '@/lib/theme/atmosphere'
 import { renderCharacter, renderScene } from './art/registry'
 import { QuoteStrip } from './quote-strip'
-import { useCurrentScene, todayKey } from './use-current-scene'
+import { useCurrentCharacter, useCurrentScene, todayKey } from './use-current-scene'
 
 const WELCOME_KEY = 'timegrid:atmosphere:welcomed'
 
@@ -51,19 +46,15 @@ export function WelcomeOverlay() {
   const sceneArt = renderScene(scene?.id, 'h-full w-full')
   const [open, setOpen] = useState(false)
 
-  const character = useMemo(() => {
-    const chosen = getCharacter(atmosphere.characterByTheme[state.themeId])
-    if (chosen && chosen.themeId === state.themeId) return chosen
-    return defaultCharacterFor(state.themeId)
-  }, [atmosphere.characterByTheme, state.themeId])
+  const character = useCurrentCharacter()
 
   const mood = welcomeMood()
   const characterArt = character
-    ? renderCharacter(character.id, { expression: mood, className: 'h-full w-full' })
+    ? renderCharacter(character.artId, { expression: mood, className: 'h-full w-full' })
     : null
   const line = useMemo(() => {
     if (!character) return null
-    const pool = linesFor(character.id, mood)
+    const pool = linesFor(character.artId, mood)
     return pool.length ? pool[0] : null
   }, [character, mood])
 

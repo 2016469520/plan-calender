@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // 外观设置的持久化：读取、校验、迁移、导入导出
 //
 // 原则：任何一步校验失败都回退到安全默认值，绝不把坏配置应用到界面。
@@ -8,6 +8,8 @@
 import type {
   AtmosphereSettings,
   AppearanceState,
+  ColorPaletteSnapshot,
+  ColorSettings,
   MotionLevel,
   ThemeId,
   ThemePersonalization,
@@ -23,10 +25,11 @@ import {
   getTheme,
 } from './themes'
 import { CHARACTERS, SCENES } from './atmosphere'
+import { CHARACTER_IDS } from './characters'
 
 export const STORAGE_KEY = 'timegrid:appearance:v1'
-/** 2：新增 atmosphere（沉浸氛围）；旧配置缺该字段时自动补默认值 */
-export const APPEARANCE_VERSION = 2
+/** 3：新增智能配色 color 与角色库偏好 characterLibrary（旧配置自动补默认） */
+export const APPEARANCE_VERSION = 3
 
 const MOTION_VALUES = MOTION_OPTIONS.map((m) => m.value)
 const FONT_VALUES = ['theme', 'system', 'rounded', 'mono', 'serif']
@@ -52,6 +55,7 @@ export function defaultAtmosphere(): AtmosphereSettings {
     characterAutoState: true,
     characterWelcome: true,
     customCharacterId: null,
+    characterId: null,
     quoteEnabled: true,
     customQuotes: {},
     bgSource: 'scene',
@@ -67,6 +71,17 @@ export function defaultAtmosphere(): AtmosphereSettings {
   }
 }
 
+export function defaultColor(): ColorSettings {
+  return {
+    mode: 'theme',
+    strength: 60,
+    seed: null,
+    palette: null,
+    candidates: [],
+    lockedSeed: null,
+  }
+}
+
 export function defaultState(): AppearanceState {
   return {
     version: APPEARANCE_VERSION,
@@ -76,6 +91,8 @@ export function defaultState(): AppearanceState {
     perTheme: {},
     presets: [],
     atmosphere: defaultAtmosphere(),
+    color: defaultColor(),
+    characterLibrary: { favorites: [], recent: [] },
   }
 }
 
@@ -213,6 +230,10 @@ export function sanitizeAtmosphere(raw: unknown): AtmosphereSettings {
       typeof input.customCharacterId === 'string' && input.customCharacterId
         ? input.customCharacterId
         : null,
+    characterId:
+      typeof input.characterId === 'string' && CHARACTER_IDS.includes(input.characterId)
+        ? input.characterId
+        : null,
     quoteEnabled: input.quoteEnabled !== false,
     customQuotes,
     bgSource: input.bgSource === 'custom' ? 'custom' : 'scene',
@@ -229,6 +250,58 @@ export function sanitizeAtmosphere(raw: unknown): AtmosphereSettings {
     celebration: input.celebration !== false,
     welcome: input.welcome !== false,
   }
+}
+
+/** 校验配色设置（兼容 v1/v2 旧配置） */
+export function sanitizeColor(raw: unknown): ColorSettings {
+  const base = defaultColor()
+  if (!raw || typeof raw !== 'object') return base
+  const input = raw as Record<string, unknown>
+  const MODES = ['theme', 'wallpaper', 'accent', 'locked']
+  const snap = input.palette as Record<string, unknown> | null | undefined
+  const palette: ColorPaletteSnapshot | null =
+    snap && typeof snap === 'object' && typeof snap.primary === 'string'
+      ? {
+          seed: String(snap.seed ?? '#7c5cff'),
+          primary: String(snap.primary),
+          onPrimary: String(snap.onPrimary ?? '#ffffff'),
+          primaryContainer: String(snap.primaryContainer ?? '#eeeeee'),
+          secondary: String(snap.secondary ?? '#888888'),
+          tertiary: String(snap.tertiary ?? '#888888'),
+          ambient: String(snap.ambient ?? 'transparent'),
+          overlay: String(snap.overlay ?? 'transparent'),
+          cardTint: String(snap.cardTint ?? 'transparent'),
+          borderTint: String(snap.borderTint ?? 'transparent'),
+          selection: String(snap.selection ?? 'transparent'),
+          dark: snap.dark === true,
+        }
+      : null
+
+  const hexOk = (v: unknown): string | null =>
+    typeof v === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v.trim()) ? v.trim() : null
+
+  return {
+    mode: MODES.includes(String(input.mode)) ? (input.mode as ColorSettings['mode']) : base.mode,
+    strength: clamp(input.strength, 0, 100, base.strength),
+    seed: hexOk(input.seed),
+    palette,
+    candidates: Array.isArray(input.candidates)
+      ? input.candidates.map(hexOk).filter((v): v is string => !!v).slice(0, 6)
+      : [],
+    lockedSeed: hexOk(input.lockedSeed),
+  }
+}
+
+/** 校验角色库偏好 */
+function sanitizeLibrary(raw: unknown): { favorites: string[]; recent: string[] } {
+  const base = { favorites: [], recent: [] }
+  if (!raw || typeof raw !== 'object') return base
+  const input = raw as Record<string, unknown>
+  const pick = (v: unknown) =>
+    Array.isArray(v)
+      ? v.filter((id): id is string => typeof id === 'string' && CHARACTER_IDS.includes(id)).slice(0, 12)
+      : []
+  return { favorites: pick(input.favorites), recent: pick(input.recent) }
 }
 
 /** 校验整体状态（也用于导入 JSON） */
@@ -258,6 +331,8 @@ export function sanitizeState(raw: unknown): AppearanceState {
     perTheme,
     presets: sanitizePresets(input.presets),
     atmosphere: sanitizeAtmosphere(input.atmosphere),
+    color: sanitizeColor(input.color),
+    characterLibrary: sanitizeLibrary(input.characterLibrary),
   }
 }
 

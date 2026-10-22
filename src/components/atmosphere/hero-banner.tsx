@@ -105,7 +105,7 @@ export function ThemeHero() {
             )}
             data-testid="hero-character"
           >
-            {renderCharacter(character.id, {
+            {renderCharacter(character.artId, {
               expression: atmo.characterAnimate ? 'happy' : 'idle',
               className: 'h-full w-full',
               reacting: false,

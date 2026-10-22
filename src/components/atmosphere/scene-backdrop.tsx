@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 // ============================================================
 // 场景背景层
@@ -12,12 +12,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAppearance } from '@/providers/appearance-provider'
 import { resolveAtmosphere } from '@/lib/theme/scene-resolve'
 import { getAssetUrl } from '@/lib/atmosphere/custom-assets'
+import { hexToRgb, rgbToOklch } from '@/lib/theme/color'
 import { renderScene } from './art/registry'
 import { AtmosphereParticles } from './atmosphere-particles'
 import { useCurrentScene } from './use-current-scene'
 
 export function SceneBackdrop() {
-  const { state } = useAppearance()
+  const { state, palette } = useAppearance()
   const atmo = useMemo(() => resolveAtmosphere(state.atmosphere), [state.atmosphere])
   const scene = useCurrentScene()
   const bgId = atmo.customBackgroundId
@@ -38,10 +39,34 @@ export function SceneBackdrop() {
   }, [useCustom, bgId])
 
   const opacity = Math.min(100, Math.max(0, atmo.bgOpacity)) / 100
+
+  /**
+   * 氛围色相偏移：把背景整体轻微拉向强调色的色相。
+   * 只在"强调色联动/背景取色"下生效，锁定背景模式完全不动画面；
+   * 幅度上限 ±32°，并随协调强度缩放——宁可少一点，也不要让樱花变成蓝色。
+   */
+  const hueShift = useMemo(() => {
+    const color = state.color
+    if (!color || !palette || color.strength < 20) return 0
+    if (color.mode !== 'accent' && color.mode !== 'wallpaper') return 0
+    const seedRgb = hexToRgb(palette.seed)
+    const tintRgb = scene ? hexToRgb(scene.tint) : null
+    if (!seedRgb || !tintRgb) return 0
+    const seedHue = rgbToOklch(seedRgb).h
+    const tintHue = rgbToOklch(tintRgb).h
+    let delta = seedHue - tintHue
+    if (delta > 180) delta -= 360
+    if (delta < -180) delta += 360
+    const clamped = Math.max(-32, Math.min(32, delta * 0.5))
+    return clamped * (color.strength / 100)
+  }, [state.color, scene, palette])
+
   const filters = [
     atmo.bgBlur > 0 ? `blur(${atmo.bgBlur}px)` : '',
     atmo.bgHue !== 0 ? `hue-rotate(${atmo.bgHue}deg)` : '',
     atmo.bgBrightness !== 100 ? `brightness(${atmo.bgBrightness}%)` : '',
+    hueShift !== 0 ? `hue-rotate(${hueShift.toFixed(1)}deg)` : '',
+    hueShift !== 0 ? `saturate(${(1 + state.color.strength / 500).toFixed(2)})` : '',
   ]
     .filter(Boolean)
     .join(' ')

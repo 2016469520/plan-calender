@@ -6,7 +6,13 @@
 // - 恢复默认时必须 removeProperty，否则内联变量会一直压住主题
 // ============================================================
 
-import type { MotionLevel, ThemeDefinition, ThemePersonalization } from './types'
+import type {
+  ColorMode,
+  ColorPaletteSnapshot,
+  MotionLevel,
+  ThemeDefinition,
+  ThemePersonalization,
+} from './types'
 import { FONT_OPTIONS } from './themes'
 
 /** 会被个性化覆盖的变量清单，重置时按这个列表清空 */
@@ -164,9 +170,51 @@ export function applyToDocument(
   }
 }
 
+/**
+ * 智能配色只负责"叠加层"变量。
+ *
+ * 主色（--primary / --ring / --chart-1 …）由 applyToDocument 统一写入：
+ * 个性化强调色与调色板主色只能有一个来源，否则两者会互相覆盖。
+ */
+const PALETTE_VARS = [
+  '--accent',
+  '--accent-foreground',
+  '--ambient-1',
+  '--ambient-2',
+  '--overlay-tint',
+  '--card-tint',
+  '--border-tint',
+  '--selection-tint',
+] as const
+
+/**
+ * 把智能配色写进 <html>。
+ * mode='theme' 或不传调色板时移除叠加层变量，回到主题自带的氛围。
+ */
+export function applyPalette(
+  root: HTMLElement,
+  palette: ColorPaletteSnapshot | null,
+  mode: ColorMode
+): void {
+  for (const name of PALETTE_VARS) root.style.removeProperty(name)
+  if (!palette || mode === 'theme') return
+
+  // 主色不在这里写（见上面的说明），只处理"次级强调"与氛围层
+  root.style.setProperty('--accent', palette.primaryContainer)
+  root.style.setProperty('--accent-foreground', palette.primary)
+  // 氛围层：背景光 + 蒙层 + 卡片/边框/选中态染色
+  root.style.setProperty('--ambient-1', palette.ambient)
+  root.style.setProperty('--ambient-2', palette.primaryContainer)
+  root.style.setProperty('--overlay-tint', palette.overlay)
+  root.style.setProperty('--card-tint', palette.cardTint)
+  root.style.setProperty('--border-tint', palette.borderTint)
+  root.style.setProperty('--selection-tint', palette.selection)
+}
+
 /** 卸载/关闭主题系统时清理 */
 export function clearFromDocument(root: HTMLElement): void {
   for (const name of OVERRIDE_VARS) root.style.removeProperty(name)
+  for (const name of PALETTE_VARS) root.style.removeProperty(name)
   root.style.removeProperty('font-size')
   delete root.dataset.theme
   delete root.dataset.mode

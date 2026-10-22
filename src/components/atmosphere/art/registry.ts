@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // 美术注册表：场景 id / 角色 id → SVG 组件
 // 六套主题的美术文件各自导出映射，这里合并成运行时唯一入口。
 // 缺少某个素材时返回 undefined，调用方会降级（不渲染背景）。
@@ -13,6 +13,8 @@ import { BENTO_SCENES } from './scenes-bento'
 import { ANIME_CHARACTERS } from './characters-anime'
 import { CYBER_CHARACTERS } from './characters-cyber'
 import { PIXEL_CHARACTERS } from './characters-pixel'
+import { YIREN_CHARACTERS } from './characters-yiren'
+import { CLASSIC_CHARACTERS } from './characters-classic'
 import type { ReactNode } from 'react'
 import type { CharacterArt, CharacterArtProps, SceneArt } from './types'
 
@@ -29,6 +31,8 @@ export const CHARACTER_ART: Record<string, CharacterArt> = {
   ...ANIME_CHARACTERS,
   ...CYBER_CHARACTERS,
   ...PIXEL_CHARACTERS,
+  ...YIREN_CHARACTERS,
+  ...CLASSIC_CHARACTERS,
 }
 
 export function getSceneArt(id: string | null | undefined): SceneArt | null {

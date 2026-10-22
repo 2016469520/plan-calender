@@ -1,17 +1,26 @@
-﻿// ============================================================
+// ============================================================
 // 场景 / 角色的解析逻辑（纯函数，无 React 依赖，便于单测）
 // ============================================================
 
 import {
   defaultCharacterFor,
   defaultSceneFor,
-  getCharacter,
   getScene,
   scenesForTheme,
-  type CharacterDefinition,
+  type CharacterExpression,
   type SceneDefinition,
 } from './atmosphere'
+import { figureOf } from './characters'
 import type { AtmosphereSettings, ThemeId } from './types'
+
+/** 可渲染的角色形象（来自角色库或主题默认） */
+export interface CharacterFigure {
+  id: string
+  name: string
+  artId: string
+  work: string
+  expressions: CharacterExpression[]
+}
 
 /** 本地时区的日期键，例如 2026-10-22 */
 export function todayKey(date: Date = new Date()): string {
@@ -78,15 +87,35 @@ export function resolveScene(
   return defaultSceneFor(themeId)
 }
 
-/** 当前该显示哪个角色；主题没有角色时返回 null */
+/**
+ * 当前该显示哪个角色。
+ * 优先级：角色库里显式选中 > 按主题记住的角色 > 主题默认角色。
+ * 返回「形象」而不是主题绑定角色，便于角色库跨主题使用。
+ */
 export function resolveCharacter(
   themeId: ThemeId,
   atmosphere: AtmosphereSettings
-): CharacterDefinition | null {
+): CharacterFigure | null {
   if (!atmosphere.enabled || !atmosphere.characterEnabled) return null
-  const chosen = getCharacter(atmosphere.characterByTheme[themeId])
-  if (chosen && chosen.themeId === themeId) return chosen
-  return defaultCharacterFor(themeId)
+
+  // 1) 角色库选中（跨主题）
+  const picked = figureOf(atmosphere.characterId)
+  if (picked) return picked
+
+  // 2) 按主题记住的角色 → 映射到角色库形象
+  const perTheme = figureOf(atmosphere.characterByTheme[themeId])
+  if (perTheme) return perTheme
+
+  // 3) 主题默认（内置三只）
+  const fallback = defaultCharacterFor(themeId)
+  if (!fallback) return null
+  return {
+    id: fallback.id,
+    name: fallback.name,
+    artId: fallback.id,
+    work: '时格',
+    expressions: fallback.expressions,
+  }
 }
 
 /** 当天的那一句（同一天稳定） */

@@ -41,6 +41,8 @@ import {
 import type { ThemeId } from '@/lib/theme/types'
 import { ThemeCard } from './theme-card'
 import { AtmospherePanel } from './atmosphere-panel'
+import { CharacterLibraryPanel } from './character-library-panel'
+import { ColorPanel } from './color-panel'
 
 /** 常用强调色预设 */
 const ACCENT_PRESETS = [
@@ -620,6 +622,12 @@ export function AppearancePanel() {
           </ul>
         )}
       </Panel>
+
+      {/* 角色库 */}
+      <CharacterLibraryPanel />
+
+      {/* 智能配色 */}
+      <ColorPanel />
 
       {/* 沉浸氛围 */}
       <AtmospherePanel />

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 // ============================================================
 // 外观 Provider：主题 + 个性化设置的唯一真源
@@ -20,10 +20,11 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react'
-import { applyToDocument } from '@/lib/theme/apply'
+import { applyPalette, applyToDocument } from '@/lib/theme/apply'
+import { buildPalette } from '@/lib/theme/color'
 import {
   defaultAtmosphere,
-  defaultPersonalization,
+  defaultColor,
   defaultState,
   exportState,
   importState,
@@ -42,6 +43,9 @@ import { getTheme, resolveMode } from '@/lib/theme/themes'
 import type {
   AppearanceState,
   AtmosphereSettings,
+  ColorMode,
+  ColorPaletteSnapshot,
+  ColorSettings,
   ThemeDefinition,
   ThemeId,
   ThemeMode,
@@ -64,6 +68,16 @@ interface AppearanceContextValue {
   patchPersonalization: (patch: Partial<ThemePersonalization>) => void
   /** 沉浸氛围设置 */
   patchAtmosphere: (patch: Partial<AtmosphereSettings>) => void
+  /** 智能配色 */
+  /** 当前生效的调色板（已按 seed 兜底推导） */
+  palette: ColorPaletteSnapshot | null
+  patchColor: (patch: Partial<ColorSettings>) => void
+  applySeed: (seedHex: string, mode?: ColorMode) => void
+  setColorStrength: (strength: number) => void
+  resetColor: () => void
+  /** 角色库 */
+  selectCharacter: (id: string | null) => void
+  toggleFavoriteCharacter: (id: string) => void
   /** 当前主题的场景列表（供设置页渲染缩略图） */
   resetAtmosphere: () => void
   resetCurrentTheme: () => void
@@ -122,15 +136,90 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
     )
   }, [personalization, theme.defaults])
 
+  // 有效调色板：优先用持久化的快照；只有 seed 时（例如导入了配置）即时推导一份
+  const effectivePalette = useMemo(() => {
+    const color = state.color
+    if (!color || color.mode === 'theme') return null
+    if (color.palette) return color.palette
+    if (!color.seed) return null
+    return buildPalette(color.seed, color.strength, mode === 'dark')
+  }, [state.color, mode])
+
   // 应用主题：属性 + 内联覆盖变量
   useEffect(() => {
     const root = document.documentElement
-    applyToDocument(root, theme, personalization, mode, reducedMotion)
+    // 主色的唯一来源：调色板优先，其次是用户强调色，最后回落到主题自带主色
+    const effectivePersonalization = effectivePalette
+      ? { ...personalization, accent: effectivePalette.primary }
+      : personalization
+    applyToDocument(root, theme, effectivePersonalization, mode, reducedMotion)
+    // 智能配色覆盖在主题与个性化之上（mode='theme' 时会自动清空）
+    applyPalette(root, effectivePalette, state.color?.mode ?? 'theme')
     root.classList.toggle('dark', mode === 'dark')
     root.style.colorScheme = mode
     // 让 CSS 知道当前是否开着沉浸氛围（日历格子会轻微透出背景）
     root.dataset.atmo = state.atmosphere.enabled ? 'on' : 'off'
-  }, [theme, personalization, mode, reducedMotion, state.atmosphere.enabled])
+  }, [theme, personalization, mode, reducedMotion, state.atmosphere.enabled, state.color, effectivePalette])
+
+  // ---------------- 智能配色 ----------------
+
+  const patchColor = useCallback((patch: Partial<ColorSettings>) => {
+    updateAppearance((prev) => ({ ...prev, color: { ...prev.color, ...patch } }))
+  }, [])
+
+  /** 用某个种子色生成整套调色板（强调色联动 / 背景取色共用） */
+  const applySeed = useCallback((seedHex: string, nextMode?: ColorMode) => {
+    updateAppearance((prev) => {
+      const dark = prev.mode === 'dark'
+      const palette = buildPalette(seedHex, prev.color.strength, dark)
+      return {
+        ...prev,
+        color: {
+          ...prev.color,
+          mode: nextMode ?? prev.color.mode,
+          seed: palette.seed,
+          palette,
+        },
+      }
+    })
+  }, [])
+
+  /** 协调强度变化时重算调色板（保持同一色相） */
+  const setColorStrength = useCallback((strength: number) => {
+    updateAppearance((prev) => {
+      const seed = prev.color.seed ?? prev.color.palette?.seed
+      const palette = seed ? buildPalette(seed, strength, prev.mode === 'dark') : prev.color.palette
+      return { ...prev, color: { ...prev.color, strength, palette } }
+    })
+  }, [])
+
+  const resetColor = useCallback(() => {
+    updateAppearance((prev) => ({ ...prev, color: defaultColor() }))
+  }, [])
+
+  // ---------------- 角色库 ----------------
+
+  const selectCharacter = useCallback((id: string | null) => {
+    updateAppearance((prev) => {
+      const recent = id
+        ? [id, ...prev.characterLibrary.recent.filter((x) => x !== id)].slice(0, 8)
+        : prev.characterLibrary.recent
+      return {
+        ...prev,
+        atmosphere: { ...prev.atmosphere, characterId: id },
+        characterLibrary: { ...prev.characterLibrary, recent },
+      }
+    })
+  }, [])
+
+  const toggleFavoriteCharacter = useCallback((id: string) => {
+    updateAppearance((prev) => {
+      const favorites = prev.characterLibrary.favorites.includes(id)
+        ? prev.characterLibrary.favorites.filter((x) => x !== id)
+        : [id, ...prev.characterLibrary.favorites].slice(0, 24)
+      return { ...prev, characterLibrary: { ...prev.characterLibrary, favorites } }
+    })
+  }, [])
 
   const patchAtmosphere = useCallback((patch: Partial<AtmosphereSettings>) => {
     updateAppearance((prev) => ({
@@ -255,6 +344,13 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
       setFollowSystem,
       patchPersonalization,
       patchAtmosphere,
+      palette: effectivePalette,
+      patchColor,
+      applySeed,
+      setColorStrength,
+      resetColor,
+      selectCharacter,
+      toggleFavoriteCharacter,
       resetAtmosphere,
       resetCurrentTheme,
       resetAll,
@@ -277,6 +373,12 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
       setFollowSystem,
       patchPersonalization,
       patchAtmosphere,
+      patchColor,
+      applySeed,
+      setColorStrength,
+      resetColor,
+      selectCharacter,
+      toggleFavoriteCharacter,
       resetAtmosphere,
       resetCurrentTheme,
       resetAll,

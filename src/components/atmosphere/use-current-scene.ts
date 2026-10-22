@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 // ============================================================
 // 组件侧的薄封装：把纯函数解析与当前外观状态接起来
@@ -6,8 +6,8 @@
 
 import { useMemo } from 'react'
 import { useAppearance } from '@/providers/appearance-provider'
-import { resolveCharacter, resolveScene } from '@/lib/theme/scene-resolve'
-import type { CharacterDefinition, SceneDefinition } from '@/lib/theme/atmosphere'
+import { resolveCharacter, resolveScene, type CharacterFigure } from '@/lib/theme/scene-resolve'
+import type { SceneDefinition } from '@/lib/theme/atmosphere'
 
 export { todayKey } from '@/lib/theme/scene-resolve'
 
@@ -19,7 +19,7 @@ export function useCurrentScene(): SceneDefinition | null {
   )
 }
 
-export function useCurrentCharacter(): CharacterDefinition | null {
+export function useCurrentCharacter(): CharacterFigure | null {
   const { state } = useAppearance()
   return useMemo(
     () => resolveCharacter(state.themeId, state.atmosphere),

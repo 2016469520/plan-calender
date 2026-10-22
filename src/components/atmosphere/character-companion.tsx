@@ -137,7 +137,7 @@ export function CharacterCompanion() {
       )
     }
     return character
-      ? renderCharacter(character.id, {
+      ? renderCharacter(character.artId, {
           expression: atmo.characterAnimate ? mood : 'idle',
           className: 'h-full w-full',
           reacting: atmo.characterAnimate && reacting,

@@ -528,3 +528,53 @@
 [data-perf='low'] .atmo-quote {
   backdrop-filter: none;
 }
+/* ---------------- 智能配色的全局联动 ---------------- */
+/* 由 AdaptiveColorEngine 写入 --ambient-1 / --overlay-tint / --card-tint /
+   --border-tint / --selection-tint；未启用时这些变量不存在，规则自动失效。 */
+
+/* 氛围光：叠在场景上方，不修改图片本身 */
+.atmo-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 70% at 50% 0%, var(--ambient-1, transparent), transparent 68%),
+    radial-gradient(90% 60% at 100% 100%, var(--ambient-2, transparent), transparent 72%);
+  opacity: 0.85;
+  mix-blend-mode: soft-light;
+}
+
+/* 蒙层色调：与原有的可读性遮罩叠加 */
+.atmo-scrim {
+  background-color: var(--overlay-tint, transparent);
+}
+
+/* 卡片与边框的轻微染色：只加一层几乎看不见的渐变，不替换主题底色 */
+.surface {
+  background-image: linear-gradient(
+    180deg,
+    var(--card-tint, transparent),
+    transparent 58%
+  );
+}
+.surface,
+.surface-2 {
+  border-color: color-mix(in oklab, var(--border) 82%, var(--border-tint, transparent) 18%);
+}
+
+/* 选中态与悬停也跟着走，但仍然只作用于"强调"语义 */
+[aria-pressed='true'],
+[aria-current='page'] {
+  --tw-ring-color: var(--primary);
+}
+.atmo-quote,
+.atmo-bubble {
+  border-color: color-mix(in oklab, var(--border) 76%, var(--border-tint, transparent) 24%);
+}
+
+/* 低性能模式下关掉氛围光的混合模式（soft-light 在部分集显上很贵） */
+[data-perf='low'] .atmo-backdrop::after {
+  mix-blend-mode: normal;
+  opacity: 0.5;
+}

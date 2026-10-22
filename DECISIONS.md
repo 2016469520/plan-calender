@@ -739,3 +739,23 @@
 - **踩到的坑**: 调用方在 `onChange` 里把 `input.value` 清空后，异步函数里再读 `files[0].name` 会拿到 `undefined` 并抛 `TypeError`。修法是入口处先 `Array.from(files)` 拍成数组，之后只引用数组。
 - **为什么不改业务库**: 便当盒（业务）与装饰（素材）生命周期不同，混在一个 DB 里会让 schema 迁移和"清空数据"互相牵连
 - **后续**: Electron 可加一个 IPC 扫描 `%APPDATA%\\my-plan-calendar\\characters\\<包>\\config.json`，复用同一套 `addAsset/groupId/state` 逻辑即可
+
+## 决策 86：智能配色用「种子色 → OKLCH 调色板 → 六个叠加变量」 (2026-10-22)
+- **问题**: 之前改强调色只改 `--primary`，背景/卡片/边框/光效都不动，于是出现"粉色背景配荧光绿按钮"
+- **决策**:
+  - `src/lib/theme/color.ts` 在 OKLCH 空间里由种子色推导 primary / onPrimary / container / secondary / tertiary / ambient / overlay / cardTint / borderTint / selection
+  - 主色与按钮文字强制 4.5:1：先选白或近黑，若两者都不够就**微调按钮底色**（调背景比调文字更符合直觉）
+  - 背景氛围通过 `--ambient-*` + `.atmo-backdrop::after` 的 soft-light 叠加实现，不修改图片本身
+  - 卡片/边框只加一层几乎看不见的渐变与 18% 混色，保持主题原有底色
+- **为什么不用成熟库**: Material Color Utilities 需要额外依赖且面向 Material 3 的 tonal palette；本项目已有 CSS 变量体系，OKLCH 数学只有 120 行且可单测
+- **协调强度**: 只缩放叠加层的不透明度，0% 等于"只换按钮色"，100% 让光效/蒙层/卡片一起参与
+
+## 决策 87：角色库「可渲染才算已安装」，官方立绘属阻断项 (2026-10-22)
+- **决策**:
+  - 内置 19 个角色全部是原创同人风 SVG（16 个新角色 + 3 个原创），明确标注「同人风 · 非官方」
+  - 另有 6 个推荐位没有立绘，单独列进「待导入」，`figureOf()` 对它们返回 null，绝不会被渲染成已安装
+  - 角色选择写入 `atmosphere.characterId`（跨主题），旧的 `characterByTheme` 继续作为回退
+  - 「应用推荐」必须用户点，不自动覆盖主题/背景/配色；锁定背景模式下不会被替换
+- **为什么不内置官方立绘**: 无授权；且本机没有任何素材（扫描过 public/resources/AppData/Pictures 均为空或私人照片）
+- **为什么不写死"候选名单即已安装"**: 会出现"点了没反应"的空壳角色，比没有更糟
+- **升级路径**: 用户用「导入立绘」替换即可；Electron 后续可加 IPC 扫描角色包目录，复用同一套 `addAsset/groupId/state`

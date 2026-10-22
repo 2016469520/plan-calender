@@ -114,6 +114,8 @@ export interface AtmosphereSettings {
   characterWelcome: boolean
   /** 选中的自定义角色素材 id */
   customCharacterId: string | null
+  /** 角色库里的角色 id（优先于按主题的默认角色） */
+  characterId: string | null
   /** 是否显示每日一句 */
   quoteEnabled: boolean
   /** 用户自定义短句（按主题分开） */
@@ -140,6 +142,40 @@ export interface AtmosphereSettings {
   welcome: boolean
 }
 
+/** 配色联动模式 */
+export type ColorMode = 'theme' | 'wallpaper' | 'accent' | 'locked'
+
+export interface ColorSettings {
+  /** theme=跟随主题；wallpaper=背景取色；accent=强调色联动；locked=锁背景只调 UI */
+  mode: ColorMode
+  /** 协调强度 0-100，只影响叠加层与卡片/边框染色 */
+  strength: number
+  /** 当前生效的种子色 */
+  seed: string | null
+  /** 已解析的调色板（持久化，重启不必重新取色） */
+  palette: ColorPaletteSnapshot | null
+  /** 背景取色得到的候选种子 */
+  candidates: string[]
+  /** 锁定模式下的背景主色，用于提示冲突程度 */
+  lockedSeed: string | null
+}
+
+/** 调色板快照（与 color.ts 的 ColorPalette 同构，独立声明以免 storage 依赖运行时模块） */
+export interface ColorPaletteSnapshot {
+  seed: string
+  primary: string
+  onPrimary: string
+  primaryContainer: string
+  secondary: string
+  tertiary: string
+  ambient: string
+  overlay: string
+  cardTint: string
+  borderTint: string
+  selection: string
+  dark: boolean
+}
+
 /** 持久化的整体外观状态 */
 export interface AppearanceState {
   version: number
@@ -151,4 +187,8 @@ export interface AppearanceState {
   perTheme: Partial<Record<ThemeId, ThemePersonalization>>
   presets: UserPreset[]
   atmosphere: AtmosphereSettings
+  /** 智能配色 */
+  color: ColorSettings
+  /** 角色库收藏与最近使用 */
+  characterLibrary: { favorites: string[]; recent: string[] }
 }
