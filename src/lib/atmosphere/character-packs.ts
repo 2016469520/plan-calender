@@ -28,6 +28,7 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import { getDesktopBridge } from '@/lib/desktop-bridge'
 import type { CharacterExpression } from '@/lib/theme/atmosphere'
+import type { PackDialogue } from './pack-dialogue'
 
 const DB_NAME = 'timegrid-character-packs'
 const DB_VERSION = 1
@@ -45,6 +46,8 @@ export interface PackManifest {
   preferred_accent?: string
   preferred_background?: string
   description?: string
+  /** Text lives outside the artwork and appears in the companion bubble. */
+  dialogue?: PackDialogue
 }
 
 export interface CharacterPack {
@@ -144,6 +147,8 @@ export async function listPacks(): Promise<CharacterPack[]> {
 
 export async function savePack(pack: CharacterPack): Promise<void> {
   await withStore('readwrite', (s) => s.put(pack) as unknown as IDBRequest<IDBValidKey>)
+  // Reimporting a cutout can produce the same byte length as the old image.
+  revokePackUrls(pack.id)
   await refreshPacks()
 }
 

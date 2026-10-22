@@ -11,7 +11,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppearance } from '@/providers/appearance-provider'
-import { linesFor, type CharacterExpression } from '@/lib/theme/atmosphere'
+import { EXPRESSION_LABELS, linesFor, type CharacterExpression } from '@/lib/theme/atmosphere'
+import { packLinesFor } from '@/lib/atmosphere/pack-dialogue'
 import { resolveAtmosphere } from '@/lib/theme/scene-resolve'
 import { atmosphereEvents, subscribeAtmosphere } from '@/lib/atmosphere/bus'
 import { getAssetUrl, useCustomAssets } from '@/lib/atmosphere/custom-assets'
@@ -37,6 +38,12 @@ const POSITION_CLASS: Record<string, string> = {
 }
 
 export function CharacterCompanion() {
+  const character = useCurrentCharacter()
+  const { state } = useAppearance()
+  return <Companion key={`${character?.id ?? 'none'}:${state.atmosphere.customCharacterId ?? ''}`} />
+}
+
+function Companion() {
   const { state } = useAppearance()
   const atmo = useMemo(() => resolveAtmosphere(state.atmosphere), [state.atmosphere])
   // 位置选「主视觉」时角色由首页 Hero 卡承担，dock 退场，避免同一角色出现两次
@@ -44,6 +51,16 @@ export function CharacterCompanion() {
   const character = useCurrentCharacter()
   const assets = useCustomAssets()
   const packs = useCharacterPacks()
+  const activePack = useMemo(
+    () => (character?.packId ? packs.find((p) => p.id === character.packId) ?? null : null),
+    [character, packs]
+  )
+  const pickCharacterLine = useCallback((expression: CharacterExpression) => {
+    const pool = packLinesFor(activePack?.manifest.dialogue, expression)
+    return pool.length
+      ? pool[Math.floor(Math.random() * pool.length)]
+      : character ? pickLine(character.id, expression) : null
+  }, [activePack, character])
 
   const [mood, setMood] = useState<CharacterExpression>('idle')
   const [line, setLine] = useState<string | null>(null)
@@ -52,6 +69,7 @@ export function CharacterCompanion() {
   const clickTimes = useRef<number[]>([])
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lineTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const reactionTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const customAsset = assets.find((a) => a.id === atmo.customCharacterId && a.kind === 'character')
   // 同一次导入的多张表情共享 groupId：按当前状态挑图，找不到就退回通用图
@@ -79,7 +97,8 @@ export function CharacterCompanion() {
     if (!text) return
     setLine(text)
     setReacting(true)
-    window.setTimeout(() => setReacting(false), 560)
+    if (reactionTimer.current) clearTimeout(reactionTimer.current)
+    reactionTimer.current = setTimeout(() => setReacting(false), 560)
     if (lineTimer.current) clearTimeout(lineTimer.current)
     lineTimer.current = setTimeout(() => setLine(null), 5200)
   }, [])
@@ -96,16 +115,17 @@ export function CharacterCompanion() {
         () => setMood('idle'),
         event.mood === 'error' ? 6000 : MOOD_HOLD_MS
       )
-      if (atmo.characterWelcome && (event.mood === 'happy' || event.mood === 'error')) {
-        showLine(pickLine(character.id, event.mood))
+      if (atmo.characterWelcome && (activePack || event.mood === 'happy' || event.mood === 'error')) {
+        showLine(pickCharacterLine(event.mood))
       }
     })
-  }, [character, atmo.characterAutoState, atmo.characterWelcome, showLine])
+  }, [character, activePack, atmo.characterAutoState, atmo.characterWelcome, showLine, pickCharacterLine])
 
   useEffect(() => {
     return () => {
       if (holdTimer.current) clearTimeout(holdTimer.current)
       if (lineTimer.current) clearTimeout(lineTimer.current)
+      if (reactionTimer.current) clearTimeout(reactionTimer.current)
     }
   }, [])
 
@@ -122,15 +142,15 @@ export function CharacterCompanion() {
     // 彩蛋：连点会换到随机表情，再随机说一句
     const pool = character.expressions
     const next = pool[Math.floor(Math.random() * pool.length)]
-    if (atmo.characterAutoState) setMood(next)
-    showLine(pickLine(character.id, next))
-  }, [character, atmo.characterAutoState, showLine])
+    if (atmo.characterAutoState) {
+      setMood(next)
+      if (holdTimer.current) clearTimeout(holdTimer.current)
+      holdTimer.current = setTimeout(() => setMood('idle'), MOOD_HOLD_MS)
+    }
+    showLine(pickCharacterLine(atmo.characterAutoState ? next : 'idle'))
+  }, [character, atmo.characterAutoState, showLine, pickCharacterLine])
 
   // 本地素材包（模式 A）：按当前情绪挑状态图，没有就退回展示图
-  const activePack = useMemo(
-    () => (character?.packId ? packs.find((p) => p.id === character.packId) ?? null : null),
-    [character, packs]
-  )
   const packUrl = useMemo(() => {
     if (!activePack) return null
     return stateUrl(activePack, atmo.characterAutoState ? mood : 'idle')
@@ -141,9 +161,10 @@ export function CharacterCompanion() {
       return (
         // eslint-disable-next-line @next/next/no-img-element -- 本地素材是运行时 object URL，next/image 无法优化
         <img
+          key={packUrl ?? customUrl}
           src={(packUrl ?? customUrl) as string}
           alt=""
-          className="h-full w-full object-contain"
+          className="atmo-character-cutout h-full w-full object-contain"
           draggable={false}
         />
       )
@@ -184,8 +205,8 @@ export function CharacterCompanion() {
         type="button"
         onClick={handleClick}
         className="atmo-character-figure bg-transparent p-0"
-        title={`${customAsset?.name ?? character?.name ?? '角色'}：点一下打个招呼`}
-        aria-label={`${customAsset?.name ?? character?.name ?? '角色'}，当前状态：${mood}`}
+        title={`${activePack?.manifest.name ?? customAsset?.name ?? character?.name ?? '角色'}：点一下打个招呼`}
+        aria-label={`${activePack?.manifest.name ?? customAsset?.name ?? character?.name ?? '角色'}，当前状态：${EXPRESSION_LABELS[mood]}`}
         data-reacting={reacting ? 'true' : 'false'}
       >
         {art}

@@ -1,9 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   __testing,
   clearPacks,
   importPackFiles,
   listPacks,
+  savePack,
+  displayUrl,
 } from '@/lib/atmosphere/character-packs'
 
 const { STATE_ALIASES, KIND_PRIORITY, packDirOf, baseName } = __testing
@@ -44,6 +46,22 @@ describe('角色包解析', () => {
 describe('导入角色包', () => {
   beforeEach(async () => {
     await clearPacks()
+  })
+
+  it('reimporting a same-size image invalidates its object URL and preserves dialogue', async () => {
+    const create = vi.fn().mockReturnValueOnce('blob:first').mockReturnValueOnce('blob:second')
+    const revoke = vi.fn()
+    vi.stubGlobal('URL', Object.assign(class extends URL {}, { createObjectURL: create, revokeObjectURL: revoke }))
+    try {
+      const pack = { id: 'pack-refresh', manifest: { dialogue: { idle: ['看啥看？'] } }, states: {}, display: new Blob(['one']), createdAt: '2026-01-01' }
+      await savePack(pack)
+      expect(displayUrl(pack)).toBe('blob:first')
+      const updated = { ...pack, display: new Blob(['two']) }
+      await savePack(updated)
+      expect(revoke).toHaveBeenCalledWith('blob:first')
+      expect(displayUrl(updated)).toBe('blob:second')
+      expect((await listPacks())[0].manifest.dialogue?.idle).toEqual(['看啥看？'])
+    } finally { await clearPacks(); vi.unstubAllGlobals() }
   })
 
   it('一个文件夹 = 一个角色包，优先用 full_body 当展示图', async () => {

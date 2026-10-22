@@ -7,11 +7,13 @@
 // 素材包还可以在这里替换图片。
 // ============================================================
 
+import { useState } from 'react'
 import { Check, Heart, Sparkles, Trash2, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { getTheme } from '@/lib/theme/themes'
-import { getScene } from '@/lib/theme/atmosphere'
+import { EXPRESSION_LABELS, getScene, type CharacterExpression } from '@/lib/theme/atmosphere'
+import { packLinesFor } from '@/lib/atmosphere/pack-dialogue'
 import { seriesAccentOf } from '@/lib/theme/characters'
 import { CharacterVisual, type LibraryItem } from './character-card'
 
@@ -37,6 +39,10 @@ export function CharacterDetail({
   onDeletePack?: () => void
 }) {
   const accent = seriesAccentOf(item.work)
+  const [expression, setExpression] = useState<CharacterExpression>('idle')
+  const [lineIndex, setLineIndex] = useState(0)
+  const previewLines = packLinesFor(item.dialogue, expression)
+  const previewLine = previewLines[lineIndex % (previewLines.length || 1)]
   const sceneName = getScene(item.recommend.sceneId)?.name ?? item.recommend.sceneId
 
   return (
@@ -49,7 +55,7 @@ export function CharacterDetail({
       data-testid="character-detail"
     >
       <div
-        className="surface relative w-full max-w-lg overflow-hidden rounded-t-xl sm:rounded-xl"
+        className="surface relative max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-t-xl sm:rounded-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -69,7 +75,7 @@ export function CharacterDetail({
             background: `radial-gradient(120% 90% at 50% 0%, ${accent}33, transparent 62%), var(--surface-2)`,
           }}
         >
-          <CharacterVisual item={item} className="h-full w-full" />
+          <CharacterVisual item={item} expression={expression} className="h-full w-full" />
           <span
             className="absolute left-0 top-0 rounded-br-md px-2 py-1 text-micro font-medium text-white/95"
             style={{ backgroundColor: `${accent}dd` }}
@@ -79,6 +85,22 @@ export function CharacterDetail({
         </div>
 
         <div className="space-y-3 p-4">
+          {item.packId && (
+            <div className="space-y-2" aria-label="表情与台词预览">
+              <div className="flex flex-wrap gap-1">
+                {(Object.keys(EXPRESSION_LABELS) as CharacterExpression[]).map((mood) => (
+                  <button key={mood} type="button" aria-pressed={expression === mood}
+                    className={cn('rounded-md border px-2 py-1 text-caption', expression === mood && 'border-primary text-primary')}
+                    onClick={() => { setExpression(mood); setLineIndex(0) }}>
+                    {EXPRESSION_LABELS[mood]}
+                  </button>
+                ))}
+              </div>
+              {previewLine && <div className="rounded-lg border border-border bg-surface-2 p-3 text-caption" role="status">{previewLine}</div>}
+              {previewLines.length > 1 && <button type="button" className="text-caption text-primary" onClick={() => setLineIndex((i) => i + 1)}>换句台词</button>}
+              <p className="text-micro text-muted-foreground">点击角色可弹出台词；没有独立表情图时使用默认图。</p>
+            </div>
+          )}
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <h3 className="text-title text-foreground">{item.name}</h3>

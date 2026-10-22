@@ -89,6 +89,7 @@ export function CharacterLibraryPanel() {
   } = useAppearance()
   const packs = useCharacterPacks()
   useLoadPacks()
+  const [note, setNote] = useState<string | null>(null)
 
   // 桌面版：打开设置页时顺手扫一次 <userData>/characters
   useEffect(() => {
@@ -110,7 +111,6 @@ export function CharacterLibraryPanel() {
   const [category, setCategory] = useState<CharacterCategory | 'all'>('all')
   const [work, setWork] = useState<string>('all')
   const [detailId, setDetailId] = useState<string | null>(null)
-  const [note, setNote] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [urlOpen, setUrlOpen] = useState(false)
   const [urlValue, setUrlValue] = useState('')
@@ -146,6 +146,7 @@ export function CharacterLibraryPanel() {
               : DEFAULT_RECOMMEND.accent,
         },
         description: manifest.description,
+        dialogue: manifest.dialogue,
         source: 'pack' as const,
       }
     })

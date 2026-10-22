@@ -341,6 +341,33 @@
   padding: 8px 10px;
   color: var(--foreground);
   box-shadow: var(--shadow-float);
+  overflow-wrap: anywhere;
+}
+
+.atmo-character[data-animate='true'] .atmo-character-cutout,
+.atmo-character[data-animate='true'] .atmo-bubble {
+  animation: atmo-reveal 220ms ease-out both;
+}
+
+@keyframes atmo-reveal {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atmo-character .atmo-character-figure,
+  .atmo-character .atmo-character-cutout,
+  .atmo-character .atmo-bubble {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+[data-motion='off'] .atmo-character-cutout,
+[data-motion='off'] .atmo-bubble,
+[data-perf='low'] .atmo-character-cutout,
+[data-perf='low'] .atmo-bubble {
+  animation: none !important;
 }
 
 .atmo-bubble::after {

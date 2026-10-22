@@ -15,6 +15,7 @@ import { renderCharacter } from '@/components/atmosphere/art/registry'
 import { seriesAccentOf, seriesKeyOf, type CharacterCategory } from '@/lib/theme/characters'
 import type { CharacterExpression } from '@/lib/theme/atmosphere'
 import type { ThemeId } from '@/lib/theme/types'
+import type { PackDialogue } from '@/lib/atmosphere/pack-dialogue'
 
 export interface LibraryItem {
   id: string
@@ -32,6 +33,7 @@ export interface LibraryItem {
   stateUrls: Partial<Record<CharacterExpression, string>> | null
   recommend: { themeId: ThemeId; sceneId: string; accent: string }
   description?: string
+  dialogue?: PackDialogue
   /** pending = 只有推荐位，没有图 */
   source: 'builtin' | 'pack' | 'pending'
 }
