@@ -183,10 +183,10 @@ describe('角色库', () => {
   it('内置角色与待导入分离，候选不会被当成已安装', () => {
     const installed = installedCharacters()
     const pending = pendingCharacters()
-    expect(installed.length).toBeGreaterThanOrEqual(3)
-    expect(pending.length).toBeGreaterThanOrEqual(1)
+    // 内置只剩 PIX；其余角色全部来自本地素材包
+    expect(installed.map((c) => c.id)).toEqual(['pixel-pix'])
+    expect(pending).toHaveLength(0)
     expect(installed.every((c) => c.artId !== null)).toBe(true)
-    expect(pending.every((c) => c.artId === null)).toBe(true)
     expect(installed.length + pending.length).toBe(CHARACTER_LIBRARY.length)
   })
 
@@ -201,24 +201,25 @@ describe('角色库', () => {
   it('分类计数与分类过滤一致', () => {
     const counts = categoryCounts()
     expect(counts.all).toBe(installedCharacters().length)
-    const yiren = filterByCategory(installedCharacters(), 'yiren')
-    expect(yiren.length).toBe(counts.yiren)
-    expect(yiren.every((c) => c.categories.includes('yiren'))).toBe(true)
+    const original = filterByCategory(installedCharacters(), 'original')
+    expect(original.length).toBe(counts.original)
+    expect(original.every((c) => c.categories.includes('original'))).toBe(true)
   })
 
   it('搜索能命中角色名与作品名', () => {
-    expect(searchCharacters('冯宝宝').some((c) => c.id === 'feng-baobao')).toBe(true)
-    expect(searchCharacters('一人之下').every((c) => c.work === '一人之下')).toBe(true)
+    expect(searchCharacters('PIX').some((c) => c.id === 'pixel-pix')).toBe(true)
+    expect(searchCharacters('时格').every((c) => c.work === '时格')).toBe(true)
     expect(searchCharacters('不存在的角色名').length).toBe(0)
   })
 
-  it('没有立绘的角色解析为 null（渲染时会安全回退）', () => {
-    expect(figureOf('hatsune-miku')).toBeNull()
-    expect(figureOf('feng-baobao')?.name).toBe('冯宝宝')
+  it('已删除的角色解析为 null（渲染时会安全回退）', () => {
+    expect(figureOf('feng-baobao')).toBeNull()
+    expect(figureOf('xiyangyang')).toBeNull()
+    expect(figureOf('pixel-pix')?.name).toBe('PIX')
     expect(figureOf(null)).toBeNull()
   })
 
-  it('冯宝宝支持 6 种表情', () => {
-    expect(figureOf('feng-baobao')?.expressions).toHaveLength(6)
+  it('PIX 支持 5 种表情', () => {
+    expect(figureOf('pixel-pix')?.expressions).toHaveLength(5)
   })
 })

@@ -44,16 +44,7 @@ import type { ThemeId } from '@/lib/theme/types'
 import { CharacterCard, type LibraryItem } from './character-card'
 import { CharacterDetail } from './character-detail'
 
-const CATEGORY_ORDER: (CharacterCategory | 'all')[] = [
-  'all',
-  'yiren',
-  'classic',
-  'childhood',
-  'japan',
-  'game',
-  'original',
-  'custom',
-]
+const CATEGORY_ORDER: (CharacterCategory | 'all')[] = ['all', 'original', 'custom']
 
 const DEFAULT_RECOMMEND = {
   themeId: 'bento' as ThemeId,

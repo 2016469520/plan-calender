@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // 美术注册表：场景 id / 角色 id → SVG 组件
 // 六套主题的美术文件各自导出映射，这里合并成运行时唯一入口。
 // 缺少某个素材时返回 undefined，调用方会降级（不渲染背景）。
@@ -10,14 +10,7 @@ import { FLUENT_SCENES } from './scenes-fluent'
 import { MINIMAL_SCENES } from './scenes-minimal'
 import { PIXEL_SCENES } from './scenes-pixel'
 import { BENTO_SCENES } from './scenes-bento'
-import { ANIME_CHARACTERS } from './characters-anime'
-import { CYBER_CHARACTERS } from './characters-cyber'
 import { PIXEL_CHARACTERS } from './characters-pixel'
-import { YIREN_SERIES } from './series-yiren'
-import { WUXIA_SERIES } from './series-wuxia'
-import { MECHA_SERIES } from './series-mecha'
-import { FRUIT_SERIES } from './series-fruit'
-import { LIGHT_SERIES } from './series-light'
 import type { ReactNode } from 'react'
 import type { CharacterArt, CharacterArtProps, SceneArt } from './types'
 
@@ -31,15 +24,7 @@ export const SCENE_ART: Record<string, SceneArt> = {
 }
 
 export const CHARACTER_ART: Record<string, CharacterArt> = {
-  ...ANIME_CHARACTERS,
-  ...CYBER_CHARACTERS,
   ...PIXEL_CHARACTERS,
-  // 分系列重绘：每个角色独立构图，按作品共享美术语言
-  ...YIREN_SERIES,
-  ...WUXIA_SERIES,
-  ...MECHA_SERIES,
-  ...FRUIT_SERIES,
-  ...LIGHT_SERIES,
 }
 
 export function getSceneArt(id: string | null | undefined): SceneArt | null {

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+﻿import { describe, it, expect } from 'vitest'
 import {
   CHARACTERS,
   SCENES,
@@ -26,10 +26,11 @@ describe('氛围素材注册表', () => {
     expect(new Set(SCENES.map((s) => s.id)).size).toBe(SCENES.length)
   })
 
-  it('只有樱色/霓虹/像素提供角色，且角色 id 唯一', () => {
-    expect(charactersForTheme('anime').length).toBeGreaterThan(0)
-    expect(charactersForTheme('cyber').length).toBeGreaterThan(0)
+  it('只有像素主题内置角色，且角色 id 唯一', () => {
+    // 其余动漫角色已移除，本地素材包由用户自己提供
     expect(charactersForTheme('pixel').length).toBeGreaterThan(0)
+    expect(charactersForTheme('anime').length).toBe(0)
+    expect(charactersForTheme('cyber').length).toBe(0)
     expect(charactersForTheme('fluent').length).toBe(0)
     expect(new Set(CHARACTERS.map((c) => c.id)).size).toBe(CHARACTERS.length)
   })

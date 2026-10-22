@@ -90,7 +90,8 @@ export function CharacterCard({
   onOpen: () => void
   onImport: () => void
 }) {
-  const accent = seriesAccentOf(item.work)
+  // 本地素材包用它自己 manifest 里声明的强调色，内置角色用作品主色
+  const accent = item.source === 'pack' ? item.recommend.accent : seriesAccentOf(item.work)
   const missing = item.source === 'pending'
 
   return (

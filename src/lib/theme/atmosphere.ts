@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // 主题氛围系统：场景、角色、短句的数据契约
 //
 // 所有视觉素材都是本项目原创的 SVG（程序化绘制），随软件打包、离线可用，
@@ -221,20 +221,6 @@ export interface CharacterDefinition {
 
 export const CHARACTERS: CharacterDefinition[] = [
   {
-    id: 'anime-aoi',
-    themeId: 'anime',
-    name: '小葵',
-    description: '住在时间轴上的看板娘。你完成一件计划，她就多一分精神。',
-    expressions: ['idle', 'happy', 'thinking', 'working', 'error', 'sleepy'],
-  },
-  {
-    id: 'cyber-nova',
-    themeId: 'cyber',
-    name: 'NOVA',
-    description: '舰载辅助意识。用扫描与数据流报告你的进度，不寒暄。',
-    expressions: ['idle', 'happy', 'thinking', 'working', 'error'],
-  },
-  {
     id: 'pixel-pix',
     themeId: 'pixel',
     name: 'PIX',
@@ -259,141 +245,12 @@ export function defaultCharacterFor(themeId: ThemeId): CharacterDefinition | nul
 
 /** 角色台词：按真实状态切换，不编造不存在的进度 */
 export const CHARACTER_LINES: Record<string, Partial<Record<CharacterExpression, string[]>>> = {
-  'anime-aoi': {
-    idle: ['今天也一起加油吧！', '我在这里陪你～', '要不要先列三件最重要的事？'],
-    happy: ['哇，又完成一件！', '好厉害，记你一功！', '这样下去，今天会很不错哦'],
-    thinking: ['嗯……先做哪件好呢？', '让我看看时间还剩多少'],
-    working: ['专注中，我不打扰你', '我在帮你计时，安心做'],
-    error: ['欸？没保存成功，再试一次吧', '这里好像卡住了，我们一起看看'],
-    sleepy: ['有点困了……要不先休息五分钟？', '已经很晚了，早点睡吧'],
-  },
-  'cyber-nova': {
-    idle: ['系统待命，等待指令', '今日负载正常', '坐标已同步'],
-    happy: ['任务已归档。效率 +1', '记录成功。继续推进'],
-    thinking: ['正在分析优先级', '检测到多个待决任务'],
-    working: ['专注进程运行中', '已锁定当前任务，屏蔽干扰'],
-    error: ['写入失败，已回滚', '异常已捕获，请重试'],
-  },
-  // ---------- 一人之下 ----------
-  'feng-baobao': {
-    idle: ['……嗯。', '要干活了吗？', '我在这儿，你说。'],
-    happy: ['做完了。', '这个，给你。', '嗯，挺好。'],
-    thinking: ['……让我想想。', '哪儿不对劲？'],
-    working: ['别吵。', '在做了。'],
-    error: ['没成。再来。', '出岔子了，重来一次。'],
-    sleepy: ['困了。先躺一会儿。', '睡一下下。'],
-  },
-  'zhang-chulan': {
-    idle: ['今天想干点什么？', '有事儿您说话。'],
-    happy: ['成了！', '这就对了嘛。'],
-    thinking: ['这个……得盘算盘算。'],
-    working: ['忙着呢，先别打岔。'],
-    error: ['哎哟，出问题了。'],
-  },
-  'wang-ye': {
-    idle: ['顺其自然吧。', '急也没用。'],
-    happy: ['行，稳了。'],
-    thinking: ['嗯……让我掐指一算。'],
-    working: ['先把手头这摊弄完。'],
-    error: ['起了。换个法子。'],
-  },
-  'zhuge-qing': {
-    idle: ['要看清楚局势。', '不急，先看。'],
-    happy: ['如我所料。'],
-    thinking: ['有意思。'],
-    working: ['我在推演。'],
-    error: ['这一步没算到。'],
-  },
-  // ---------- 童年经典 ----------
-  'hongmao': {
-    idle: ['长虹剑在此！', '今天也要行侠仗义。'],
-    happy: ['旗开得胜！'],
-    thinking: ['敌人在哪里？'],
-    working: ['看我的。'],
-    error: ['情况不妙，撤！'],
-  },
-  'lantu': {
-    idle: ['冰魄剑，出鞘。', '我们一起。'],
-    happy: ['做得漂亮。'],
-    thinking: ['等等，有埋伏。'],
-    working: ['我在守着你。'],
-    error: ['小心！'],
-  },
-  'kaixin-chaoren': {
-    idle: ['开心超人，出发！', '今天也要开心哦。'],
-    happy: ['太棒啦！'],
-    thinking: ['让我想想办法。'],
-    working: ['正在执行任务！'],
-    error: ['哎呀，出故障了。'],
-  },
-  'xiyangyang': {
-    idle: ['今天也要动脑筋。', '别急，我有办法。'],
-    happy: ['成功啦！'],
-    thinking: ['嗯……这样这样。'],
-    working: ['交给我吧。'],
-    error: ['糟糕，被发现了。'],
-  },
-  'huitailang': {
-    idle: ['我一定会回来的！', '今天也要努力抓羊。'],
-    happy: ['哈哈，成了！'],
-    thinking: ['嘿嘿，让我想想。'],
-    working: ['正在发明中。'],
-    error: ['又失败了……'],
-  },
-  'cheng-liuxiang': {
-    idle: ['橙留香，参见。', '果宝特攻，出击。'],
-    happy: ['一招制胜！'],
-    thinking: ['看招之前先看路。'],
-    working: ['练功中。'],
-    error: ['大意了。'],
-  },
-  'boluo-chuixue': {
-    idle: ['菠萝吹雪，到。', '剑在手，跟我走。'],
-    happy: ['漂亮！'],
-    thinking: ['让我找找破绽。'],
-    working: ['正在出剑。'],
-    error: ['这招不灵。'],
-  },
-  'huolinfei': {
-    idle: ['超兽武装，启动。', '准备战斗。'],
-    happy: ['任务完成！'],
-    thinking: ['扫描中……'],
-    working: ['引擎全开。'],
-    error: ['系统报警！'],
-  },
-  'leiyi': {
-    idle: ['雷伊，待机。', '能量充足。'],
-    happy: ['放电完毕！'],
-    thinking: ['正在计算路线。'],
-    working: ['电流稳定。'],
-    error: ['能量不足。'],
-  },
-  'luoluo': {
-    idle: ['洛洛，准备起飞。', '今天去哪儿？'],
-    happy: ['完美着陆！'],
-    thinking: ['看看地图。'],
-    working: ['飞行中。'],
-    error: ['遇到气流了。'],
-  },
-  'nangong-wentian': {
-    idle: ['问天在此。', '剑已出鞘。'],
-    happy: ['邪不压正。'],
-    thinking: ['让我看看天色。'],
-    working: ['守好这一关。'],
-    error: ['情势危急。'],
-  },
-  'maidang': {
-    idle: ['星星，出发！', '今天也要热血一点。'],
-    happy: ['我们做到了！'],
-    thinking: ['前面有什么？'],
-    working: ['正在赶路。'],
-    error: ['别怕，再来一次。'],
-  },  'pixel-pix': {
-    idle: ['READY.', '按 START 继续冒险', '今日地图已生成'],
-    happy: ['+1 经验值！', '叮！获得成就', 'LEVEL UP!'],
-    thinking: ['……（翻地图中）', '要先打哪个副本？'],
-    working: ['BATTLE IN PROGRESS', '正在蓄力'],
-    error: ['GAME OVER? 再试一次', '存档失败，请重试'],
+  'pixel-pix': {
+    idle: ['READY.', '今天也要去打怪吗？', '任务清单还没清完呢。'],
+    happy: ['LEVEL UP!', '这一关过了！'],
+    thinking: ['让我看看地图…', '这条路对吗？'],
+    working: ['正在执行。', '别打断我，快完成了。'],
+    error: ['GAME OVER…再来一次。', '出 bug 了。'],
   },
 }
 
