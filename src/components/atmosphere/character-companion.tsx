@@ -5,7 +5,7 @@
 //
 // - 内置角色（樱色小葵 / 霓虹 NOVA / 像素 PIX）为原创 SVG，自带多表情
 // - 也可以挂自定义图片（用户导入的 PNG/GIF），此时只有一张图，不切表情
-// - 表情由真实事件驱动；纯净模式、关闭角色、关闭自动状态都会让它退场
+// - 左键说话、右键切换；自动状态可跟随真实事件，纯净模式或关闭角色时退场
 // - 位置/尺寸/不透明度/待机动画都由设置控制
 // ============================================================
 
@@ -37,17 +37,17 @@ const POSITION_CLASS: Record<string, string> = {
   sidebar: 'atmo-pos-sidebar',
 }
 
-export function CharacterCompanion() {
+export function CharacterCompanion({ placement = 'dock' }: { placement?: 'dock' | 'hero' }) {
   const character = useCurrentCharacter()
   const { state } = useAppearance()
-  return <Companion key={`${character?.id ?? 'none'}:${state.atmosphere.customCharacterId ?? ''}`} />
+  return <Companion placement={placement} key={`${character?.id ?? 'none'}:${state.atmosphere.customCharacterId ?? ''}`} />
 }
 
-function Companion() {
+function Companion({ placement }: { placement: 'dock' | 'hero' }) {
   const { state } = useAppearance()
   const atmo = useMemo(() => resolveAtmosphere(state.atmosphere), [state.atmosphere])
   // 位置选「主视觉」时角色由首页 Hero 卡承担，dock 退场，避免同一角色出现两次
-  const showDock = atmo.characterPosition !== 'hero'
+  const visibleHere = (atmo.characterPosition === 'hero') === (placement === 'hero')
   const character = useCurrentCharacter()
   const assets = useCustomAssets()
   const packs = useCharacterPacks()
@@ -59,14 +59,13 @@ function Companion() {
     const pool = packLinesFor(activePack?.manifest.dialogue, expression)
     return pool.length
       ? pool[Math.floor(Math.random() * pool.length)]
-      : character ? pickLine(character.id, expression) : null
+      : (character ? pickLine(character.id, expression) : null) ?? '我在这里。'
   }, [activePack, character])
 
   const [mood, setMood] = useState<CharacterExpression>('idle')
   const [line, setLine] = useState<string | null>(null)
   const [reacting, setReacting] = useState(false)
   const [loadedImage, setLoadedImage] = useState<{ id: string; url: string } | null>(null)
-  const clickTimes = useRef<number[]>([])
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lineTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const reactionTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -132,29 +131,25 @@ function Companion() {
   const handleClick = useCallback(() => {
     if (!character) return
     atmosphereEvents.poke()
-    // 彩蛋：1.5 秒内连点三次会撒一次彩带
-    const now = Date.now()
-    clickTimes.current = [...clickTimes.current.filter((t) => now - t < 1500), now]
-    if (clickTimes.current.length >= 3) {
-      clickTimes.current = []
-      atmosphereEvents.celebrate()
-    }
-    // 彩蛋：连点会换到随机表情，再随机说一句
-    const pool = character.expressions
-    const next = pool[Math.floor(Math.random() * pool.length)]
-    if (atmo.characterAutoState) {
-      setMood(next)
-      if (holdTimer.current) clearTimeout(holdTimer.current)
-      holdTimer.current = setTimeout(() => setMood('idle'), MOOD_HOLD_MS)
-    }
-    showLine(pickCharacterLine(atmo.characterAutoState ? next : 'idle'))
-  }, [character, atmo.characterAutoState, showLine, pickCharacterLine])
+    showLine(pickCharacterLine(mood))
+  }, [character, mood, showLine, pickCharacterLine])
+
+  const cycleState = useCallback(() => {
+    const order: CharacterExpression[] = ['idle', 'happy', 'thinking', 'working', 'error', 'sleepy']
+    const available = activePack
+      ? order.filter((s) => s === 'idle' || activePack.states[s])
+      : character?.expressions ?? ['idle']
+    if (holdTimer.current) clearTimeout(holdTimer.current)
+    if (lineTimer.current) clearTimeout(lineTimer.current)
+    setLine(null)
+    setMood((current) => available[(available.indexOf(current) + 1) % available.length] ?? 'idle')
+  }, [activePack, character])
 
   // 本地素材包（模式 A）：按当前情绪挑状态图，没有就退回展示图
   const packUrl = useMemo(() => {
     if (!activePack) return null
-    return stateUrl(activePack, atmo.characterAutoState ? mood : 'idle')
-  }, [activePack, atmo.characterAutoState, mood])
+    return stateUrl(activePack, mood)
+  }, [activePack, mood])
 
   const art = useMemo(() => {
     if (packUrl || customUrl) {
@@ -171,14 +166,14 @@ function Companion() {
     }
     return character
       ? renderCharacter(character.artId, {
-          expression: atmo.characterAnimate ? mood : 'idle',
+          expression: mood,
           className: 'h-full w-full',
           reacting: atmo.characterAnimate && reacting,
         })
       : null
   }, [packUrl, customUrl, character, atmo.characterAnimate, mood, reacting])
 
-  if (!showDock) return null
+  if (!visibleHere) return null
   if (!atmo.enabled || !atmo.characterEnabled || !art) return null
   if (!character && !customUrl) return null
 
@@ -186,7 +181,7 @@ function Companion() {
 
   return (
     <div
-      className={cn('atmo-character', POSITION_CLASS[atmo.characterPosition] ?? POSITION_CLASS['bottom-left'])}
+      className={cn('atmo-character', placement === 'hero' ? 'atmo-character-inline' : POSITION_CLASS[atmo.characterPosition] ?? POSITION_CLASS['bottom-left'])}
       data-testid="atmosphere-character"
       data-character={customAsset?.id ?? character?.id ?? 'custom'}
       data-mood={mood}
@@ -204,8 +199,12 @@ function Companion() {
       <button
         type="button"
         onClick={handleClick}
+        onContextMenu={(event) => { event.preventDefault(); cycleState() }}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowRight') { event.preventDefault(); cycleState() }
+        }}
         className="atmo-character-figure bg-transparent p-0"
-        title={`${activePack?.manifest.name ?? customAsset?.name ?? character?.name ?? '角色'}：点一下打个招呼`}
+        title={`${activePack?.manifest.name ?? customAsset?.name ?? character?.name ?? '角色'}：左键说话，右键切换状态（键盘右方向键）`}
         aria-label={`${activePack?.manifest.name ?? customAsset?.name ?? character?.name ?? '角色'}，当前状态：${EXPRESSION_LABELS[mood]}`}
         data-reacting={reacting ? 'true' : 'false'}
       >

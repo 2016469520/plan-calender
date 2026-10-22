@@ -606,6 +606,21 @@
   opacity: 0.5;
 }
 /* ---------------- 角色卡的作品气质装饰 ---------------- */
+.atmo-character.atmo-character-inline {
+  position: relative;
+  inset: auto;
+  z-index: 1;
+  max-width: none;
+}
+.atmo-character-inline .atmo-bubble {
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 2;
+  width: max-content;
+  max-width: min(220px, 65vw);
+}
+
 /* 不同作品给不一样的角落语言：水墨 / 竹影 / HUD 角标 / 圆点糖纸。
    只用伪元素与渐变，不增加图片请求。 */
 .series-corner {

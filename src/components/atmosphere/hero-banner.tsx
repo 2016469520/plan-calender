@@ -16,10 +16,9 @@ import { useAppearance } from '@/providers/appearance-provider'
 import { resolveAtmosphere } from '@/lib/theme/scene-resolve'
 import { linesFor } from '@/lib/theme/atmosphere'
 import { useCurrentCharacter, useCurrentScene } from './use-current-scene'
-import { renderCharacter, renderScene } from './art/registry'
-import { stateUrl, useCharacterPacks } from '@/lib/atmosphere/character-packs'
+import { renderScene } from './art/registry'
+import { CharacterCompanion } from './character-companion'
 import { QuoteStrip } from './quote-strip'
-import { cn } from '@/lib/utils'
 
 function greeting(): string {
   const hour = new Date().getHours()
@@ -36,11 +35,6 @@ export function ThemeHero() {
   const scene = useCurrentScene()
   const character = useCurrentCharacter()
   const [collapsed, setCollapsed] = useState(false)
-  const packs = useCharacterPacks()
-  const activePack = useMemo(
-    () => (character?.packId ? packs.find((p) => p.id === character.packId) ?? null : null),
-    [character, packs]
-  )
 
   const line = useMemo(() => {
     if (!character || !atmo.characterWelcome) return null
@@ -105,28 +99,10 @@ export function ThemeHero() {
 
         {character && atmo.characterPosition === 'hero' && (
           <div
-            className={cn(
-              'relative hidden shrink-0 items-end sm:flex',
-              'h-32 w-24 md:h-40 md:w-32'
-            )}
+            className="relative flex shrink-0 items-end"
             data-testid="hero-character"
           >
-            {activePack ? (
-              // 本地素材包优先
-              // eslint-disable-next-line @next/next/no-img-element -- 本地素材是运行时 object URL
-              <img
-                src={stateUrl(activePack, atmo.characterAnimate ? 'happy' : 'idle') ?? ''}
-                alt=""
-                className="h-full w-full object-contain"
-                draggable={false}
-              />
-            ) : (
-              renderCharacter(character.artId, {
-                expression: atmo.characterAnimate ? 'happy' : 'idle',
-                className: 'h-full w-full',
-                reacting: false,
-              })
-            )}
+            <CharacterCompanion placement="hero" />
           </div>
         )}
       </div>
