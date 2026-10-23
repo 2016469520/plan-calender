@@ -9,6 +9,7 @@ import { useInitializeDefaultTags } from '@/hooks/use-default-tags'
 import { useCrossWindowSync } from '@/hooks/use-cross-window-sync'
 import { usePerformanceMode } from '@/hooks/use-performance-mode'
 import { importScannedPacks, scanDesktopPacks, useLoadPacks } from '@/lib/atmosphere/character-packs'
+import { useSeedBundledPacks } from '@/lib/atmosphere/bundled-packs'
 import { SceneBackdrop } from '@/components/atmosphere/scene-backdrop'
 import { CharacterCompanion } from '@/components/atmosphere/character-companion'
 import { CelebrationLayer } from '@/components/atmosphere/celebration'
@@ -25,6 +26,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   usePerformanceMode()
   // 本地角色包：任何页面都能取到（首页陪伴位、主视觉都要用）
   useLoadPacks()
+
+  // 随包分发的角色包：首次启动自动装进本地，新用户开箱就有
+  useSeedBundledPacks()
 
   // 桌面版：自动扫描 <userData>/characters，拷进去就能用
   useEffect(() => {

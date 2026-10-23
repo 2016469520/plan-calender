@@ -262,3 +262,47 @@ node theme-shots-seeded.mjs    # 带数据截图 + 对比度
 
 - 内置角色现在只有 PIX；冯宝宝与羊狼来自 `%APPDATA%\my-plan-calendar\characters\`，不随包分发
 - 这些素材 `redistribution_allowed: false`，因此不进仓库、不进 Release
+
+---
+
+# 第五轮：内置素材包随包分发（2026-10-23）
+
+## 机制
+
+新增 `public/characters/` 目录：放在这里的角色包会在**新用户首次启动时自动安装**，不需要手动导入。
+
+- `scripts/verify-bundled-packs.mjs` 扫描目录、校验 `manifest.json`、生成 `index.json`
+- 校验规则：必须写 `"redistribution_allowed": true`，否则脚本报错并拒绝入索引
+- 运行时 `src/lib/atmosphere/bundled-packs.ts`：读取 `index.json` → 拉取图片 → 写入 IndexedDB → 之后正常走本地素材包逻辑
+- 幂等：`manifest.version` 未变则跳过；本地已有同名包时**覆盖更新**而不是新增一份（id 统一归一化，`feng_baobao` 与 `feng-baobao` 视为同一个）
+
+## 随包内容
+
+`public/characters/feng_baobao/`（6.91 MB）
+
+| 文件 | 用途 |
+|---|---|
+| `half_body.webp` | 待机态（默认展示图） |
+| `happy.png` / `thinking.webp` / `working.webp` / `error.png` / `sleepy.png` | 五种状态 |
+| `preview.webp` | 缩略图 |
+| `expressions/expr1-9.webp` | 9 张原始表情（运行时未使用，供替换） |
+| `poses/*.webp` | 13 张动作参考（运行时未使用） |
+| `NOTICE.md` | 版权与下架说明 |
+
+`manifest.json` 里写明 `redistribution_allowed: true` 与权利归属（角色著作权属原作者与权利方，素材为个人非商业用途的二次处理图）。
+
+## 验证
+
+| 检查 | 结果 |
+|---|---|
+| 全新用户首次启动 | ✅ 7/7（角色库出现 PIX + 冯宝宝、详情用真图、左键台词、右键走完六态） |
+| 内置包守卫测试 | ✅ 5 项（索引合法、每包允许再分发、展示图与状态图真实存在、目录与索引一致） |
+| tsc / eslint | ✅ 0 error / 16 warning |
+| 单元测试 | ✅ 25 文件 / 359 项 |
+| e2e | ✅ 38/38 |
+| exe asar | ✅ 244 文件哈希一致，内部含 `characters/feng_baobao/` 全部文件 |
+| APK | ✅ 资源一致（体积 5.7 → 12.6 MB） |
+
+## 体积
+
+exe 96.3 → 102.6 MB，apk 5.7 → 12.6 MB（素材 6.9 MB）。

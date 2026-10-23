@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 // ============================================================
 // 本地角色素材包（模式 A：用户素材优先）
@@ -48,6 +48,10 @@ export interface PackManifest {
   description?: string
   /** Text lives outside the artwork and appears in the companion bubble. */
   dialogue?: PackDialogue
+  /** 是否允许随仓库/安装包再分发；只有 true 的包才会被内置安装 */
+  redistribution_allowed?: boolean
+  /** 包的版本号，用于判断是否需要重新写入本地 */
+  version?: string | number
 }
 
 export interface CharacterPack {
