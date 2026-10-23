@@ -1,3 +1,9 @@
+> [!IMPORTANT]
+> **本项目已升级为「时栖 ShiQi」，并迁移到新仓库 👉 [2016469520/shiqi-daily-planner](https://github.com/2016469520/shiqi-daily-planner)**
+>
+> 时格（TimeGrid）是时栖的前身。新仓库提供全新的品牌与图标、界面截图、**Windows / Android 安装包下载**和中英文使用说明，后续的开发与维护都在新仓库进行。
+> 本仓库保留为历史存档，不再更新；历史版本（时格 v0.9.x）仍可在本仓库 [Releases](https://github.com/2016469520/plan-calender/releases) 页下载。
+
 # 时格
 
 **把一天切成格子来安排。** 上午 / 下午 / 晚上三个时段排计划，顺手打卡习惯、写每日复盘，还有一个常驻桌面的小浮窗。
